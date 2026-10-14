@@ -1,0 +1,221 @@
+//! Original procedure `0x0040ce24` (195 bytes, `0x40ce24–0x40cee6`).
+//! Evidence: `evidence/0040ce24_fn_0040ce24.md`.
+
+unsafe extern "C" fn default_fail(_c: u32) {}
+unsafe extern "C" fn default_fill(_s: *mut u8, _n: u32, _v: u8) {}
+unsafe extern "C" fn default_parse(
+    _s: *mut u8,
+    _n: u32,
+    _h: *const u8,
+    _o1: *mut u32,
+    _o2: *mut i32,
+    _c: u32,
+) -> i32 {
+    0
+}
+unsafe extern "C" fn default_free_one(_p: *mut u8) {}
+unsafe extern "C" fn default_alloc(_a: u32, _s: u32, _t: u32, _p: u32) -> u32 {
+    0
+}
+unsafe extern "C" fn default_emit(_s: *mut u8, _d: usize, _o: usize) {}
+unsafe extern "C" fn default_oom() {}
+
+/// `0x40cc3c` reporter (codes 1/3/7).
+///
+/// ponytail: hook standing in for same-batch `fn_0040cc3c`, rewire once
+/// cross-module linkage proven.
+pub static mut HOOK_0040CC3C: unsafe extern "C" fn(u32) = default_fail;
+
+/// `0x403250` fill `(state,0x50,0)`.
+///
+/// ponytail: hook standing in for done `fn_00403250`, rewire once linkage proven.
+pub static mut HOOK_00403250: unsafe extern "C" fn(*mut u8, u32, u8) = default_fill;
+
+/// `0x40d9d8` header parse `(state,0x50,hdr,&sz,&off,5)`.
+///
+/// ponytail: hook standing in for unreconstructed callee.
+pub static mut HOOK_0040D9D8: unsafe extern "C" fn(*mut u8, u32, *const u8, *mut u32, *mut i32, u32) -> i32 =
+    default_parse;
+
+/// `0x40cdcc` free lane.
+///
+/// ponytail: hook standing in for same-batch `fn_0040cdcc`.
+pub static mut HOOK_0040CDCC: unsafe extern "C" fn(*mut u8) = default_free_one;
+
+/// Thunk `0x40684c` (`KERNEL32.DLL::VirtualAlloc`).
+///
+/// ponytail: hook standing in for the import thunk, rewire to
+/// `windows-sys` once import mapping proven.
+pub static mut HOOK_VirtualAlloc: unsafe extern "C" fn(u32, u32, u32, u32) -> u32 = default_alloc;
+
+/// `0x40da28` emit `(state,dst,dst+off)`.
+///
+/// ponytail: hook standing in for unreconstructed callee.
+pub static mut HOOK_0040DA28: unsafe extern "C" fn(*mut u8, usize, usize) = default_emit;
+
+/// `0x409818` OOM lane.
+///
+/// ponytail: hook standing in for done `fn_00409818`.
+pub static mut HOOK_00409818: unsafe extern "C" fn() = default_oom;
+
+/// Header-read → fill → parse → size-gated realloc → emit → ready=1.
+/// First call is raw indirect `[param_1+8]`; `ADD` wraps.
+pub unsafe fn fn_0040ce24(param_1: *mut u8) {
+    let target: usize = core::ptr::read_unaligned(param_1.wrapping_byte_add(8) as *const usize);
+    let arg0: u32 = core::ptr::read_unaligned(param_1.wrapping_byte_add(0xc) as *const u32);
+    let read: unsafe extern "C" fn(u32, *mut u8, u32) -> i32 = core::mem::transmute(target);
+    let mut hdr = [0u8; 8];
+    if read(arg0, hdr.as_mut_ptr(), 5) != 5 {
+        HOOK_0040CC3C(1);
+    }
+    HOOK_00403250(param_1.wrapping_byte_add(0x14), 0x50, 0);
+    let mut out_sz: u32 = 0;
+    let mut out_off: i32 = 0;
+    if HOOK_0040D9D8(
+        param_1.wrapping_byte_add(0x14),
+        0x50,
+        hdr.as_ptr(),
+        &mut out_sz,
+        &mut out_off,
+        5,
+    ) != 0
+    {
+        HOOK_0040CC3C(3);
+    }
+    if out_sz > 0x4000000 {
+        HOOK_0040CC3C(7);
+    }
+    // ponytail: `ADD ESI,[ESP+0xc]` wraps on target; `wrapping_add` here.
+    let total: u32 = (out_off as u32).wrapping_add(out_sz);
+    if total != core::ptr::read_unaligned(param_1.wrapping_byte_add(0x68) as *const u32) {
+        HOOK_0040CDCC(param_1);
+        let p = HOOK_VirtualAlloc(0, total, 0x1000, 4);
+        core::ptr::write_unaligned(param_1.wrapping_byte_add(0x64) as *mut u32, p);
+        if p == 0 {
+            HOOK_00409818();
+        }
+        core::ptr::write_unaligned(param_1.wrapping_byte_add(0x68) as *mut u32, total);
+    }
+    let base: usize =
+        core::ptr::read_unaligned(param_1.wrapping_byte_add(0x64) as *const u32) as usize;
+    HOOK_0040DA28(
+        param_1.wrapping_byte_add(0x14),
+        base,
+        base.wrapping_add(out_off as usize),
+    );
+    core::ptr::write_unaligned(param_1.wrapping_byte_add(0x11), 1u8);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        HOOK_00409818, HOOK_00403250, HOOK_0040CC3C, HOOK_0040CDCC, HOOK_0040D9D8,
+        HOOK_0040DA28, HOOK_VirtualAlloc, fn_0040ce24,
+    };
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static FAIL: AtomicUsize = AtomicUsize::new(0);
+    static PARSE_RET: AtomicUsize = AtomicUsize::new(0);
+    static SZ: AtomicUsize = AtomicUsize::new(0);
+    static OFF: AtomicUsize = AtomicUsize::new(0);
+    static FREE: AtomicUsize = AtomicUsize::new(0);
+    static ALLOC: AtomicUsize = AtomicUsize::new(0);
+    static EMIT: AtomicUsize = AtomicUsize::new(0);
+    static READ_RET: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn fail(c: u32) {
+        FAIL.store(c as usize, Ordering::SeqCst);
+    }
+    unsafe extern "C" fn fill(_s: *mut u8, _n: u32, _v: u8) {}
+    unsafe extern "C" fn parse(
+        _s: *mut u8,
+        _n: u32,
+        _h: *const u8,
+        o1: *mut u32,
+        o2: *mut i32,
+        _c: u32,
+    ) -> i32 {
+        *o1 = SZ.load(Ordering::SeqCst) as u32;
+        *o2 = OFF.load(Ordering::SeqCst) as i32;
+        PARSE_RET.load(Ordering::SeqCst) as i32
+    }
+    unsafe extern "C" fn free1(_p: *mut u8) {
+        FREE.fetch_add(1, Ordering::SeqCst);
+    }
+    unsafe extern "C" fn alloc(_a: u32, _s: u32, _t: u32, _p: u32) -> u32 {
+        ALLOC.fetch_add(1, Ordering::SeqCst);
+        0x7000
+    }
+    unsafe extern "C" fn emit(_s: *mut u8, d: usize, o: usize) {
+        EMIT.store(d.wrapping_sub(o), Ordering::SeqCst);
+    }
+    unsafe extern "C" fn oom() {}
+    unsafe extern "C" fn read5(_a: u32, _b: *mut u8, _c: u32) -> i32 {
+        READ_RET.load(Ordering::SeqCst) as i32
+    }
+
+    fn rec_with(read_ret: i32) -> [u8; 0x80] {
+        let mut rec = [0u8; 0x80];
+        let base = rec.as_mut_ptr();
+        unsafe {
+            core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut usize, read5 as usize);
+            core::ptr::write_unaligned(base.wrapping_byte_add(0x64) as *mut u32, 0x7000);
+        }
+        READ_RET.store(read_ret as isize as usize, Ordering::SeqCst);
+        rec
+    }
+
+    #[test]
+    fn lanes() {
+        unsafe {
+            HOOK_0040CC3C = fail;
+            HOOK_00403250 = fill;
+            HOOK_0040D9D8 = parse;
+            HOOK_0040CDCC = free1;
+            HOOK_VirtualAlloc = alloc;
+            HOOK_0040DA28 = emit;
+            HOOK_00409818 = oom;
+        }
+        // Short-read lane: fail(1), then equal-size lane skips alloc.
+        SZ.store(0x10, Ordering::SeqCst);
+        OFF.store(0x4, Ordering::SeqCst);
+        PARSE_RET.store(0, Ordering::SeqCst);
+        let mut rec = rec_with(5);
+        let base = rec.as_mut_ptr();
+        unsafe {
+            core::ptr::write_unaligned(base.wrapping_byte_add(0x68) as *mut u32, 0x14);
+            fn_0040ce24(base);
+            assert_eq!(core::ptr::read_unaligned(base.wrapping_byte_add(0x11) as *const u8), 1);
+        }
+        assert_eq!(FAIL.load(Ordering::SeqCst), 0);
+        assert_eq!(FREE.load(Ordering::SeqCst), 0);
+        // Short read hits fail(1).
+        let mut rec = rec_with(3);
+        FAIL.store(0, Ordering::SeqCst);
+        SZ.store(0x10, Ordering::SeqCst);
+        OFF.store(0x4, Ordering::SeqCst);
+        unsafe {
+            core::ptr::write_unaligned(rec.as_mut_ptr().wrapping_byte_add(0x68) as *mut u32, 0x14);
+            fn_0040ce24(rec.as_mut_ptr());
+        }
+        assert_eq!(FAIL.load(Ordering::SeqCst), 1);
+        // Parse-fail hits fail(3); resize lane frees+allocs.
+        PARSE_RET.store(2, Ordering::SeqCst);
+        SZ.store(0x20, Ordering::SeqCst);
+        OFF.store(0x4, Ordering::SeqCst);
+        FREE.store(0, Ordering::SeqCst);
+        ALLOC.store(0, Ordering::SeqCst);
+        let mut rec = rec_with(5);
+        unsafe {
+            core::ptr::write_unaligned(rec.as_mut_ptr().wrapping_byte_add(0x68) as *mut u32, 0x10);
+            fn_0040ce24(rec.as_mut_ptr());
+            assert_eq!(
+                core::ptr::read_unaligned(rec.as_mut_ptr().wrapping_byte_add(0x68) as *const u32),
+                0x24
+            );
+        }
+        assert_eq!(FAIL.load(Ordering::SeqCst), 3);
+        assert_eq!(FREE.load(Ordering::SeqCst), 1);
+        assert_eq!(ALLOC.load(Ordering::SeqCst), 1);
+    }
+}
