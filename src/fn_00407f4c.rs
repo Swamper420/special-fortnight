@@ -7,10 +7,6 @@ unsafe extern "C" fn default_norm(_slot: *mut u8, _v: *mut u8) -> *mut u8 {
     core::ptr::null_mut()
 }
 
-unsafe extern "C" fn default_str(_p: *const u8) -> *const u8 {
-    core::ptr::null()
-}
-
 unsafe extern "C" fn default_find(_base: *const u8, _ch: u16) -> *const u8 {
     core::ptr::null()
 }
@@ -31,11 +27,9 @@ pub static mut HOOK_00404C80: unsafe extern "C" fn(*mut u8) = default_pin;
 pub static mut HOOK_00404820: unsafe extern "C" fn(*mut u8, *mut u8) -> *mut u8 =
     default_norm;
 
-/// String base `0x00404d24` (`FUN_00404d24`), called once with `param_1`.
-///
-/// ponytail: hook mirroring done `fn_00404d24`'s shape, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_00404D24: unsafe extern "C" fn(*const u8) -> *const u8 = default_str;
+/// String base `0x00404d24` (`FUN_00404d24`): rewired to
+/// `crate::fn_00404d24::fn_00404d24` (signatures match exactly).
+use crate::fn_00404d24::fn_00404d24;
 
 /// Finder `0x004081d0` (`thunk_FUN_004081dd`), called with `(str, MOVZX ch)`.
 ///
@@ -70,7 +64,7 @@ pub unsafe fn fn_00407f4c(param_1: *mut u8, param_2: *mut u8) {
     } else {
         0
     };
-    let ps = HOOK_00404D24(param_1 as *const u8);
+    let ps = fn_00404d24(param_1 as *const u8);
     let mut cur = local_8;
     let mut i = count;
     while i > 0 {
@@ -111,15 +105,13 @@ pub unsafe fn fn_00407f4c(param_1: *mut u8, param_2: *mut u8) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_004046C4, HOOK_00404820, HOOK_00404C80, HOOK_00404D24, HOOK_004081DD,
+        HOOK_004046C4, HOOK_00404820, HOOK_00404C80, HOOK_004081DD,
         fn_00407f4c,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static PIN_HITS: AtomicUsize = AtomicUsize::new(0);
     static NORM_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STR_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STR_BASE: AtomicUsize = AtomicUsize::new(0);
     static FIND_HITS: AtomicUsize = AtomicUsize::new(0);
     static FIND_MODE: AtomicUsize = AtomicUsize::new(0);
     static REL_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -132,11 +124,6 @@ mod tests {
         NORM_HITS.fetch_add(1, Ordering::SeqCst);
         // Passthrough DATA pointer (normalizer keeps identity here).
         v
-    }
-
-    unsafe extern "C" fn strhook(_p: *const u8) -> *const u8 {
-        STR_HITS.fetch_add(1, Ordering::SeqCst);
-        STR_BASE.load(Ordering::SeqCst) as *const u8
     }
 
     unsafe extern "C" fn find(b: *const u8, _c: u16) -> *const u8 {
@@ -175,7 +162,6 @@ mod tests {
     fn reset() {
         PIN_HITS.store(0, Ordering::SeqCst);
         NORM_HITS.store(0, Ordering::SeqCst);
-        STR_HITS.store(0, Ordering::SeqCst);
         FIND_HITS.store(0, Ordering::SeqCst);
         REL_HITS.store(0, Ordering::SeqCst);
     }
@@ -186,24 +172,22 @@ mod tests {
         unsafe {
             HOOK_00404C80 = pin;
             HOOK_00404820 = norm;
-            HOOK_00404D24 = strhook;
             HOOK_004081DD = find;
             HOOK_004046C4 = release;
         }
         let mut seed = 0u8;
         let p1 = &mut seed as *mut u8;
-        unsafe { STR_BASE.store(p1 as usize, Ordering::SeqCst) };
         let mut b = [0u32; 4];
         let mut c = [0u32; 4];
         let mut d = [0u32; 4];
         let mut e = [0u32; 4];
 
-        // Null lane: pin + str + release only, loop skipped.
+        // Null lane: pin + release only, loop skipped
+        // (real 00404d24 passes param_1 through).
         reset();
         unsafe { fn_00407f4c(p1, core::ptr::null_mut()) };
         assert_eq!(PIN_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(NORM_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(STR_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(FIND_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
 

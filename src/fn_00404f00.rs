@@ -11,8 +11,6 @@ unsafe extern "C" fn default_alloc(_n: u32) -> *mut u8 {
     core::ptr::null_mut()
 }
 
-unsafe extern "C" fn default_copy(_src: *mut u8, _dst: *mut u8, _n: u32) {}
-
 unsafe extern "C" fn default_fail(_base: *mut u8) {}
 
 /// Normalize target `0x00404e6c` (`FUN_00404e6c`), called with
@@ -39,11 +37,9 @@ pub static mut HOOK_00402e38: unsafe extern "C" fn(*mut *mut u8, u32) = default_
 pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> *mut u8 = default_alloc;
 
 /// Copy target `0x00402fbc` (`FUN_00402fbc`), called with
-/// `(prev, newbuf, signed-min([prev-4], count)<<1)`.
-///
-/// ponytail: hook standing in for done `fn_00402fbc`, rewire to
-/// the real call once cross-module linkage proven.
-pub static mut HOOK_00402fbc: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_copy;
+/// `(prev, newbuf, signed-min([prev-4], count)<<1`): direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, *mut u8, u32)`).
 
 /// Overflow arm `0x0040380c` (`thunk_FUN_00402f60`), terminal `JMP`
 /// with `EAX=base` when `count*2` or `+14` signed-overflows.
@@ -122,7 +118,7 @@ pub unsafe fn fn_00404f00(slot: *mut *mut u8, count: u32) {
         if !prev.is_null() {
             let pl: u32 = core::ptr::read_unaligned(prev.wrapping_byte_offset(-4) as *const u32);
             let n = if (pl as i32) < (count as i32) { pl } else { count };
-            HOOK_00402fbc(prev, nb, n.wrapping_shl(1));
+            crate::fn_00402fbc::fn_00402fbc(prev, nb, n.wrapping_shl(1));
         }
     }
     fn_004046c4(slot as *mut u8);
@@ -132,7 +128,7 @@ pub unsafe fn fn_00404f00(slot: *mut *mut u8, count: u32) {
 #[cfg(test)]
 mod tests {
     use super::{
-        FAIL_00402F60, HOOK_00402e38, HOOK_00402fbc, HOOK_00404e6c, HOOK_004054b4, fn_00404f00,
+        FAIL_00402F60, HOOK_00402e38, HOOK_00404e6c, HOOK_004054b4, fn_00404f00,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -143,10 +139,6 @@ mod tests {
     static REALLOC_TOTAL: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_ARG: AtomicUsize = AtomicUsize::new(0);
-    static COPY_HITS: AtomicUsize = AtomicUsize::new(0);
-    static COPY_SRC: AtomicUsize = AtomicUsize::new(0);
-    static COPY_DST: AtomicUsize = AtomicUsize::new(0);
-    static COPY_N: AtomicUsize = AtomicUsize::new(0);
     static FAIL_HITS: AtomicUsize = AtomicUsize::new(0);
     static FAIL_ARG: AtomicUsize = AtomicUsize::new(0);
     static NORM_RET: AtomicUsize = AtomicUsize::new(0);
@@ -171,13 +163,6 @@ mod tests {
         ALLOC_HITS.fetch_add(1, Ordering::SeqCst);
         ALLOC_ARG.store(n as usize, Ordering::SeqCst);
         ALLOC_RET.load(Ordering::SeqCst) as *mut u8
-    }
-
-    unsafe extern "C" fn copy(src: *mut u8, dst: *mut u8, n: u32) {
-        COPY_HITS.fetch_add(1, Ordering::SeqCst);
-        COPY_SRC.store(src as usize, Ordering::SeqCst);
-        COPY_DST.store(dst as usize, Ordering::SeqCst);
-        COPY_N.store(n as usize, Ordering::SeqCst);
     }
 
     unsafe extern "C" fn fail(base: *mut u8) {
@@ -206,7 +191,6 @@ mod tests {
         NORM_HITS.store(0, Ordering::SeqCst);
         REALLOC_HITS.store(0, Ordering::SeqCst);
         ALLOC_HITS.store(0, Ordering::SeqCst);
-        COPY_HITS.store(0, Ordering::SeqCst);
         FAIL_HITS.store(0, Ordering::SeqCst);
     }
 
@@ -218,7 +202,6 @@ mod tests {
             HOOK_00404e6c = normalize;
             HOOK_00402e38 = realloc;
             HOOK_004054b4 = alloc;
-            HOOK_00402fbc = copy;
             FAIL_00402F60 = fail;
         }
         // count=0 lane: tail release (old rc 2→1, no dtor) + store 0.
@@ -243,25 +226,32 @@ mod tests {
         assert_eq!(s1, nb1);
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(ALLOC_ARG.load(Ordering::SeqCst), 5);
-        assert_eq!(COPY_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(NORM_HITS.load(Ordering::SeqCst), 0);
 
         // Copy lane (tag==2, old count==2, prev len 9 > count
-        // 4): signed-min copy n=4<<1=8, tail release+store newbuf.
+        // 4): signed-min copy n=4<<1=8 through the real
+        // `fn_00402fbc`, tail release+store newbuf.
         reset();
         arena!(a2, b2, o2, 2, 2, 9);
         arena!(an2, _bn2, _on2, 2, 1, 0);
         let nb2 = _on2;
         ALLOC_RET.store(nb2 as usize, Ordering::SeqCst);
+        // Seed the source payload; the real copy must move it.
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                [0xC0u8, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7].as_ptr(),
+                o2,
+                8,
+            )
+        };
         let mut s2: *mut u8 = o2;
         let p2 = &mut s2 as *mut *mut u8;
         unsafe { fn_00404f00(p2, 4) };
         assert_eq!(s2, nb2);
         assert_eq!(NORM_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(COPY_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(COPY_SRC.load(Ordering::SeqCst), o2 as usize);
-        assert_eq!(COPY_DST.load(Ordering::SeqCst), nb2 as usize);
-        assert_eq!(COPY_N.load(Ordering::SeqCst), 8);
+        let mut got = [0u8; 8];
+        unsafe { core::ptr::copy_nonoverlapping(nb2, got.as_mut_ptr(), 8) };
+        assert_eq!(got, [0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7]);
         assert_eq!(unsafe { core::ptr::read_unaligned(b2.wrapping_add(4) as *const u32) }, 1);
 
         // Grow lane (tag==2, count==1): realloc passthrough with

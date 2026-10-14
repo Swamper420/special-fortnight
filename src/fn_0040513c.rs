@@ -13,8 +13,6 @@ unsafe extern "C" fn default_alloc(_n: u32) -> *mut u8 {
     null_mut()
 }
 
-unsafe extern "C" fn default_fill(_a: *mut u8, _b: *mut u8, _c: u32) {}
-
 unsafe extern "C" fn default_cleanup(_a: *mut u8, _n: u32) {}
 
 unsafe extern "C" fn default_store(_a: *mut u8, _b: *mut u8) {}
@@ -42,12 +40,8 @@ pub static mut HOOK_00404830: unsafe extern "C" fn(*mut u8) -> *mut u8 = default
 /// rewire to real `fn_004054b4` once it exists.
 pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> *mut u8 = default_alloc;
 
-/// Copier `0x00402fbc` (`FUN_00402fbc`).
-///
-/// ponytail: hook mirroring done `fn_00402fbc`'s
-/// `(src, dst, bytes)` shape, rewire to the real call once
-/// cross-module linkage proven.
-pub static mut HOOK_00402fbc: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_fill;
+/// Copier `0x00402fbc` (`FUN_00402fbc`): direct intra-reconstruction
+/// call (rewired; signatures verified `fn(*mut u8, *mut u8, u32)`).
 
 /// Cleanup `0x004046e8` (`FUN_004046e8`).
 ///
@@ -171,7 +165,7 @@ unsafe fn finalize(param_1: *mut u8, count: u32, elems: *mut *mut u8, acc: u32, 
             let v: *mut u8 = read_unaligned(elems.add(j as usize) as *const *mut u8);
             if !v.is_null() {
                 let bytes = len_of(v).wrapping_shl(1);
-                HOOK_00402fbc(v, dest, bytes);
+                crate::fn_00402fbc::fn_00402fbc(v, dest, bytes);
                 dest = (dest as usize).wrapping_add(bytes as usize) as *mut u8;
             }
             j = j.wrapping_sub(1);
@@ -195,7 +189,7 @@ unsafe fn finalize(param_1: *mut u8, count: u32, elems: *mut *mut u8, acc: u32, 
             let v: *mut u8 = read_unaligned(elems.add(j as usize) as *const *mut u8);
             if !v.is_null() {
                 let bytes = len_of(v).wrapping_shl(1);
-                HOOK_00402fbc(v, dest, bytes);
+                crate::fn_00402fbc::fn_00402fbc(v, dest, bytes);
                 dest = (dest as usize).wrapping_add(bytes as usize) as *mut u8;
             }
             j = j.wrapping_sub(1);
@@ -209,14 +203,11 @@ unsafe fn finalize(param_1: *mut u8, count: u32, elems: *mut *mut u8, acc: u32, 
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00402f60, HOOK_004046e8, HOOK_00404830, HOOK_00404c80, HOOK_00404c98, HOOK_00404f00, HOOK_004054b4, HOOK_00402fbc, fn_0040513c};
+    use super::{HOOK_00402f60, HOOK_004046e8, HOOK_00404830, HOOK_00404c80, HOOK_00404c98, HOOK_00404f00, HOOK_004054b4, fn_0040513c};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_ARG: AtomicUsize = AtomicUsize::new(0);
-    static FILL_HITS: AtomicUsize = AtomicUsize::new(0);
-    static FILL0_N: AtomicUsize = AtomicUsize::new(0);
-    static FILL1_N: AtomicUsize = AtomicUsize::new(0);
     static CLEAN_HITS: AtomicUsize = AtomicUsize::new(0);
     static CLEAN_N: AtomicUsize = AtomicUsize::new(0);
     static STORE_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -225,7 +216,7 @@ mod tests {
     static FAIL_HITS: AtomicUsize = AtomicUsize::new(0);
     static FAIL_ARG: AtomicUsize = AtomicUsize::new(0);
 
-    static mut CANNED: [u32; 4] = [0; 4];
+    static mut CANNED: [u8; 64] = [0; 64];
 
     unsafe extern "C" fn pin(_v: *mut u8) {
         panic!("norm lane must not fire for tag==2 inputs");
@@ -245,20 +236,6 @@ mod tests {
         core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut u32, n);
         base.wrapping_byte_add(12)
     }
-
-    unsafe extern "C" fn fill(a: *mut u8, b: *mut u8, c: u32) {
-        let i = FILL_HITS.fetch_add(1, Ordering::SeqCst);
-        if i < 2 {
-            FILLS[i] = (a as usize, b as usize, c as usize);
-        }
-        if i == 0 {
-            FILL0_N.store(c as usize, Ordering::SeqCst);
-        } else {
-            FILL1_N.store(c as usize, Ordering::SeqCst);
-        }
-    }
-
-    static mut FILLS: [(usize, usize, usize); 2] = [(0, 0, 0); 2];
 
     unsafe extern "C" fn cleanup(_a: *mut u8, n: u32) {
         CLEAN_HITS.fetch_add(1, Ordering::SeqCst);
@@ -281,7 +258,8 @@ mod tests {
 
     /// Header arena: obj = base+12; tag at base+2 (`obj-10`),
     /// refcount at base+4 (`obj-8`), length at base+8 (`obj-4`).
-    unsafe fn hdr(arena: &mut [u32; 4], tag: u16, rc: u32, len: u32) -> *mut u8 {
+    /// Sized past the header so the real copy lanes fit.
+    unsafe fn hdr(arena: &mut [u8; 64], tag: u16, rc: u32, len: u32) -> *mut u8 {
         let base = arena.as_mut_ptr() as *mut u8;
         core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, tag);
         core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, rc);
@@ -302,24 +280,36 @@ mod tests {
             HOOK_00404f00 = grow;
             HOOK_00402f60 = fail;
         }
-        // fill hook records src/dst into static slots for order checks.
-        unsafe { HOOK_00402fbc = fill };
+        // Copies run through the real `fn_00402fbc`; order and
+        // placement checked via the destination bytes.
         let mut slot: *mut u8 = core::ptr::null_mut();
         let slot_ptr = &mut slot as *mut *mut u8 as *mut u8;
-        let mut aa = [0u32; 4];
-        let mut ab = [0u32; 4];
-        let mut ax = [0u32; 4];
+        let mut aa = [0u8; 64];
+        let mut ab = [0u8; 64];
+        let mut ax = [0u8; 64];
 
         // Fresh lane: *slot=X distinct; words[2]=A(len4),
-        // words[1]=B(len6) → sum 10, alloc(10), copies
+        // words[1]=B(len6) → sum 10, alloc(10), real copies
         // (A,new,8),(B,new+8,12), cleanup(2), store(new).
         let pa = unsafe { hdr(&mut aa, 2, 4, 4) };
         let pb = unsafe { hdr(&mut ab, 2, 4, 6) };
         let px = unsafe { hdr(&mut ax, 2, 4, 1) };
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                [0xA0u8, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7].as_ptr(),
+                pa,
+                8,
+            );
+            core::ptr::copy_nonoverlapping(
+                [0xB0u8, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB]
+                    .as_ptr(),
+                pb,
+                12,
+            );
+        }
         let mut words: [*mut u8; 3] = [core::ptr::null_mut(), pb, pa];
         unsafe { slot = px };
         ALLOC_HITS.store(0, Ordering::SeqCst);
-        FILL_HITS.store(0, Ordering::SeqCst);
         CLEAN_HITS.store(0, Ordering::SeqCst);
         STORE_HITS.store(0, Ordering::SeqCst);
         GROW_HITS.store(0, Ordering::SeqCst);
@@ -328,11 +318,15 @@ mod tests {
         let new = unsafe { core::ptr::addr_of_mut!(CANNED) as *mut u8 }.wrapping_byte_add(12);
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(ALLOC_ARG.load(Ordering::SeqCst), 10);
-        assert_eq!(FILL_HITS.load(Ordering::SeqCst), 2);
-        assert_eq!(unsafe { FILLS[0] }, (pa as usize, new as usize, 8));
-        assert_eq!(FILL0_N.load(Ordering::SeqCst), 8);
-        assert_eq!(unsafe { FILLS[1] }, (pb as usize, (new as usize).wrapping_add(8), 12));
-        assert_eq!(FILL1_N.load(Ordering::SeqCst), 12);
+        let mut got = [0u8; 20];
+        unsafe { core::ptr::copy_nonoverlapping(new, got.as_mut_ptr(), 20) };
+        assert_eq!(
+            got,
+            [
+                0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xB0, 0xB1, 0xB2, 0xB3,
+                0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA, 0xBB
+            ]
+        );
         assert_eq!(CLEAN_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(CLEAN_N.load(Ordering::SeqCst), 2);
         assert_eq!(GROW_HITS.load(Ordering::SeqCst), 0);
@@ -343,19 +337,17 @@ mod tests {
 
         // Overflow lane: words[2] len 0x40000000 → first add
         // trips (0x40000000 & 0xc0000000 != 0) → tail, no alloc.
-        let mut big = [0u32; 4];
+        let mut big = [0u8; 64];
         let pbig = unsafe { hdr(&mut big, 2, 4, 0x4000_0000) };
         let mut words2: [*mut u8; 3] = [core::ptr::null_mut(), pb, pbig];
         unsafe { slot = px };
         ALLOC_HITS.store(0, Ordering::SeqCst);
-        FILL_HITS.store(0, Ordering::SeqCst);
         STORE_HITS.store(0, Ordering::SeqCst);
         FAIL_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040513c(slot_ptr, 2, words2.as_mut_ptr()) };
         assert_eq!(FAIL_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(FAIL_ARG.load(Ordering::SeqCst), 0x4000_0000);
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(FILL_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(STORE_HITS.load(Ordering::SeqCst), 0);
     }
 }

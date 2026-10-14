@@ -7,8 +7,6 @@ unsafe extern "C" fn default_norm(_slot: *mut u8, _v: *mut u8) -> *mut u8 {
     core::ptr::null_mut()
 }
 
-unsafe extern "C" fn default_fill(_a: *mut u8, _b: *mut u8, _c: u32) {}
-
 unsafe extern "C" fn default_grow(_a: *mut u8, _n: u32) {}
 
 unsafe extern "C" fn default_warn(_n: u32) {}
@@ -31,11 +29,9 @@ pub static mut HOOK_00404c80: unsafe extern "C" fn(*mut u8) = default_pin;
 /// proven.
 pub static mut HOOK_00404820: unsafe extern "C" fn(*mut u8, *mut u8) -> *mut u8 = default_norm;
 
-/// Copier `0x00402fbc` (`FUN_00402fbc`), `(src, dst, bytes)`.
-///
-/// ponytail: hook mirroring done `fn_00402fbc`'s shape, rewire
-/// to the real call once cross-module linkage proven.
-pub static mut HOOK_00402fbc: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_fill;
+/// Copier `0x00402fbc` (`FUN_00402fbc`), `(src, dst, bytes)`:
+/// direct intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, *mut u8, u32)`).
 
 /// Grow `0x00404f00` (`FUN_00404f00`), `(slot, total)`.
 ///
@@ -118,16 +114,16 @@ pub unsafe fn fn_0040532c(param_1: *mut u8, param_2: *mut u8, param_3: i32) {
             ((pos as u32).wrapping_add(src_len)).wrapping_mul(2) as usize,
         ) as *mut u8;
         let n = ((dst_i.wrapping_sub(pos)) as u32).wrapping_mul(2);
-        HOOK_00402fbc(src, dst, n);
+        crate::fn_00402fbc::fn_00402fbc(src, dst, n);
     }
     {
         let base: *mut u8 = core::ptr::read_unaligned(param_2 as *const *mut u8);
         let dst = (base as usize).wrapping_add((pos as u32).wrapping_mul(2) as usize) as *mut u8;
         let n = src_len.wrapping_mul(2);
         if alias {
-            HOOK_00402fbc(base, dst, n);
+            crate::fn_00402fbc::fn_00402fbc(base, dst, n);
         } else {
-            HOOK_00402fbc(local_8, dst, n);
+            crate::fn_00402fbc::fn_00402fbc(local_8, dst, n);
         }
     }
     HOOK_004046c4(&mut local_8 as *mut *mut u8 as *mut u8);
@@ -135,29 +131,19 @@ pub unsafe fn fn_0040532c(param_1: *mut u8, param_2: *mut u8, param_3: i32) {
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00402fbc, HOOK_004046c4, HOOK_00404820, HOOK_00404c80, HOOK_00404f00, HOOK_00402f60, fn_0040532c};
+    use super::{HOOK_004046c4, HOOK_00404820, HOOK_00404c80, HOOK_00404f00, HOOK_00402f60, fn_0040532c};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    static FILL_HITS: AtomicUsize = AtomicUsize::new(0);
     static GROW_HITS: AtomicUsize = AtomicUsize::new(0);
     static GROW_N: AtomicUsize = AtomicUsize::new(0);
     static WARN_HITS: AtomicUsize = AtomicUsize::new(0);
     static REL_HITS: AtomicUsize = AtomicUsize::new(0);
-
-    static mut FILLS: [(usize, usize, usize); 3] = [(0, 0, 0); 3];
 
     unsafe extern "C" fn pin(_v: *mut u8) {}
 
     unsafe extern "C" fn norm(_slot: *mut u8, v: *mut u8) -> *mut u8 {
         // Passthrough DATA pointer (normalizer keeps identity here).
         v
-    }
-
-    unsafe extern "C" fn fill(a: *mut u8, b: *mut u8, c: u32) {
-        let i = FILL_HITS.fetch_add(1, Ordering::SeqCst);
-        if i < 3 {
-            FILLS[i] = (a as usize, b as usize, c as usize);
-        }
     }
 
     unsafe extern "C" fn grow(_a: *mut u8, n: u32) {
@@ -174,9 +160,9 @@ mod tests {
     }
 
     /// Header arena: obj = base+12; tag at base+2 (`obj-10`),
-    /// length at base+8 (`obj-4`). Sized for header reads; the
-    /// fill hook records instead of writing.
-    unsafe fn hdr(arena: &mut [u32; 6], tag: u16, len: u32) -> *mut u8 {
+    /// length at base+8 (`obj-4`). Sized past the header so the
+    /// real copy lanes fit.
+    unsafe fn hdr(arena: &mut [u32; 16], tag: u16, len: u32) -> *mut u8 {
         let base = arena.as_mut_ptr() as *mut u8;
         core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, tag);
         core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, 1);
@@ -191,22 +177,33 @@ mod tests {
         unsafe {
             HOOK_00404c80 = pin;
             HOOK_00404820 = norm;
-            HOOK_00402fbc = fill;
             HOOK_00404f00 = grow;
             HOOK_00402f60 = warn;
             HOOK_004046c4 = release;
         }
-        let mut aa = [0u32; 6];
-        let mut ad = [0u32; 6];
+        let mut aa = [0u32; 16];
+        let mut ad = [0u32; 16];
         // Source len 3, dest len 5, both tag 2 (no norm replace).
         let a = unsafe { hdr(&mut aa, 2, 3) };
         let d = unsafe { hdr(&mut ad, 2, 5) };
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                [0xA0u8, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5].as_ptr(),
+                a,
+                6,
+            );
+            core::ptr::copy_nonoverlapping(
+                [0xB0u8, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9].as_ptr(),
+                d,
+                10,
+            );
+        }
         let mut cell: *mut u8 = d;
         let slot = &mut cell as *mut *mut u8 as *mut u8;
 
-        // Mid-insert at 1-based pos 2 → c=1: grow(8), shift
-        // (D+2,D+8,8), copy (A,D+2,6).
-        FILL_HITS.store(0, Ordering::SeqCst);
+        // Mid-insert at 1-based pos 2 → c=1: grow(8), real shift
+        // (D+2,D+8,8) then insert (A,D+2,6):
+        // D == [B0 B1 A0..A5 B2..B9].
         GROW_HITS.store(0, Ordering::SeqCst);
         WARN_HITS.store(0, Ordering::SeqCst);
         REL_HITS.store(0, Ordering::SeqCst);
@@ -214,32 +211,37 @@ mod tests {
         assert_eq!(GROW_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(GROW_N.load(Ordering::SeqCst), 8);
         assert_eq!(WARN_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(FILL_HITS.load(Ordering::SeqCst), 2);
-        assert_eq!(unsafe { FILLS[0] }, ((d as usize).wrapping_add(2), (d as usize).wrapping_add(8), 8));
-        assert_eq!(unsafe { FILLS[1] }, (a as usize, (d as usize).wrapping_add(2), 6));
+        let mut got = [0u8; 16];
+        unsafe { core::ptr::copy_nonoverlapping(d, got.as_mut_ptr(), 16) };
+        assert_eq!(
+            got,
+            [
+                0xB0, 0xB1, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xB2, 0xB3, 0xB4, 0xB5,
+                0xB6, 0xB7, 0xB8, 0xB9
+            ]
+        );
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
 
         // Alias lane: *slot == source (len 3 both views) →
-        // grow(6), shift (A+2,A+8,4), self-copy (A,A+2,6).
+        // grow(6), shift (A+2,A+8,4), self-copy (A,A+2,6):
+        // A[2..8] == A[0..6].
         unsafe { cell = a };
-        FILL_HITS.store(0, Ordering::SeqCst);
         GROW_HITS.store(0, Ordering::SeqCst);
         REL_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040532c(a, slot, 2) };
         assert_eq!(GROW_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(FILL_HITS.load(Ordering::SeqCst), 2);
-        assert_eq!(unsafe { FILLS[1] }, (a as usize, (a as usize).wrapping_add(2), 6));
+        let mut gots = [0u8; 8];
+        unsafe { core::ptr::copy_nonoverlapping(a.wrapping_add(2), gots.as_mut_ptr(), 8) };
+        assert_eq!(gots, [0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA2, 0xA3]);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
 
         // Empty source lane: len 0 → JLE exit, release only.
-        let mut az = [0u32; 6];
+        let mut az = [0u32; 16];
         let z = unsafe { hdr(&mut az, 2, 0) };
         unsafe { cell = d };
-        FILL_HITS.store(0, Ordering::SeqCst);
         GROW_HITS.store(0, Ordering::SeqCst);
         REL_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040532c(z, slot, 2) };
-        assert_eq!(FILL_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(GROW_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
     }

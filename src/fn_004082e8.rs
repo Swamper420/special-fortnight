@@ -132,7 +132,6 @@ mod tests {
     static P00_ALLOC_RET: AtomicUsize = AtomicUsize::new(0);
     static P00_REALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
     static P00_REALLOC_TOTAL: AtomicUsize = AtomicUsize::new(0);
-    static P00_COPY_HITS: AtomicUsize = AtomicUsize::new(0);
     static P00_NORM_HITS: AtomicUsize = AtomicUsize::new(0);
     static P00_FAIL_HITS: AtomicUsize = AtomicUsize::new(0);
 
@@ -199,10 +198,6 @@ mod tests {
         P00_REALLOC_TOTAL.store(total as usize, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn p00_copy(_s: *mut u8, _d: *mut u8, _n: u32) {
-        P00_COPY_HITS.fetch_add(1, Ordering::SeqCst);
-    }
-
     unsafe extern "C" fn p00_norm(_o: *mut u8, _s: *mut u8) {
         P00_NORM_HITS.fetch_add(1, Ordering::SeqCst);
     }
@@ -233,7 +228,6 @@ mod tests {
         FILL_HITS.store(0, Ordering::SeqCst);
         P00_ALLOC_HITS.store(0, Ordering::SeqCst);
         P00_REALLOC_HITS.store(0, Ordering::SeqCst);
-        P00_COPY_HITS.store(0, Ordering::SeqCst);
         P00_NORM_HITS.store(0, Ordering::SeqCst);
         P00_FAIL_HITS.store(0, Ordering::SeqCst);
     }
@@ -251,7 +245,6 @@ mod tests {
         let sdd_f = unsafe { crate::fn_00404dd4::HOOK_00402fbc };
         let sc98 = unsafe { crate::fn_00404c98::HOOK_00404e6c };
         let s00_a = unsafe { crate::fn_00404f00::HOOK_004054b4 };
-        let s00_c = unsafe { crate::fn_00404f00::HOOK_00402fbc };
         let s00_r = unsafe { crate::fn_00404f00::HOOK_00402e38 };
         let s00_n = unsafe { crate::fn_00404f00::HOOK_00404e6c };
         let s00_f = unsafe { crate::fn_00404f00::FAIL_00402F60 };
@@ -262,7 +255,6 @@ mod tests {
             crate::fn_00404dd4::HOOK_00402fbc = fill;
             crate::fn_00404c98::HOOK_00404e6c = fwd;
             crate::fn_00404f00::HOOK_004054b4 = p00_alloc;
-            crate::fn_00404f00::HOOK_00402fbc = p00_copy;
             crate::fn_00404f00::HOOK_00402e38 = p00_realloc;
             crate::fn_00404f00::HOOK_00404e6c = p00_norm;
             crate::fn_00404f00::FAIL_00402F60 = p00_fail;
@@ -338,7 +330,6 @@ mod tests {
         assert_eq!(P00_ALLOC_ARG.load(Ordering::SeqCst), 0x1800);
         assert_eq!(NORM_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(FWD_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(P00_COPY_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(P00_NORM_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(P00_FAIL_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(P00_REALLOC_HITS.load(Ordering::SeqCst), 1);
@@ -353,7 +344,6 @@ mod tests {
             crate::fn_00404dd4::HOOK_00402fbc = sdd_f;
             crate::fn_00404c98::HOOK_00404e6c = sc98;
             crate::fn_00404f00::HOOK_004054b4 = s00_a;
-            crate::fn_00404f00::HOOK_00402fbc = s00_c;
             crate::fn_00404f00::HOOK_00402e38 = s00_r;
             crate::fn_00404f00::HOOK_00404e6c = s00_n;
             crate::fn_00404f00::FAIL_00402F60 = s00_f;

@@ -5,9 +5,9 @@ unsafe extern "C" fn default_pin(_slot: *mut u8, _src: *mut u8) {}
 
 unsafe extern "C" fn default_ensure(_slot: *mut *mut u8, _count: u32) {}
 
-unsafe extern "C" fn default_data(_p: *const u8) -> *const u8 {
-    core::ptr::null()
-}
+/// Target `0x00404d24` (`FUN_00404d24`): rewired to
+/// `crate::fn_00404d24::fn_00404d24` (signatures match exactly).
+use crate::fn_00404d24::fn_00404d24;
 
 unsafe extern "C" fn default_convert(
     _dst: *mut u16,
@@ -33,14 +33,6 @@ pub static mut HOOK_00404c98: unsafe extern "C" fn(*mut u8, *mut u8) = default_p
 /// ponytail: hook standing in for done `fn_00404f00`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00404f00: unsafe extern "C" fn(*mut *mut u8, u32) = default_ensure;
-
-/// Target `0x00404d24` (`FUN_00404d24`), called with `local_8`,
-/// result feeds convert as the wide dst.
-///
-/// ponytail: hook standing in for done `fn_00404d24` (which returns
-/// the DATA pointer), rewire to the real call once cross-module
-/// linkage proven.
-pub static mut HOOK_00404d24: unsafe extern "C" fn(*const u8) -> *const u8 = default_data;
 
 /// Target `0x004062b8` (`FUN_004062b8`),
 /// `(data, lead+1, param_1+1, lead)`; 4th arg spilled with `PUSH EBX`
@@ -79,7 +71,7 @@ pub unsafe fn fn_0040633c(param_1: *const u8, param_2: *mut u8) {
     if core::ptr::read_unaligned(param_1) != 0 {
         let lead: u32 = core::ptr::read_unaligned(param_1) as u32;
         HOOK_00404f00(&mut local_8 as *mut *mut u8, lead);
-        let data: *const u8 = HOOK_00404d24(local_8 as *const u8);
+        let data: *const u8 = fn_00404d24(local_8 as *const u8);
         let n: u32 = HOOK_004062b8(
             data as *mut u16,
             lead.wrapping_add(1),
@@ -102,7 +94,7 @@ pub unsafe fn fn_0040633c(param_1: *const u8, param_2: *mut u8) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_004046c4, HOOK_00404c98, HOOK_00404cec, HOOK_00404d24, HOOK_00404f00, HOOK_004062b8,
+        HOOK_004046c4, HOOK_00404c98, HOOK_00404cec, HOOK_00404f00, HOOK_004062b8,
         fn_0040633c,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -113,8 +105,6 @@ mod tests {
     static PIN2_B: AtomicUsize = AtomicUsize::new(0);
     static ENS_HITS: AtomicUsize = AtomicUsize::new(0);
     static ENS_N: AtomicUsize = AtomicUsize::new(0);
-    static DATA_HITS: AtomicUsize = AtomicUsize::new(0);
-    static DATA_RET: AtomicUsize = AtomicUsize::new(0);
     static CVT_HITS: AtomicUsize = AtomicUsize::new(0);
     static CVT_DST: AtomicUsize = AtomicUsize::new(0);
     static CVT_CAP: AtomicUsize = AtomicUsize::new(0);
@@ -140,11 +130,6 @@ mod tests {
         core::ptr::write_unaligned(slot, ENS_RET.load(Ordering::SeqCst) as *mut u8);
     }
 
-    unsafe extern "C" fn data(_p: *const u8) -> *const u8 {
-        DATA_HITS.fetch_add(1, Ordering::SeqCst);
-        DATA_RET.load(Ordering::SeqCst) as *const u8
-    }
-
     unsafe extern "C" fn convert(dst: *mut u16, cap: u32, src: *const u8, n: i32) -> u32 {
         CVT_HITS.fetch_add(1, Ordering::SeqCst);
         CVT_DST.store(dst as usize, Ordering::SeqCst);
@@ -165,7 +150,6 @@ mod tests {
     fn reset() {
         PIN_HITS.store(0, Ordering::SeqCst);
         ENS_HITS.store(0, Ordering::SeqCst);
-        DATA_HITS.store(0, Ordering::SeqCst);
         CVT_HITS.store(0, Ordering::SeqCst);
         CEC_HITS.store(0, Ordering::SeqCst);
         REL_HITS.store(0, Ordering::SeqCst);
@@ -176,7 +160,6 @@ mod tests {
         unsafe {
             HOOK_00404c98 = pin;
             HOOK_00404f00 = ensure;
-            HOOK_00404d24 = data;
             HOOK_004062b8 = convert;
             HOOK_00404cec = cec;
             HOOK_004046c4 = release;
@@ -193,16 +176,15 @@ mod tests {
         assert_eq!(ENS_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(CVT_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
-        // Convert-zero lane: ensure(3), convert(.,4,p1+1,3)=0 -> cec.
+        // Convert-zero lane: ensure(3), real 00404d24 passes local
+        // through so convert sees ENS output; convert(.,4,p1+1,3)=0 -> cec.
         reset();
         let b3 = [3u8, 0x41];
-        DATA_RET.store(0x6200, Ordering::SeqCst);
-        ENS_RET.store(0x6100, Ordering::SeqCst);
+        ENS_RET.store(0x6200, Ordering::SeqCst);
         CVT_RET.store(0, Ordering::SeqCst);
         unsafe { fn_0040633c(b3.as_ptr(), param_2) };
         assert_eq!(ENS_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(ENS_N.load(Ordering::SeqCst), 3);
-        assert_eq!(DATA_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(CVT_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(CVT_DST.load(Ordering::SeqCst), 0x6200);
         assert_eq!(CVT_CAP.load(Ordering::SeqCst), 4);

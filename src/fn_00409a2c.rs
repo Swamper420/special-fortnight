@@ -5,14 +5,6 @@ unsafe extern "C" fn default_query() -> *const u8 {
     core::ptr::null()
 }
 
-unsafe extern "C" fn default_match(_p: *const u8, _key: u32) -> u32 {
-    0
-}
-
-unsafe extern "C" fn default_take() -> u32 {
-    0
-}
-
 /// Target `0x00402e88` (`FUN_00402e88`), no args; result feeds the
 /// match call as its object.
 ///
@@ -21,19 +13,13 @@ unsafe extern "C" fn default_take() -> u32 {
 /// cross-module linkage proven.
 pub static mut HOOK_00402e88: unsafe extern "C" fn() -> *const u8 = default_query;
 
-/// Target `0x0040392c` (`FUN_0040392c`), `(query, [0x00406d5c])`;
-/// only the low byte of the result is tested.
-///
-/// ponytail: hook standing in for done `fn_0040392c`, rewire to
-/// the real call once cross-module linkage proven.
-pub static mut HOOK_0040392c: unsafe extern "C" fn(*const u8, u32) -> u32 = default_match;
+/// Target `0x0040392c` (`FUN_0040392c`): rewired to
+/// `crate::fn_0040392c::fn_0040392c` (signatures match exactly).
+use crate::fn_0040392c::fn_0040392c;
 
 /// Target `0x00402ec8` (`FUN_00402ec8`), no args; result stored to
-/// `[param_1+0xc]`.
-///
-/// ponytail: hook standing in for done `fn_00402ec8`, rewire to
-/// the real call once cross-module linkage proven.
-pub static mut HOOK_00402ec8: unsafe extern "C" fn() -> u32 = default_take;
+/// `[param_1+0xc]`: direct intra-reconstruction call (rewired;
+/// signatures verified `fn() -> u32`).
 
 /// Dword VALUE at absolute `0x00406d5c` (`PTR_PTR_00406d5c`,
 /// nominally `PTR_LAB_00406db4`), passed by value as the match
@@ -54,62 +40,59 @@ pub unsafe fn fn_00409a2c(param_1: *mut u8) {
         return;
     }
     let q = HOOK_00402e88();
-    let r = HOOK_0040392c(q, DATA_00406D5C);
+    let r = fn_0040392c(q, DATA_00406D5C);
     if r & 0xff == 0 {
         return;
     }
-    let v = HOOK_00402ec8();
+    let v = crate::fn_00402ec8::fn_00402ec8();
     core::ptr::write_unaligned(param_1.wrapping_byte_add(0xc) as *mut u32, v);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{DATA_00406D5C, HOOK_00402e88, HOOK_0040392c, HOOK_00402ec8, fn_00409a2c};
+    use super::{DATA_00406D5C, HOOK_00402e88, fn_00409a2c};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static Q_HITS: AtomicUsize = AtomicUsize::new(0);
     static Q_RET: AtomicUsize = AtomicUsize::new(0);
-    static M_HITS: AtomicUsize = AtomicUsize::new(0);
-    static M_P: AtomicUsize = AtomicUsize::new(0);
-    static M_KEY: AtomicUsize = AtomicUsize::new(0);
-    static M_RET: AtomicUsize = AtomicUsize::new(0);
-    static T_HITS: AtomicUsize = AtomicUsize::new(0);
-    static T_RET: AtomicUsize = AtomicUsize::new(0);
+
+    static mut TAKE_INNER: [u32; 3] = [0; 3];
+    static mut TAKE_CTX: *const u8 = core::ptr::null();
 
     unsafe extern "C" fn query() -> *const u8 {
         Q_HITS.fetch_add(1, Ordering::SeqCst);
         Q_RET.load(Ordering::SeqCst) as *const u8
     }
 
-    unsafe extern "C" fn match_fn(p: *const u8, key: u32) -> u32 {
-        M_HITS.fetch_add(1, Ordering::SeqCst);
-        M_P.store(p as usize, Ordering::SeqCst);
-        M_KEY.store(key as usize, Ordering::SeqCst);
-        M_RET.load(Ordering::SeqCst) as u32
+    /// Resolver for the real `fn_00402ec8`: points at the take slot.
+    unsafe extern "C" fn take_resolver() -> *const u8 {
+        core::ptr::addr_of!(TAKE_CTX) as *const u8
     }
 
-    unsafe extern "C" fn take() -> u32 {
-        T_HITS.fetch_add(1, Ordering::SeqCst);
-        T_RET.load(Ordering::SeqCst) as u32
+    const NODE_OFF: usize = 0x30;
+
+    unsafe fn set_link(node: *mut u8, cell: *const *const u8) {
+        core::ptr::write_unaligned(node.wrapping_byte_sub(NODE_OFF) as *mut *const *const u8, cell);
+    }
+
+    unsafe fn obj_holding(inner: *const u8) -> [u8; 8] {
+        let mut obj = [0u8; 8];
+        core::ptr::write_unaligned(obj.as_mut_ptr() as *mut *const u8, inner);
+        obj
     }
 
     fn reset() {
         Q_HITS.store(0, Ordering::SeqCst);
-        M_HITS.store(0, Ordering::SeqCst);
-        T_HITS.store(0, Ordering::SeqCst);
     }
 
     #[test]
     fn flag_miss_and_hit_lanes() {
         unsafe {
             HOOK_00402e88 = query;
-            HOOK_0040392c = match_fn;
-            HOOK_00402ec8 = take;
-            DATA_00406D5C = 0x0db4;
+            // Take lane observed through the real `fn_00402ec8`.
+            crate::fn_00402ec8::HOOK_00406588 = take_resolver;
+            crate::fn_00402ec8::HOOK_00413020 = None;
         }
-        let obj_buf = [0u8; 8];
-        let inner = obj_buf.as_ptr();
-        Q_RET.store(inner as usize, Ordering::SeqCst);
         // Feasible buffer: flag at +0x14, slot at +0xc.
         let mut buf = [0u8; 0x18];
         let p = buf.as_mut_ptr();
@@ -122,29 +105,39 @@ mod tests {
             assert_eq!(*p.wrapping_byte_add(0xc).cast::<u32>(), 0x1111_1111);
         }
         assert_eq!(Q_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(M_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(T_HITS.load(Ordering::SeqCst), 0);
-        // Miss lane: low byte zero → no take, slot kept.
+        // Miss lane: real 0040392c on a null-linked node returns 0 →
+        // low byte zero, no take, slot kept.
+        let mut b0 = [0u8; 0x40];
+        let (obj0, key0) = unsafe {
+            let n0 = b0.as_mut_ptr().add(NODE_OFF);
+            set_link(n0, core::ptr::null());
+            (obj_holding(n0), 0x12345678u32)
+        };
+        Q_RET.store(obj0.as_ptr() as usize, Ordering::SeqCst);
         reset();
-        M_RET.store(0x1234_5600, Ordering::SeqCst);
         unsafe {
+            DATA_00406D5C = key0;
             *p.wrapping_byte_add(0x14) = 1;
             fn_00409a2c(p);
             assert_eq!(*p.wrapping_byte_add(0xc).cast::<u32>(), 0x1111_1111);
         }
         assert_eq!(Q_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(M_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(M_P.load(Ordering::SeqCst), inner as usize);
-        assert_eq!(M_KEY.load(Ordering::SeqCst), 0x0db4);
-        assert_eq!(T_HITS.load(Ordering::SeqCst), 0);
-        // Hit lane: low byte nonzero → take stored.
+        // Hit lane: key == inner node address → low byte forced 1 →
+        // real take stored (and its slot cleared).
+        let mut b1 = [0u8; 0x40];
+        let obj1 = unsafe {
+            let n1 = b1.as_mut_ptr().add(NODE_OFF);
+            DATA_00406D5C = n1 as u32;
+            obj_holding(n1)
+        };
+        Q_RET.store(obj1.as_ptr() as usize, Ordering::SeqCst);
         reset();
-        M_RET.store(0x1234_5601, Ordering::SeqCst);
-        T_RET.store(0x9e37_79b9, Ordering::SeqCst);
         unsafe {
+            TAKE_INNER = [0, 0, 0x9e37_79b9];
+            TAKE_CTX = TAKE_INNER.as_ptr() as *const u8;
             fn_00409a2c(p);
             assert_eq!(*p.wrapping_byte_add(0xc).cast::<u32>(), 0x9e37_79b9);
+            assert_eq!(TAKE_INNER[2], 0);
         }
-        assert_eq!(T_HITS.load(Ordering::SeqCst), 1);
     }
 }

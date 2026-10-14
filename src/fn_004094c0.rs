@@ -53,9 +53,6 @@ unsafe extern "C" fn default_probe(_slot: *mut u8, _tab: usize) -> u32 {
 unsafe extern "C" fn default_ext(_p: usize) -> usize {
     0
 }
-unsafe extern "C" fn default_wlen(_s: *const u16) -> u32 {
-    0
-}
 unsafe extern "C" fn default_resolve(_k: usize) -> usize {
     0
 }
@@ -118,11 +115,9 @@ pub static mut HOOK_0040392C: unsafe extern "C" fn(*mut u8, usize) -> u32 = defa
 /// call once cross-module linkage proven.
 pub static mut HOOK_00404D24: unsafe extern "C" fn(usize) -> usize = default_ext;
 
-/// Target `0x004080dc` (WCHAR length), both sites.
-///
-/// ponytail: hook standing in for done `fn_004080dc`, rewire to the real
-/// call once cross-module linkage proven.
-pub static mut HOOK_004080DC: unsafe extern "C" fn(*const u16) -> u32 = default_wlen;
+/// Target `0x004080dc` (WCHAR length): rewired to
+/// `crate::fn_004080dc::fn_004080dc` (signatures match exactly).
+use crate::fn_004080dc::fn_004080dc;
 
 /// Target `0x00405b90` (resolve; returns the `LoadStringW` instance, a
 /// DATA pointer).
@@ -222,7 +217,7 @@ pub unsafe fn fn_004094c0(
         );
         let ext = HOOK_00404D24(second);
         ps_var5 = ext;
-        let len = HOOK_004080DC(ext as *const u16);
+        let len = fn_004080dc(ext as *const u16);
         if len != 0 {
             // ponytail: WCHAR index from ASSEMBLY (`[EBX+EAX*2-2]`);
             // parens keep the offset on the address.
@@ -256,7 +251,7 @@ pub unsafe fn fn_004094c0(
         t_a3: 10,
     };
     HOOK_00408290(param_3, param_4, title.as_mut_ptr(), 4, &blk);
-    HOOK_004080DC(param_3 as *const u16);
+    fn_004080dc(param_3 as *const u16);
     HOOK_004046C4(&mut local_668 as *mut u32 as *mut u8)
 }
 
@@ -265,7 +260,7 @@ mod tests {
     use super::{
         DAT_00406D5C, DAT_00409680, DAT_00409684, DAT_00412C70, DAT_00415B48, FmtBlock,
         HOOK_00403814, HOOK_0040392C, HOOK_004046C4, HOOK_00404D24, HOOK_00405B90,
-        HOOK_004080DC, HOOK_00408128, HOOK_00408290, HOOK_004094B4, HOOK_0040A48C,
+        HOOK_00408128, HOOK_00408290, HOOK_004094B4, HOOK_0040A48C,
         HOOK_GetModuleFileNameW, HOOK_LoadStringW, HOOK_VirtualQuery, Mbi, fn_004094c0,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -288,7 +283,6 @@ mod tests {
     static PROBE_HITS: AtomicUsize = AtomicUsize::new(0);
     static PROBE_RET: AtomicUsize = AtomicUsize::new(0);
     static EXT_HITS: AtomicUsize = AtomicUsize::new(0);
-    static WLEN_RET: AtomicUsize = AtomicUsize::new(0);
     static RES_RET: AtomicUsize = AtomicUsize::new(0);
     static LS_H: AtomicUsize = AtomicUsize::new(0);
     static LS_ID: AtomicUsize = AtomicUsize::new(0);
@@ -303,7 +297,7 @@ mod tests {
     static EMIT_T11: AtomicUsize = AtomicUsize::new(0);
     static EMIT_T5: AtomicUsize = AtomicUsize::new(0);
     static REL_RET: AtomicUsize = AtomicUsize::new(0);
-    static EXTBUF: [u16; 4] = [0x2e, 0x74, 0x78, 0x74];
+    static EXTBUF: [u16; 5] = [0x2e, 0x74, 0x78, 0x74, 0];
     static PATHSRC: [u16; 8] = [0x41; 8];
 
     unsafe extern "C" fn vq(addr: usize, mbi: *mut Mbi, n: u32) -> u32 {
@@ -339,9 +333,6 @@ mod tests {
     unsafe extern "C" fn ext4(_p: usize) -> usize {
         EXT_HITS.fetch_add(1, Ordering::SeqCst);
         core::ptr::addr_of!(EXTBUF) as *const u16 as usize
-    }
-    unsafe extern "C" fn wlen(_s: *const u16) -> u32 {
-        WLEN_RET.load(Ordering::SeqCst) as u32
     }
     unsafe extern "C" fn resolve(_k: usize) -> usize {
         RES_RET.load(Ordering::SeqCst)
@@ -385,7 +376,6 @@ mod tests {
             HOOK_00408128 = copy;
             HOOK_0040392C = probe;
             HOOK_00404D24 = ext4;
-            HOOK_004080DC = wlen;
             HOOK_00405B90 = resolve;
             HOOK_LoadStringW = load;
             HOOK_00403814 = first;
@@ -416,7 +406,8 @@ mod tests {
             Ordering::SeqCst,
         );
         PROBE_RET.store(1, Ordering::SeqCst);
-        WLEN_RET.store(4, Ordering::SeqCst);
+        // Real 004080dc measures the terminated EXTBUF (len 4,
+        // last 't' != '.', so dot lane).
         RES_RET.store(0x77, Ordering::SeqCst);
         REL_RET.store(7, Ordering::SeqCst);
         let r = unsafe { fn_004094c0(rec.as_mut_ptr() as *mut u8, 0x5034, out.as_mut_ptr(), 0x400) };

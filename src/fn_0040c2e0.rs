@@ -1,10 +1,6 @@
 //! Original procedure `0x0040c2e0` (72 bytes, `0x0040c2e0–0x0040c327`).
 //! Evidence: `evidence/0040c2e0_fn_0040c2e0.md`.
 
-unsafe extern "C" fn default_convert(_path: *const u8) -> *const u8 {
-    core::ptr::null()
-}
-
 unsafe extern "C" fn default_create(
     _name: *const u16,
     _access: u32,
@@ -35,12 +31,9 @@ pub static mut TABLE_004129E8: [u32; 256] = [0; 256];
 /// once table extent proven.
 pub static mut TABLE_004129F8: [u32; 256] = [0; 256];
 
-/// Target `0x00404d24` (`FUN_00404d24`), `(param_2)`; returns the
-/// `CreateFileW` filename (a DATA pointer).
-///
-/// ponytail: hook standing in for done `fn_00404d24`, rewire to the real
-/// call once cross-module linkage proven.
-pub static mut HOOK_00404D24: unsafe extern "C" fn(*const u8) -> *const u8 = default_convert;
+/// Target `0x00404d24` (`FUN_00404d24`): rewired to
+/// `crate::fn_00404d24::fn_00404d24` (signatures match exactly).
+use crate::fn_00404d24::fn_00404d24;
 
 /// Import `KERNEL32.DLL::CreateFileW` (`CALL 0x00406658`), return discarded.
 ///
@@ -71,19 +64,18 @@ pub unsafe fn fn_0040c2e0(
     let disp: u32 = TABLE_004129F8[(param_3 & 0xff) as usize];
     let share: u32 = TABLE_004129E8[param_4 as usize];
     let access: u32 = TABLE_004129DC[param_5 as usize];
-    let name = HOOK_00404D24(param_2);
+    let name = fn_00404d24(param_2);
     HOOK_CreateFileW(name as *const u16, access, share, 0, disp, 0x80, 0);
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_00404D24, HOOK_CreateFileW, TABLE_004129DC, TABLE_004129E8, TABLE_004129F8,
+        HOOK_CreateFileW, TABLE_004129DC, TABLE_004129E8, TABLE_004129F8,
         fn_0040c2e0,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    static CONVERT_ARG: AtomicUsize = AtomicUsize::new(0);
     static CREATE_ARGS: [AtomicUsize; 7] = [
         AtomicUsize::new(0),
         AtomicUsize::new(0),
@@ -93,12 +85,6 @@ mod tests {
         AtomicUsize::new(0),
         AtomicUsize::new(0),
     ];
-    static CANNED: [u8; 4] = [b'a', 0, 0, 0];
-
-    unsafe extern "C" fn convert(path: *const u8) -> *const u8 {
-        CONVERT_ARG.store(path as usize, Ordering::SeqCst);
-        CANNED.as_ptr()
-    }
 
     unsafe extern "C" fn create(
         name: *const u16,
@@ -127,7 +113,6 @@ mod tests {
     #[test]
     fn masked_tables_and_arg_order() {
         unsafe {
-            HOOK_00404D24 = convert;
             HOOK_CreateFileW = create;
             TABLE_004129F8[3] = 0x10;
             TABLE_004129E8[2] = 0x20;
@@ -136,9 +121,9 @@ mod tests {
         }
         let path = 0x1234 as *const u8;
         unsafe { fn_0040c2e0(0xdead, path, 3, 2, 1) };
-        assert_eq!(CONVERT_ARG.load(Ordering::SeqCst), path as usize);
+        // Real 00404d24 passes the pointer through.
         let want = [
-            CANNED.as_ptr() as usize,
+            path as usize,
             0x30,
             0x20,
             0,

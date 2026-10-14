@@ -1,10 +1,6 @@
 //! Original procedure `0x004063e4` (106 bytes, `0x004063e4–0x0040644d`).
 //! Evidence: `evidence/004063e4_fn_004063e4.md`.
 
-unsafe extern "C" fn default_resolve(_key: *mut u8) -> usize {
-    0
-}
-
 unsafe extern "C" fn default_load_string(
     _h: usize,
     _id: u32,
@@ -18,13 +14,9 @@ unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8, _n: u32) {}
 
 unsafe extern "C" fn default_store_wide(_slot: *mut u8, _s: *mut u16) {}
 
-/// Target `0x00405b90` (`FUN_00405b90`), called with `**param_1`;
-/// result is the `LoadStringW` instance.
-///
-/// ponytail: hook standing in for done `fn_00405b90` (which returns
-/// the DATA pointer or resolved value), rewire to the real call
-/// once cross-module linkage proven.
-pub static mut HOOK_00405b90: unsafe extern "C" fn(*mut u8) -> usize = default_resolve;
+/// Target `0x00405b90` (`FUN_00405b90`): rewired to
+/// `crate::fn_00405b90::fn_00405b90` (signatures match exactly).
+use crate::fn_00405b90::fn_00405b90;
 
 /// Import thunk `0x00401138` (`USER32.DLL::LoadStringW`),
 /// `(hInstance, uID, lpBuffer, 0x1000)`.
@@ -71,7 +63,7 @@ pub unsafe fn fn_004063e4(param_1: *const u8, param_2: *mut u8) {
     if (id as i32) < 0x10000 {
         let mid: *mut u8 = core::ptr::read_unaligned(param_1 as *const *mut u8);
         let key: *mut u8 = core::ptr::read_unaligned(mid as *const *mut u8);
-        let h: usize = HOOK_00405b90(key);
+        let h: usize = fn_00405b90(key);
         let n: i32 = LOAD_STRING_W_00401138(h, id, buf.as_mut_ptr(), 0x1000);
         HOOK_00404dd4(param_2, buf.as_mut_ptr() as *mut u8, n as u32);
     } else {
@@ -81,12 +73,10 @@ pub unsafe fn fn_004063e4(param_1: *const u8, param_2: *mut u8) {
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00404dd4, HOOK_00404e14, HOOK_00405b90, LOAD_STRING_W_00401138, fn_004063e4};
+    use super::{HOOK_00404dd4, HOOK_00404e14, LOAD_STRING_W_00401138, fn_004063e4};
+    use crate::fn_00405b90::DAT_0041202c;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    static RES_HITS: AtomicUsize = AtomicUsize::new(0);
-    static RES_ARG: AtomicUsize = AtomicUsize::new(0);
-    static RES_RET: AtomicUsize = AtomicUsize::new(0);
     static LS_HITS: AtomicUsize = AtomicUsize::new(0);
     static LS_H: AtomicUsize = AtomicUsize::new(0);
     static LS_ID: AtomicUsize = AtomicUsize::new(0);
@@ -100,12 +90,6 @@ mod tests {
     static W_HITS: AtomicUsize = AtomicUsize::new(0);
     static W_SLOT: AtomicUsize = AtomicUsize::new(0);
     static W_SRC: AtomicUsize = AtomicUsize::new(0);
-
-    unsafe extern "C" fn resolve(key: *mut u8) -> usize {
-        RES_HITS.fetch_add(1, Ordering::SeqCst);
-        RES_ARG.store(key as usize, Ordering::SeqCst);
-        RES_RET.load(Ordering::SeqCst)
-    }
 
     unsafe extern "C" fn load_string(h: usize, id: u32, buf: *mut u16, cch: i32) -> i32 {
         LS_HITS.fetch_add(1, Ordering::SeqCst);
@@ -130,7 +114,6 @@ mod tests {
     }
 
     fn reset() {
-        RES_HITS.store(0, Ordering::SeqCst);
         LS_HITS.store(0, Ordering::SeqCst);
         ST_HITS.store(0, Ordering::SeqCst);
         W_HITS.store(0, Ordering::SeqCst);
@@ -139,17 +122,17 @@ mod tests {
     #[test]
     fn null_resource_direct_lanes() {
         unsafe {
-            HOOK_00405b90 = resolve;
             LOAD_STRING_W_00401138 = load_string;
             HOOK_00404dd4 = store;
             HOOK_00404e14 = store_wide;
+            // Real 00405b90 with an empty list echoes the key.
+            DAT_0041202c = core::ptr::null_mut();
         }
         let mut slot = [0u8; 8];
         let param_2 = slot.as_mut_ptr();
         // Null lane: silent.
         reset();
         unsafe { fn_004063e4(core::ptr::null(), param_2) };
-        assert_eq!(RES_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(LS_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(ST_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(W_HITS.load(Ordering::SeqCst), 0);
@@ -161,13 +144,11 @@ mod tests {
         let id: u32 = 0x1234;
         let rec = [&mut mid as *mut *mut u8 as usize, id as usize];
         let param_1 = rec.as_ptr() as *const u8;
-        RES_RET.store(0x51, Ordering::SeqCst);
         LS_RET.store(7, Ordering::SeqCst);
         unsafe { fn_004063e4(param_1, param_2) };
-        assert_eq!(RES_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(RES_ARG.load(Ordering::SeqCst), key_ptr as usize);
+        // Real 00405b90 echoes the key on an empty list.
         assert_eq!(LS_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(LS_H.load(Ordering::SeqCst), 0x51);
+        assert_eq!(LS_H.load(Ordering::SeqCst), key_ptr as usize);
         assert_eq!(LS_ID.load(Ordering::SeqCst), 0x1234);
         assert_eq!(LS_CCH.load(Ordering::SeqCst), 0x1000);
         assert_eq!(ST_HITS.load(Ordering::SeqCst), 1);
@@ -184,7 +165,6 @@ mod tests {
         assert_eq!(W_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(W_SLOT.load(Ordering::SeqCst), param_2 as usize);
         assert_eq!(W_SRC.load(Ordering::SeqCst), 0x10000);
-        assert_eq!(RES_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(LS_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(ST_HITS.load(Ordering::SeqCst), 0);
     }
