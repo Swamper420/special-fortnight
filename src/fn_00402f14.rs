@@ -47,6 +47,9 @@ mod tests {
     static INDIRECT_HITS: AtomicUsize = AtomicUsize::new(0);
     static INDIRECT_A: AtomicUsize = AtomicUsize::new(0);
     static FAKE: [u8; 8] = [0, 0, 0, 0, 0xAB, 0, 0, 0];
+    static mut EMPTY_CTX: *const u8 = core::ptr::null();
+    static TLS_CALLS: AtomicUsize = AtomicUsize::new(0);
+    static TLS_FIRST_FAKE: AtomicUsize = AtomicUsize::new(0);
 
     unsafe extern "C" fn indirect(a: u32, _b: u32) {
         INDIRECT_HITS.fetch_add(1, Ordering::SeqCst);
@@ -54,27 +57,42 @@ mod tests {
     }
 
     /// Stands in for the OS import behind real `fn_00406588`.
+    /// Lane 1's `bl == 0` path reads `[fake+4]`; every later call
+    /// comes from the main loop's take chain, which needs a null
+    /// inner (empty queue) — a `u8`-array head would decode as a
+    /// wild 64-bit pointer.
     unsafe extern "C" fn tls_value(_index: u32) -> *const u8 {
-        FAKE.as_ptr()
+        if TLS_FIRST_FAKE.load(Ordering::SeqCst) == 1
+            && TLS_CALLS.fetch_add(1, Ordering::SeqCst) == 0
+        {
+            FAKE.as_ptr()
+        } else {
+            core::ptr::addr_of!(EMPTY_CTX) as *const u8
+        }
     }
 
     #[test]
     fn masked_probe_then_zero_table_passthrough_lanes() {
-        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
         // Final lane runs the real `fn_00402f08` → `fn_004046ac` →
         // main-loop chain: cells take the args, loop takes the
-        // zeroed quick-exit lane.
+        // zeroed quick-exit lane with an empty take queue
+        // (outermost-call-first lock order).
         let _f08 = crate::fn_004046ac::TEST_LOCK.lock().unwrap();
         let _loop = crate::fn_00404580::TEST_LOCK.lock().unwrap();
-        let (old_flag, old_hook, old_index);
+        let _take = crate::fn_00402ec8::TEST_LOCK.lock().unwrap();
+        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        let (old_flag, old_hook, old_index, old_cb);
         let (old_c4, old_b18, old_struct, old_s48, old_s2c);
         unsafe {
             old_flag = crate::fn_00406588::FLAG_00415b44;
             old_hook = crate::fn_00406588::TLS_GET_VALUE_00406520;
             old_index = crate::fn_00406588::TLS_INDEX_004127ac;
+            old_cb = crate::fn_00402ec8::HOOK_00413020;
             crate::fn_00406588::FLAG_00415b44 = 1;
             crate::fn_00406588::TLS_GET_VALUE_00406520 = tls_value;
             crate::fn_00406588::TLS_INDEX_004127ac = 0;
+            crate::fn_00402ec8::HOOK_00413020 = None;
+            EMPTY_CTX = core::ptr::null();
             HOOK_00413008 = Some(indirect);
             old_c4 = crate::fn_00404580::CELL_00412004;
             old_b18 = crate::fn_00404580::CELL_00415B18;
@@ -88,12 +106,16 @@ mod tests {
             crate::fn_00404580::SLOT_0041302C = None;
             TABLE_00412754[5] = 0x42;
         }
-        // Zero path: 0x80 -> ebx 0x00 -> [fake+4] = 0xAB.
+        // Zero path: 0x80 -> ebx 0x00 -> [fake+4] = 0xAB. First TLS
+        // call serves the fake, later ones the empty take queue.
+        TLS_FIRST_FAKE.store(1, Ordering::SeqCst);
+        TLS_CALLS.store(0, Ordering::SeqCst);
         unsafe { fn_00402f14(0x80, 0x11) };
         assert_eq!(INDIRECT_A.load(Ordering::SeqCst), 0x00);
         assert_eq!(unsafe { crate::fn_004046ac::CELL_00412000 }, 0xAB);
         assert_eq!(unsafe { crate::fn_00402f08::CELL_00412004 }, 0x11);
-        // Table path: 0x05 -> table[5] = 0x42.
+        // Table path: 0x05 -> table[5] = 0x42 (take queue stays empty).
+        TLS_FIRST_FAKE.store(0, Ordering::SeqCst);
         unsafe { fn_00402f14(0x05, 0x22) };
         assert_eq!(INDIRECT_A.load(Ordering::SeqCst), 0x05);
         assert_eq!(unsafe { crate::fn_004046ac::CELL_00412000 }, 0x42);
@@ -108,6 +130,7 @@ mod tests {
             crate::fn_00406588::FLAG_00415b44 = old_flag;
             crate::fn_00406588::TLS_GET_VALUE_00406520 = old_hook;
             crate::fn_00406588::TLS_INDEX_004127ac = old_index;
+            crate::fn_00402ec8::HOOK_00413020 = old_cb;
             crate::fn_00404580::CELL_00412004 = old_c4;
             crate::fn_00404580::CELL_00415B18 = old_b18;
             crate::fn_00404580::STRUCT_00415AE4 = old_struct;

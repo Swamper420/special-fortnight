@@ -50,9 +50,8 @@ mod tests {
     static GLI_RET: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
     static FILL_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STORE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STORE_SLOT: AtomicUsize = AtomicUsize::new(0);
-    static STORE_SRC: AtomicUsize = AtomicUsize::new(0);
+    static LS_HITS: AtomicUsize = AtomicUsize::new(0);
+    static LS_RET: AtomicUsize = AtomicUsize::new(0);
 
     const CANNED: u32 = 0x1122_3344;
 
@@ -72,51 +71,67 @@ mod tests {
         FILL_HITS.fetch_add(1, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn store_wide(slot: *mut u8, s: *mut u16) {
-        STORE_HITS.fetch_add(1, Ordering::SeqCst);
-        STORE_SLOT.store(slot as usize, Ordering::SeqCst);
-        STORE_SRC.store(s as usize, Ordering::SeqCst);
+    /// Resource load behind real `fn_004063e4` (empty-list key echo).
+    unsafe extern "C" fn load_string(_h: usize, _id: u32, _buf: *mut u16, _cch: i32) -> i32 {
+        LS_HITS.fetch_add(1, Ordering::SeqCst);
+        LS_RET.load(Ordering::SeqCst) as i32
     }
 
     #[test]
     fn resolve_then_fallback_lanes() {
         // Foreign hooks (owners hold no lock): hold the common one first.
         let _shared = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        let (old_list, old_load);
         unsafe {
             crate::fn_00408eb4::HOOK_GetLocaleInfoW = gli;
             crate::fn_00404dd4::HOOK_004054b4 = alloc;
             crate::fn_00404dd4::HOOK_00402fbc = fill;
-            crate::fn_004063e4::HOOK_00404e14 = store_wide;
+            old_list = crate::fn_00405b90::DAT_0041202c;
+            old_load = crate::fn_004063e4::LOAD_STRING_W_00401138;
+            crate::fn_00405b90::DAT_0041202c = core::ptr::null_mut();
+            crate::fn_004063e4::LOAD_STRING_W_00401138 = load_string;
         }
         // Frame anchor: [p6-4] must read back the LCID.
         let frame = [0x409u32, 0u32];
         let p6 = core::ptr::addr_of!(frame[1]) as *const u8;
-        // One-entry table -> {ptr, id} record with a direct-lane id.
-        let mut mid: *mut u8 = core::ptr::null_mut();
-        let rec = [&mut mid as *mut *mut u8 as usize, 0x1_0000usize];
+        // One-entry table -> {ptr, id} record with a resource id;
+        // the key echoes through the empty resolve list.
+        let mut key = [0xabu8; 4];
+        let mut mid: *mut u8 = key.as_mut_ptr();
+        let rec = [&mut mid as *mut *mut u8 as usize, 0x1234usize];
         let table = [rec.as_ptr() as *const u8];
         let mut slot: *mut u8 = core::ptr::null_mut();
         let slot_ptr = &mut slot as *mut *mut u8 as *mut u8;
 
-        // Fail lane: locale resolves nothing -> table fallback fires.
+        // Fail lane: locale resolves nothing -> table fallback fires
+        // the real resource lane (load 7 → alloc/fill, slot takes it).
         GLI_RET.store(0, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
+        LS_RET.store(7, Ordering::SeqCst);
+        LS_HITS.store(0, Ordering::SeqCst);
+        ALLOC_HITS.store(0, Ordering::SeqCst);
+        FILL_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_00408f2c(0x44, 0, table.as_ptr() as *const u8, slot_ptr, 0xb, p6) };
         assert_eq!(GLI_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(GLI_A.load(Ordering::SeqCst), 0x409);
         assert_eq!(GLI_B.load(Ordering::SeqCst), 0x44);
-        assert!(slot.is_null());
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_SLOT.load(Ordering::SeqCst), slot_ptr as usize);
-        assert_eq!(STORE_SRC.load(Ordering::SeqCst), 0x1_0000);
+        assert_eq!(LS_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(FILL_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(slot as usize, CANNED as usize);
 
-        // Success lane: slot set -> fallback skipped.
+        // Success lane: locale resolves (slot takes the converted
+        // value) -> table fallback skipped.
         GLI_RET.store(2, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
+        ALLOC_HITS.store(0, Ordering::SeqCst);
+        FILL_HITS.store(0, Ordering::SeqCst);
+        slot = core::ptr::null_mut();
         unsafe { fn_00408f2c(0x44, 0, table.as_ptr() as *const u8, slot_ptr, 0xb, p6) };
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(FILL_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(slot as usize, CANNED as usize);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 0);
+        unsafe {
+            crate::fn_00405b90::DAT_0041202c = old_list;
+            crate::fn_004063e4::LOAD_STRING_W_00401138 = old_load;
+        }
     }
 }

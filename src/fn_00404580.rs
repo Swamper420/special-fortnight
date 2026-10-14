@@ -98,11 +98,9 @@ pub static mut HOOK_004041DC: unsafe extern "C" fn(*mut u8) = default_sink_ptr;
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_004044C4: unsafe extern "C" fn(*mut u8) = default_sink_ptr;
 
-/// `FUN_00402ec8`, work-queue query (`() -> u32`, matches real shape).
-///
-/// ponytail: hook standing in for reconstructed `fn_00402ec8`, rewire to
-/// the real call once cross-module linkage proven.
-pub static mut HOOK_00402EC8: unsafe extern "C" fn() -> u32 = default_ret0;
+/// `FUN_00402ec8`, work-queue query (`() -> u32`, matches real shape):
+/// direct intra-reconstruction call (rewired; signatures verified
+/// `fn() -> u32`).
 
 /// `FUN_00403894`, called with the queued item dword.
 ///
@@ -173,7 +171,7 @@ pub unsafe fn fn_00404580() {
             STRUCT_00415AE4[3] = 0;
         }
         loop {
-            let p = HOOK_00402EC8();
+            let p = crate::fn_00402ec8::fn_00402ec8();
             if p == 0 {
                 break;
             }
@@ -232,9 +230,10 @@ mod tests {
     static H41DC: AtomicUsize = AtomicUsize::new(0);
     static H44C4: AtomicUsize = AtomicUsize::new(0);
     static HDRAIN: AtomicUsize = AtomicUsize::new(0);
-    static H2EC8: AtomicUsize = AtomicUsize::new(0);
     static A3894: AtomicUsize = AtomicUsize::new(0);
     static H3894: AtomicUsize = AtomicUsize::new(0);
+    static mut TAKE_CTX: *const u8 = core::ptr::null();
+    static mut TAKE_WORDS: [u32; 3] = [0; 3];
     static H4204: AtomicUsize = AtomicUsize::new(0);
     static H6204: AtomicUsize = AtomicUsize::new(0);
     static HFINI: AtomicUsize = AtomicUsize::new(0);
@@ -268,12 +267,11 @@ mod tests {
         HDRAIN.fetch_add(1, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn s2ec8() -> u32 {
-        if H2EC8.fetch_add(1, Ordering::SeqCst) == 0 {
-            0x77
-        } else {
-            0
-        }
+    /// TLS slot behind real `fn_00402ec8` → real `fn_00406588`:
+    /// returns the take-slot address (first take returns 0x77 and
+    /// clears, second sees 0 — mirroring the old stub).
+    unsafe extern "C" fn tls_take(_index: u32) -> *const u8 {
+        core::ptr::addr_of!(TAKE_CTX) as *const u8
     }
 
     unsafe extern "C" fn s3894(p: *mut u8) {
@@ -301,17 +299,31 @@ mod tests {
     #[test]
     fn quick_exit_and_tid_mismatch() {
         let _guard = super::TEST_LOCK.lock().unwrap();
+        let _take = crate::fn_00402ec8::TEST_LOCK.lock().unwrap();
+        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        // Real take chain: slow TLS path to the take slot, no
+        // indirect callback.
+        let (old_flag, old_tls_hook, old_index, old_cb);
         unsafe {
             HOOK_00404458 = s4458;
             HOOK_004044F0 = s44f0;
             HOOK_GETCURRENTTHREADID = stid;
             HOOK_004041DC = s41dc;
             HOOK_004044C4 = s44c4;
-            HOOK_00402EC8 = s2ec8;
             HOOK_00403894 = s3894;
             HOOK_00404204 = s4204;
             HOOK_00406204 = s6204;
             HOOK_EXITPROCESS = sexit;
+            old_flag = crate::fn_00406588::FLAG_00415b44;
+            old_tls_hook = crate::fn_00406588::TLS_GET_VALUE_00406520;
+            old_index = crate::fn_00406588::TLS_INDEX_004127ac;
+            old_cb = crate::fn_00402ec8::HOOK_00413020;
+            crate::fn_00406588::FLAG_00415b44 = 1;
+            crate::fn_00406588::TLS_GET_VALUE_00406520 = tls_take;
+            crate::fn_00406588::TLS_INDEX_004127ac = 0;
+            crate::fn_00402ec8::HOOK_00413020 = None;
+            TAKE_WORDS = [0, 0, 0x77];
+            TAKE_CTX = TAKE_WORDS.as_ptr() as *const u8;
             CELL_00412004 = 1;
             CELL_00412000 = 0x5a;
             CELL_00415B18 = 1;
@@ -330,8 +342,9 @@ mod tests {
         assert_eq!(H44C4.load(Ordering::SeqCst), 1);
         assert_eq!(HDRAIN.load(Ordering::SeqCst), 1);
         assert_eq!(unsafe { SLOT_00413048 }.is_none(), true);
-        assert_eq!(H2EC8.load(Ordering::SeqCst), 2);
+        assert_eq!(H3894.load(Ordering::SeqCst), 1);
         assert_eq!(A3894.load(Ordering::SeqCst), 0x77);
+        assert_eq!(unsafe { TAKE_WORDS[2] }, 0);
         assert_eq!(H4204.load(Ordering::SeqCst), 1);
         assert_eq!(H6204.load(Ordering::SeqCst), 0);
         assert_eq!(HFINI.load(Ordering::SeqCst), 1);
@@ -358,5 +371,11 @@ mod tests {
         assert_eq!(HFINI.load(Ordering::SeqCst), 1);
         assert_eq!(HEXIT.load(Ordering::SeqCst), 2);
         assert_eq!(EXITCODE.load(Ordering::SeqCst), 0x5a);
+        unsafe {
+            crate::fn_00406588::FLAG_00415b44 = old_flag;
+            crate::fn_00406588::TLS_GET_VALUE_00406520 = old_tls_hook;
+            crate::fn_00406588::TLS_INDEX_004127ac = old_index;
+            crate::fn_00402ec8::HOOK_00413020 = old_cb;
+        }
     }
 }

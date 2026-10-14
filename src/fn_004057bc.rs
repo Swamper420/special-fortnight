@@ -58,6 +58,11 @@ pub static mut HOOK_00405B20: unsafe extern "C" fn(usize, usize, *mut u8) =
 /// two-lane call once cross-module test serialization exists.
 pub static mut TAIL_00402F60: unsafe extern "C" fn(u32) = default_tail;
 
+/// Test-only serialization for tests sharing this module's hooks
+/// (also held by cross-module tests that drive `fn_004057bc`).
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Tag-dispatched counted filler: one loop per tag over `param_4`
 /// items. Params arrive in EAX/EDX/ECX (+stack count) per Ghidra
 /// `__register` observation; `RET 0x4` pops the stack count, modeled
@@ -192,7 +197,7 @@ pub unsafe fn fn_004057bc(
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00405664, TAIL_00402F60, fn_004057bc};
+    use super::{HOOK_00405664, TAIL_00402F60, TEST_LOCK, fn_004057bc};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static LANE_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -212,6 +217,7 @@ mod tests {
 
     #[test]
     fn stride_loop_and_fail_tail() {
+        let _guard = TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00405664 = lane;
             TAIL_00402F60 = tail;

@@ -1,14 +1,10 @@
 //! Original procedure `0x004046c4` (35 bytes, `0x004046c4–0x004046e6`).
 //! Evidence: `evidence/004046c4_fn_004046c4.md`.
 
-unsafe extern "C" fn default_target(_arg: u32) {}
-
 /// Target `0x00402e20` (`FUN_00402e20`), called with `obj-12` when the
-/// locked count hits zero; slot (EAX) preserved across the call.
-///
-/// ponytail: hook standing in for reconstructed `fn_00402e20`, rewire
-/// to real call once cross-module linkage proven.
-pub static mut HOOK_00402E20: unsafe extern "C" fn(u32) = default_target;
+/// locked count hits zero; slot (EAX) preserved across the call:
+/// direct intra-reconstruction call (rewired; signatures verified
+/// `fn(u32)`).
 
 /// Refcount release: `obj=[slot]; if obj { [slot]=0; if [obj-8]>0 {
 /// LOCK DEC [obj-8]; if zero { callee(obj-12) } } }`, returns slot.
@@ -34,25 +30,27 @@ pub unsafe fn fn_004046c4(slot: *mut u8) -> *mut u8 {
     if next != 0 {
         return slot;
     }
-    HOOK_00402E20(obj.wrapping_byte_sub(12) as u32);
+    crate::fn_00402e20::fn_00402e20(obj.wrapping_byte_sub(12) as u32);
     slot
 }
 
-/// Test-only serialization for tests sharing HOOK_00402E20 (also
-/// held by cross-module tests that call `fn_004046c4` directly).
+/// Test-only serialization for tests driving the real `fn_00402e20`
+/// chain (also held by cross-module tests that call `fn_004046c4`
+/// directly).
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00402E20, TEST_LOCK, fn_004046c4};
+    use super::{TEST_LOCK, fn_004046c4};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    static HITS: AtomicUsize = AtomicUsize::new(0);
-    static ARG: AtomicUsize = AtomicUsize::new(0);
+    static INDIRECT_HITS: AtomicUsize = AtomicUsize::new(0);
 
-    unsafe extern "C" fn target(arg: u32) {
-        HITS.fetch_add(1, Ordering::SeqCst);
-        ARG.store(arg as usize, Ordering::SeqCst);
+    /// Probe for the done dtor's indirect slot: counts entries,
+    /// returns 0 so its tail lane never fires.
+    unsafe extern "C" fn indirect() -> u32 {
+        INDIRECT_HITS.fetch_add(1, Ordering::SeqCst);
+        0
     }
 
     /// Arena: obj = base+12; count cell = base+4 (`obj-8`);
@@ -79,39 +77,50 @@ mod tests {
     #[test]
     fn release_lanes() {
         let _guard = TEST_LOCK.lock().unwrap();
-        unsafe { HOOK_00402E20 = target };
+        let _callee = crate::fn_00402e20::TEST_LOCK.lock().unwrap();
+        // Real `fn_00402e20` behind the zero-hit lane: the probe
+        // counts the dispatch, returning 0 so the tail never fires.
+        let old_ptr;
+        unsafe {
+            old_ptr = crate::fn_00402e20::PTR_00412740;
+            crate::fn_00402e20::PTR_00412740 = indirect;
+        }
         // Null lane: no call, slot untouched.
         let mut null_slot: *mut u8 = core::ptr::null_mut();
         let null_ptr = &mut null_slot as *mut *mut u8 as *mut u8;
-        HITS.store(0, Ordering::SeqCst);
+        INDIRECT_HITS.store(0, Ordering::SeqCst);
         let ret = unsafe { fn_004046c4(null_ptr) };
         assert_eq!(ret, null_ptr);
         assert!(null_slot.is_null());
-        assert_eq!(HITS.load(Ordering::SeqCst), 0);
+        assert_eq!(INDIRECT_HITS.load(Ordering::SeqCst), 0);
         // Zero-count lane: slot cleared, no call.
         lane!(arena0, _base0, _slot0, slot_ptr0, 0);
-        HITS.store(0, Ordering::SeqCst);
+        INDIRECT_HITS.store(0, Ordering::SeqCst);
         let ret = unsafe { fn_004046c4(slot_ptr0) };
         assert_eq!(ret, slot_ptr0);
         assert!(unsafe { slot_cleared(slot_ptr0) });
         assert_eq!(unsafe { count_at(&mut arena0) }, 0);
-        assert_eq!(HITS.load(Ordering::SeqCst), 0);
+        assert_eq!(INDIRECT_HITS.load(Ordering::SeqCst), 0);
         // Count=2 lane: slot cleared, count 1, no call.
         lane!(arena2, _base2, _slot2, slot_ptr2, 2);
-        HITS.store(0, Ordering::SeqCst);
+        INDIRECT_HITS.store(0, Ordering::SeqCst);
         let ret = unsafe { fn_004046c4(slot_ptr2) };
         assert_eq!(ret, slot_ptr2);
         assert!(unsafe { slot_cleared(slot_ptr2) });
         assert_eq!(unsafe { count_at(&mut arena2) }, 1);
-        assert_eq!(HITS.load(Ordering::SeqCst), 0);
-        // Count=1 lane: slot cleared, count 0, one call with obj-12.
-        lane!(arena1, base1, _slot1, slot_ptr1, 1);
-        HITS.store(0, Ordering::SeqCst);
+        assert_eq!(INDIRECT_HITS.load(Ordering::SeqCst), 0);
+        // Count=1 lane: slot cleared, count 0, one real dispatch
+        // with `obj-12` (the probe observes the entry; the exact
+        // word is covered by `fn_00402e20`'s own tail-encoding test).
+        lane!(arena1, _base1, _slot1, slot_ptr1, 1);
+        INDIRECT_HITS.store(0, Ordering::SeqCst);
         let ret = unsafe { fn_004046c4(slot_ptr1) };
         assert_eq!(ret, slot_ptr1);
         assert!(unsafe { slot_cleared(slot_ptr1) });
         assert_eq!(unsafe { count_at(&mut arena1) }, 0);
-        assert_eq!(HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(ARG.load(Ordering::SeqCst), base1 as u32 as usize);
+        assert_eq!(INDIRECT_HITS.load(Ordering::SeqCst), 1);
+        unsafe {
+            crate::fn_00402e20::PTR_00412740 = old_ptr;
+        }
     }
 }

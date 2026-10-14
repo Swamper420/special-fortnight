@@ -75,8 +75,6 @@ mod tests {
     static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_ARG: AtomicUsize = AtomicUsize::new(0);
     static CLEAN_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STORE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STORE_B: AtomicUsize = AtomicUsize::new(0);
     static FAIL_HITS: AtomicUsize = AtomicUsize::new(0);
 
     static mut CANNED: [u8; 64] = [0; 64];
@@ -119,11 +117,6 @@ mod tests {
         CLEAN_HITS.fetch_add(1, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn store(_a: *mut u8, b: *mut u8) {
-        STORE_HITS.fetch_add(1, Ordering::SeqCst);
-        STORE_B.store(b as usize, Ordering::SeqCst);
-    }
-
     unsafe extern "C" fn fail(_n: u32) {
         FAIL_HITS.fetch_add(1, Ordering::SeqCst);
     }
@@ -134,7 +127,6 @@ mod tests {
         T4F98.store(0, Ordering::SeqCst);
         ALLOC_HITS.store(0, Ordering::SeqCst);
         CLEAN_HITS.store(0, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
         FAIL_HITS.store(0, Ordering::SeqCst);
     }
 
@@ -157,13 +149,12 @@ mod tests {
         // Real callees under the common owner lock; the `fn_00405082`
         // lane hooks saved + restored.
         let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
-        let (old_pin, old_norm, old_alloc, old_clean, old_store, old_fail);
+        let (old_pin, old_norm, old_alloc, old_clean, old_fail);
         unsafe {
             old_pin = crate::fn_00405082::HOOK_00404c80;
             old_norm = crate::fn_00405082::HOOK_00404830;
             old_alloc = crate::fn_00405082::HOOK_004054b4;
             old_clean = crate::fn_00405082::HOOK_004046e8;
-            old_store = crate::fn_00405082::HOOK_00404c98;
             old_fail = crate::fn_00405082::HOOK_00402f60;
             TAIL_00405127 = t127;
             TAIL_0040512e = t12e;
@@ -172,7 +163,6 @@ mod tests {
             crate::fn_00405082::HOOK_00404830 = norm;
             crate::fn_00405082::HOOK_004054b4 = alloc;
             crate::fn_00405082::HOOK_004046e8 = cleanup;
-            crate::fn_00405082::HOOK_00404c98 = store;
             crate::fn_00405082::HOOK_00402f60 = fail;
         }
         let mut cell: *mut u8 = core::ptr::null_mut();
@@ -204,7 +194,8 @@ mod tests {
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
 
         // p3==*p1 → real 5082 concat (3+5=8): alloc(8), no
-        // cleanup (tag-2 skips norm), store(slot, new).
+        // cleanup (tag-2 skips norm), real store(slot, new) takes
+        // it (old p3 released 4→3, new 1→0→1).
         clear();
         let mut arena2 = [0u8; 64];
         let mut arena3 = [0u8; 64];
@@ -228,8 +219,9 @@ mod tests {
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(ALLOC_ARG.load(Ordering::SeqCst), 8);
         assert_eq!(CLEAN_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_B.load(Ordering::SeqCst), new as usize);
+        assert_eq!(cell, new);
+        assert_eq!(unsafe { rc_of(new) }, 1);
+        assert_eq!(unsafe { rc_of(p3) }, 3);
         assert_eq!(FAIL_HITS.load(Ordering::SeqCst), 0);
         let mut got = [0u8; 16];
         unsafe { core::ptr::copy_nonoverlapping(new, got.as_mut_ptr(), 16) };
@@ -255,7 +247,6 @@ mod tests {
             crate::fn_00405082::HOOK_00404830 = old_norm;
             crate::fn_00405082::HOOK_004054b4 = old_alloc;
             crate::fn_00405082::HOOK_004046e8 = old_clean;
-            crate::fn_00405082::HOOK_00404c98 = old_store;
             crate::fn_00405082::HOOK_00402f60 = old_fail;
         }
     }

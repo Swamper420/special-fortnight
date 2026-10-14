@@ -64,8 +64,9 @@ mod tests {
         Q_RET.load(Ordering::SeqCst) as *const u8
     }
 
-    /// Resolver for the real `fn_00402ec8`: points at the take slot.
-    unsafe extern "C" fn take_resolver() -> *const u8 {
+    /// TLS slot behind real `fn_00402ec8` → real `fn_00406588`:
+    /// returns the take-slot address.
+    unsafe extern "C" fn tls_get_value(_index: u32) -> *const u8 {
         core::ptr::addr_of!(TAKE_CTX) as *const u8
     }
 
@@ -87,10 +88,21 @@ mod tests {
 
     #[test]
     fn flag_miss_and_hit_lanes() {
+        // Real `fn_00402ec8` → real `fn_00406588` chain: hold both
+        // owner locks while programming the TLS slot.
+        let _take = crate::fn_00402ec8::TEST_LOCK.lock().unwrap();
+        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        let (old_flag, old_hook, old_index, old_cb);
         unsafe {
             HOOK_00402e88 = query;
-            // Take lane observed through the real `fn_00402ec8`.
-            crate::fn_00402ec8::HOOK_00406588 = take_resolver;
+            old_flag = crate::fn_00406588::FLAG_00415b44;
+            old_hook = crate::fn_00406588::TLS_GET_VALUE_00406520;
+            old_index = crate::fn_00406588::TLS_INDEX_004127ac;
+            old_cb = crate::fn_00402ec8::HOOK_00413020;
+            // Take lane observed through the real chain.
+            crate::fn_00406588::FLAG_00415b44 = 1;
+            crate::fn_00406588::TLS_GET_VALUE_00406520 = tls_get_value;
+            crate::fn_00406588::TLS_INDEX_004127ac = 0;
             crate::fn_00402ec8::HOOK_00413020 = None;
         }
         // Feasible buffer: flag at +0x14, slot at +0xc.
@@ -138,6 +150,10 @@ mod tests {
             fn_00409a2c(p);
             assert_eq!(*p.wrapping_byte_add(0xc).cast::<u32>(), 0x9e37_79b9);
             assert_eq!(TAKE_INNER[2], 0);
+            crate::fn_00406588::FLAG_00415b44 = old_flag;
+            crate::fn_00406588::TLS_GET_VALUE_00406520 = old_hook;
+            crate::fn_00406588::TLS_INDEX_004127ac = old_index;
+            crate::fn_00402ec8::HOOK_00413020 = old_cb;
         }
     }
 }

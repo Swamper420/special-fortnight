@@ -57,9 +57,11 @@ mod tests {
     static RAISE_EXTRA: AtomicUsize = AtomicUsize::new(0);
     static TAIL_HITS: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
-    static ALLOC_ARG: AtomicUsize = AtomicUsize::new(0);
 
-    static mut WORDS: [u32; 2] = [0, 0];
+    // Pointer-sized lanes: the same TLS stub feeds real `fn_00402efc`
+    // (u32 head read) and real `fn_00402ec8` (pointer-sized inner
+    // read, null here so the work loop breaks immediately).
+    static mut WORDS: [usize; 2] = [0, 0];
 
     unsafe extern "C" fn raise(code: u32, flags: u32, extra: u32) {
         RAISE_HITS.fetch_add(1, Ordering::SeqCst);
@@ -78,32 +80,48 @@ mod tests {
         core::ptr::addr_of!(WORDS) as *const u8
     }
 
-    unsafe extern "C" fn alloc_tail(arg: u32) {
+    /// Observer on the real main loop's `41dc` site (fires once on the
+    /// zeroed quick-exit lane behind the real `fn_004046b8` chain).
+    unsafe extern "C" fn site41dc(_p: *mut u8) {
         ALLOC_HITS.fetch_add(1, Ordering::SeqCst);
-        ALLOC_ARG.store(arg as usize, Ordering::SeqCst);
     }
 
     #[test]
     fn alloc_raise_tail_lanes() {
-        // Foreign hooks/cells (no shared locks exist): save, use in a
-        // tight window, restore. Asserts run after restore.
+        // Foreign hooks/cells: save, use in a tight window, restore
+        // (outermost-call-first lock order). Asserts run after restore.
+        let _b8 = crate::fn_004046b8::TEST_LOCK.lock().unwrap();
+        let _ac = crate::fn_004046ac::TEST_LOCK.lock().unwrap();
+        let _loop = crate::fn_00404580::TEST_LOCK.lock().unwrap();
         let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
-        let (old_hook, old_tail, old_cell, old_alloc);
+        let (old_hook, old_tail, old_cell, old_c0);
         let (old_flag, old_tls_hook, old_index);
+        let (old_c4, old_b18, old_struct, old_s48, old_s2c, old_41dc);
         unsafe {
             old_hook = HOOK_0041301C;
             old_tail = TAIL_00413014;
             old_cell = crate::fn_004046b8::CELL_00412004;
-            old_alloc = crate::fn_004046b8::HOOK_004046ac;
+            old_c0 = crate::fn_004046ac::CELL_00412000;
             old_flag = crate::fn_00406588::FLAG_00415b44;
             old_tls_hook = crate::fn_00406588::TLS_GET_VALUE_00406520;
             old_index = crate::fn_00406588::TLS_INDEX_004127ac;
+            old_c4 = crate::fn_00404580::CELL_00412004;
+            old_b18 = crate::fn_00404580::CELL_00415B18;
+            old_struct = crate::fn_00404580::STRUCT_00415AE4;
+            old_s48 = crate::fn_00404580::SLOT_00413048;
+            old_s2c = crate::fn_00404580::SLOT_0041302C;
+            old_41dc = crate::fn_00404580::HOOK_004041DC;
             HOOK_0041301C = None;
             TAIL_00413014 = tail14;
-            crate::fn_004046b8::HOOK_004046ac = alloc_tail;
             crate::fn_00406588::FLAG_00415b44 = 1;
             crate::fn_00406588::TLS_GET_VALUE_00406520 = tls_value;
             crate::fn_00406588::TLS_INDEX_004127ac = 0;
+            crate::fn_00404580::CELL_00412004 = 0;
+            crate::fn_00404580::CELL_00415B18 = 0;
+            crate::fn_00404580::STRUCT_00415AE4 = [0; 12];
+            crate::fn_00404580::SLOT_00413048 = None;
+            crate::fn_00404580::SLOT_0041302C = None;
+            crate::fn_00404580::HOOK_004041DC = site41dc;
             WORDS = [0, 0x99];
         }
         // Nonzero param: no alloc, null slot: no raise, tail fires.
@@ -114,13 +132,13 @@ mod tests {
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(RAISE_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 1);
-        // Zero param: alloc via 0x004046b8(0xd8) with the retaddr-slot word.
+        // Zero param: alloc via real 0x004046b8(0xd8) with the retaddr-slot word.
         RAISE_HITS.store(0, Ordering::SeqCst);
         TAIL_HITS.store(0, Ordering::SeqCst);
         ALLOC_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_00403f88(0) };
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(ALLOC_ARG.load(Ordering::SeqCst), 0xd8);
+        assert_eq!(unsafe { crate::fn_004046ac::CELL_00412000 }, 0xd8);
         assert_eq!(unsafe { crate::fn_004046b8::CELL_00412004 }, 0x00403f96);
         assert_eq!(RAISE_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 1);
@@ -139,10 +157,16 @@ mod tests {
             HOOK_0041301C = old_hook;
             TAIL_00413014 = old_tail;
             crate::fn_004046b8::CELL_00412004 = old_cell;
-            crate::fn_004046b8::HOOK_004046ac = old_alloc;
+            crate::fn_004046ac::CELL_00412000 = old_c0;
             crate::fn_00406588::FLAG_00415b44 = old_flag;
             crate::fn_00406588::TLS_GET_VALUE_00406520 = old_tls_hook;
             crate::fn_00406588::TLS_INDEX_004127ac = old_index;
+            crate::fn_00404580::CELL_00412004 = old_c4;
+            crate::fn_00404580::CELL_00415B18 = old_b18;
+            crate::fn_00404580::STRUCT_00415AE4 = old_struct;
+            crate::fn_00404580::SLOT_00413048 = old_s48;
+            crate::fn_00404580::SLOT_0041302C = old_s2c;
+            crate::fn_00404580::HOOK_004041DC = old_41dc;
         }
     }
 }

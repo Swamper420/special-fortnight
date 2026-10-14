@@ -13,8 +13,6 @@ unsafe extern "C" fn default_class(_ch: u16) -> u32 {
     0
 }
 
-unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8) {}
-
 unsafe extern "C" fn default_slice(_obj: *mut u8, _one: i32, _n: i32, _dest: *mut u8) {}
 
 /// Scanner `0x0040b3cc` (`FUN_0040b3cc`), `(obj, 1)`.
@@ -38,11 +36,9 @@ pub static mut HOOK_0040b620: unsafe extern "C" fn(*mut u8, *mut u8) -> *mut u16
 /// to real `fn_0040b334` once it exists.
 pub static mut HOOK_0040b334: unsafe extern "C" fn(u16) -> u32 = default_class;
 
-/// Store `0x00404c98` (`FUN_00404c98`), `(dest_slot, src)`.
-///
-/// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire
-/// to the real call once cross-module linkage proven.
-pub static mut HOOK_00404c98: unsafe extern "C" fn(*mut u8, *mut u8) = default_store;
+/// Store `0x00404c98` (`FUN_00404c98`), `(dest_slot, src)`: direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, *mut u8)`).
 
 /// Slicer `0x0040525c` (`FUN_0040525c`), `(obj, 1, n, dest)`.
 ///
@@ -79,7 +75,7 @@ pub unsafe fn fn_0040b62c(param_1: *mut u8, param_2: *mut u8) {
         core::ptr::read_unaligned(param_1.wrapping_byte_offset(-4) as *const i32)
     };
     if len == n {
-        HOOK_00404c98(param_2, param_1);
+        crate::fn_00404c98::fn_00404c98(param_2, param_1);
     } else {
         HOOK_0040525c(param_1, 1, n, param_2);
     }
@@ -87,7 +83,7 @@ pub unsafe fn fn_0040b62c(param_1: *mut u8, param_2: *mut u8) {
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00404c98, HOOK_0040525c, HOOK_0040b334, HOOK_0040b3cc, HOOK_0040b620, fn_0040b62c};
+    use super::{HOOK_0040525c, HOOK_0040b334, HOOK_0040b3cc, HOOK_0040b620, fn_0040b62c};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static SCAN_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -97,9 +93,6 @@ mod tests {
     static CLASS_HITS: AtomicUsize = AtomicUsize::new(0);
     static CLASS_CH: AtomicUsize = AtomicUsize::new(0);
     static CLASS_SEQ: AtomicUsize = AtomicUsize::new(0);
-    static STORE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STORE_A: AtomicUsize = AtomicUsize::new(0);
-    static STORE_B: AtomicUsize = AtomicUsize::new(0);
     static SLICE_HITS: AtomicUsize = AtomicUsize::new(0);
     static SLICE_B: AtomicUsize = AtomicUsize::new(0);
     static SLICE_C: AtomicUsize = AtomicUsize::new(0);
@@ -130,12 +123,6 @@ mod tests {
         }
     }
 
-    unsafe extern "C" fn store(a: *mut u8, b: *mut u8) {
-        STORE_HITS.fetch_add(1, Ordering::SeqCst);
-        STORE_A.store(a as usize, Ordering::SeqCst);
-        STORE_B.store(b as usize, Ordering::SeqCst);
-    }
-
     unsafe extern "C" fn slice(_o: *mut u8, b: i32, c: i32, d: *mut u8) {
         SLICE_HITS.fetch_add(1, Ordering::SeqCst);
         SLICE_B.store(b as usize, Ordering::SeqCst);
@@ -143,60 +130,65 @@ mod tests {
         SLICE_D.store(d as usize, Ordering::SeqCst);
     }
 
-    /// Header arena: obj = base+12; length at base+8 (`obj-4`).
+    /// Header arena: obj = base+12; tag 2 at base+2 (`obj-10`),
+    /// refcount at base+4 (`obj-8`), length at base+8 (`obj-4`).
     unsafe fn hdr(arena: &mut [u32; 4], len: u32) -> *mut u8 {
         let base = arena.as_mut_ptr() as *mut u8;
+        core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, 2);
+        core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, 5);
         core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut u32, len);
         base.wrapping_byte_add(12)
     }
 
+    unsafe fn rc_of(p: *mut u8) -> u32 {
+        core::ptr::read_unaligned(p.wrapping_byte_offset(-8) as *const u32)
+    }
+
     #[test]
     fn scan_store_slice_lanes() {
+        // Real `fn_00404c98` behind the store lane (null old → no
+        // dtor): hold the common owner lock.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_0040b3cc = scan;
             HOOK_0040b620 = at;
             HOOK_0040b334 = class;
-            HOOK_00404c98 = store;
             HOOK_0040525c = slice;
         }
         let mut dest: *mut u8 = core::ptr::null_mut();
         let dest_ptr = &mut dest as *mut *mut u8 as *mut u8;
 
-        // Null lane: scan(?,1), no loop, store(dest, null).
+        // Null lane: scan(?,1), no loop, real store(dest, null)
+        // no-op (dest stays null).
         SCAN_RET.store(5, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
         SLICE_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040b62c(core::ptr::null_mut(), dest_ptr) };
         assert_eq!(SCAN_ONE.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_A.load(Ordering::SeqCst), dest_ptr as usize);
-        assert_eq!(STORE_B.load(Ordering::SeqCst), 0);
+        assert!(dest.is_null());
         assert_eq!(SLICE_HITS.load(Ordering::SeqCst), 0);
 
         // Equal lane: len 3, scan→0, char releases at once →
-        // break at n=3 → 3==3 → store lane; at-addr = obj+6.
+        // break at n=3 → 3==3 → real store lane; at-addr = obj+6.
+        // Headed obj taken (rc 5→6).
         let mut a_eq = [0u32; 4];
         let obj = unsafe { hdr(&mut a_eq, 3) };
         SCAN_RET.store(0, Ordering::SeqCst);
         CLASS_SEQ.store(1, Ordering::SeqCst);
         CLASS_HITS.store(0, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
         SLICE_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040b62c(obj, dest_ptr) };
         assert_eq!(CLASS_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(CLASS_CH.load(Ordering::SeqCst), 0x41);
         assert_eq!(AT_ADDR.load(Ordering::SeqCst), (obj as usize).wrapping_add(6));
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_B.load(Ordering::SeqCst), obj as usize);
+        assert_eq!(dest, obj);
+        assert_eq!(unsafe { rc_of(obj) }, 6);
         assert_eq!(SLICE_HITS.load(Ordering::SeqCst), 0);
 
         // Shrink lane: reset seq so first call holds (n 3→2)
         // then releases → break at 2 → 3!=2 → slice(obj,1,2,dest).
         CLASS_SEQ.store(0, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
         SLICE_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040b62c(obj, dest_ptr) };
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(SLICE_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(SLICE_B.load(Ordering::SeqCst), 1);
         assert_eq!(SLICE_C.load(Ordering::SeqCst), 2);

@@ -203,9 +203,6 @@ mod tests {
     static FAIL_ARG: AtomicUsize = AtomicUsize::new(0);
     static FILL_HITS: AtomicUsize = AtomicUsize::new(0);
     static FILL_A: AtomicUsize = AtomicUsize::new(0);
-    static FILL_B: AtomicUsize = AtomicUsize::new(0);
-    static FILL_C: AtomicUsize = AtomicUsize::new(0);
-    static FILL_D: AtomicUsize = AtomicUsize::new(0);
     static POOL_NEXT: AtomicUsize = AtomicUsize::new(0);
 
     static mut TOP_BUF: *mut u32 = core::ptr::null_mut();
@@ -245,15 +242,13 @@ mod tests {
         FAIL_ARG.store(code as usize, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn fill57_hook(a: usize, b: usize, c: *mut u8, d: u32) {
+    /// Fail tail behind the real `fn_004057bc`: the test descriptors
+    /// carry an unknown tag, so the forward lands here with
+    /// `((dst as u32) & ~0xff) | 2`.
+    unsafe extern "C" fn tail57(code: u32) {
         FILL_HITS.fetch_add(1, Ordering::SeqCst);
-        FILL_A.store(a, Ordering::SeqCst);
-        FILL_B.store(b, Ordering::SeqCst);
-        FILL_C.store(c as usize, Ordering::SeqCst);
-        FILL_D.store(d as usize, Ordering::SeqCst);
+        FILL_A.store(code as usize, Ordering::SeqCst);
     }
-
-    unsafe extern "C" fn no57(_a: usize, _b: usize, _c: *mut u8, _d: u32) {}
 
     unsafe extern "C" fn no5ae4(_a: *mut usize, _b: *const u8) {}
 
@@ -272,20 +267,21 @@ mod tests {
     fn grow_copy_recurse() {
         let _l20 = crate::fn_00405920::TEST_LOCK.lock().unwrap();
         let _l38 = crate::fn_00405938::TEST_LOCK.lock().unwrap();
+        let _l57 = crate::fn_004057bc::TEST_LOCK.lock().unwrap();
         let _own = TEST_LOCK.lock().unwrap();
-        let saved_57 = unsafe { crate::fn_00405920::HOOK_004057BC };
+        let saved_tail = unsafe { crate::fn_004057bc::TAIL_00402F60 };
         let saved_ae4 = unsafe { crate::fn_00405938::HOOK_00405AE4 };
         unsafe {
             HOOK_00402E04 = alloc_hook;
             HOOK_00402E38 = realloc_hook;
             HOOK_00402F60 = fail_hook;
-            crate::fn_00405920::HOOK_004057BC = fill57_hook;
+            crate::fn_004057bc::TAIL_00402F60 = tail57;
             crate::fn_00405938::HOOK_00405AE4 = no5ae4;
             // Zero-init: the alloc lane (rc 2→DEC) performs no chars
-            // copy here (05920 forward is a record-only hook and the
-            // tail fill length is (edi-local_14)*elem = 0), so the new
-            // object's slots must already be null for the depth-2
-            // recursions to take their null lanes.
+            // copy here (real 05920 forward takes the unknown-tag tail
+            // and the tail fill length is (edi-local_14)*elem = 0), so
+            // the new object's slots must already be null for the
+            // depth-2 recursions to take their null lanes.
             TOP_BUF = leak_u32(6, 0);
             SUB_BUFS = [leak_u32(8, 0xAAAA_AAAA), leak_u32(8, 0xAAAA_AAAA)];
         }
@@ -318,18 +314,20 @@ mod tests {
             assert_eq!(ALLOC_SIZE.load(Ordering::SeqCst), 24);
             assert_eq!(*top.add(0), 1);
             assert_eq!(*top.add(1), 2);
-            // Chars area: the 05920 forward is record-only (no copy)
-            // and the tail fill length is (edi-local_14)*elem = 0, so
+            // Chars area: the real 05920 forward copies nothing (tail
+            // lane) and the tail fill length is (edi-local_14)*elem = 0, so
             // words 2..6 hold only the recursion store-backs asserted
             // below (SUB0+8, SUB1+8); no zeroing is expected here.
             // Old refcount DEC'd 2 -> 1.
             assert_eq!(*old.add(0), 1);
-            // 0x00405920 forward: (newdata, olddata, desc2, 2).
+            // 0x00405920 forward: real `fn_004057bc` sees tag 0 on
+            // desc2 and takes the fail tail with
+            // `((newdata as u32) & ~0xff) | 2`; nothing is copied.
             assert_eq!(FILL_HITS.load(Ordering::SeqCst), 1);
-            assert_eq!(FILL_A.load(Ordering::SeqCst), top.add(2) as usize);
-            assert_eq!(FILL_B.load(Ordering::SeqCst), old_data as usize);
-            assert_eq!(FILL_C.load(Ordering::SeqCst), desc2 as usize);
-            assert_eq!(FILL_D.load(Ordering::SeqCst), 2);
+            assert_eq!(
+                FILL_A.load(Ordering::SeqCst),
+                ((top.add(2) as u32 & 0xffff_ff00) | 2) as usize
+            );
             // Two recursions, each null-slot realloc of 5*4+8=28.
             assert_eq!(REALLOC_HITS.load(Ordering::SeqCst), 2);
             assert_eq!(REALLOC_SIZE.load(Ordering::SeqCst), 28);
@@ -351,7 +349,7 @@ mod tests {
             // Top slot store-back: new DATA pointer.
             assert_eq!(slot, top.add(2) as usize);
             assert_eq!(FAIL_HITS.load(Ordering::SeqCst), 0);
-            crate::fn_00405920::HOOK_004057BC = saved_57;
+            crate::fn_004057bc::TAIL_00402F60 = saved_tail;
             crate::fn_00405938::HOOK_00405AE4 = saved_ae4;
         }
     }
@@ -360,14 +358,13 @@ mod tests {
     fn mul_overflow_fails_through() {
         let _l20 = crate::fn_00405920::TEST_LOCK.lock().unwrap();
         let _l38 = crate::fn_00405938::TEST_LOCK.lock().unwrap();
+        let _l57 = crate::fn_004057bc::TEST_LOCK.lock().unwrap();
         let _own = TEST_LOCK.lock().unwrap();
-        let saved_57 = unsafe { crate::fn_00405920::HOOK_004057BC };
         let saved_ae4 = unsafe { crate::fn_00405938::HOOK_00405AE4 };
         unsafe {
             HOOK_00402E04 = alloc_hook;
             HOOK_00402E38 = realloc_hook;
             HOOK_00402F60 = fail_hook;
-            crate::fn_00405920::HOOK_004057BC = no57;
             crate::fn_00405938::HOOK_00405AE4 = no5ae4;
             SMALL_BUF = leak_u32(8, 0xAAAA_AAAA);
         }
@@ -391,7 +388,6 @@ mod tests {
             assert_eq!(*SMALL_BUF.add(0), 1);
             assert_eq!(*SMALL_BUF.add(1), 0x4000_0001);
             assert_eq!(slot, SMALL_BUF.add(2) as usize);
-            crate::fn_00405920::HOOK_004057BC = saved_57;
             crate::fn_00405938::HOOK_00405AE4 = saved_ae4;
         }
     }

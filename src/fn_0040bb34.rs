@@ -22,8 +22,6 @@ unsafe extern "C" fn default_data(_slot: *mut u8) -> *mut u8 {
 
 unsafe extern "C" fn default_grow(_slot: *mut u8, _n: u32) {}
 
-unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8) {}
-
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
 /// Import `ADVAPI32.DLL::RegQueryValueExW` (`CALL 0x00406638`),
@@ -56,11 +54,8 @@ pub static mut HOOK_00405458: unsafe extern "C" fn(*mut u8) -> *mut u8 = default
 pub static mut HOOK_00404F00: unsafe extern "C" fn(*mut u8, u32) = default_grow;
 
 /// Store `0x00404c98` (`FUN_00404c98`), `(slot, null)` on the
-/// zero-size lane else `(slot, local_8)`.
-///
-/// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire to
-/// the real call once cross-module test serialization exists.
-pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u8, *mut u8) = default_store;
+/// zero-size lane else `(slot, local_8)`: direct intra-reconstruction
+/// call (rewired; signatures verified `fn(*mut u8, *mut u8)`).
 
 /// Overflow arm `0x00409818` (`FUN_00409818`), no args, called when
 /// `size >= 0x70000000` (unsigned) with fallthrough.
@@ -111,7 +106,7 @@ pub unsafe fn fn_0040bb34(
             break;
         }
         if local_18 == 0 {
-            HOOK_00404C98(param_3, core::ptr::null_mut());
+            crate::fn_00404c98::fn_00404c98(param_3, core::ptr::null_mut());
             break;
         }
         if local_18 >= 0x7000_0000 {
@@ -164,7 +159,7 @@ pub unsafe fn fn_0040bb34(
                 0,
             );
         }
-        HOOK_00404C98(param_3, local_8);
+        crate::fn_00404c98::fn_00404c98(param_3, local_8);
         break;
     }
     HOOK_004046C4(core::ptr::addr_of_mut!(local_8) as *mut u8);
@@ -173,7 +168,7 @@ pub unsafe fn fn_0040bb34(
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_004046C4, HOOK_00404C98, HOOK_00404DD4, HOOK_00404F00, HOOK_00405458, HOOK_00409818,
+        HOOK_004046C4, HOOK_00404DD4, HOOK_00404F00, HOOK_00405458, HOOK_00409818,
         HOOK_RegQueryValueExW, fn_0040bb34,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -198,15 +193,34 @@ mod tests {
     static DATA_HITS: AtomicUsize = AtomicUsize::new(0);
     static GROW_HITS: AtomicUsize = AtomicUsize::new(0);
     static GROW_N: AtomicUsize = AtomicUsize::new(0);
-    static STORE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STORE_A: AtomicUsize = AtomicUsize::new(0);
-    static STORE_B_NULL: AtomicUsize = AtomicUsize::new(0);
     static FAIL_HITS: AtomicUsize = AtomicUsize::new(0);
     static REL_HITS: AtomicUsize = AtomicUsize::new(0);
     static BUF_ADDR: AtomicUsize = AtomicUsize::new(0);
 
-    static mut BUF4: [u16; 4] = [0; 4];
-    static mut BUF5: [u16; 5] = [0; 5];
+    /// Headed value buffer for the real `fn_00404c98` success lanes:
+    /// tag 2 / rc 5 header, WCHAR payload seeded per lane at the
+    /// object base.
+    static mut BUF_ARENA: [u8; 64] = [0; 64];
+
+    unsafe fn seed_buf(words: &[u16]) -> *mut u8 {
+        let base = core::ptr::addr_of_mut!(BUF_ARENA) as *mut u8;
+        core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, 2);
+        core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, 5);
+        core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut u32, 0);
+        let obj = base.wrapping_byte_add(12);
+        for (i, w) in words.iter().enumerate() {
+            core::ptr::write_unaligned(obj.wrapping_add(i * 2) as *mut u16, *w);
+        }
+        obj
+    }
+
+    unsafe fn rc_of(p: *mut u8) -> u32 {
+        core::ptr::read_unaligned(p.wrapping_byte_offset(-8) as *const u32)
+    }
+
+    unsafe fn slot_of(p: *mut u8) -> *mut u8 {
+        core::ptr::read_unaligned(p as *const *mut u8)
+    }
 
     unsafe extern "C" fn query(
         h: u32,
@@ -263,12 +277,6 @@ mod tests {
         GROW_N.store(n as usize, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn store(_slot: *mut u8, src: *mut u8) {
-        STORE_HITS.fetch_add(1, Ordering::SeqCst);
-        STORE_A.store(_slot as usize, Ordering::SeqCst);
-        STORE_B_NULL.store(src.is_null() as usize, Ordering::SeqCst);
-    }
-
     unsafe extern "C" fn fail() {
         FAIL_HITS.fetch_add(1, Ordering::SeqCst);
     }
@@ -294,20 +302,20 @@ mod tests {
         SIZED_HITS.store(0, Ordering::SeqCst);
         DATA_HITS.store(0, Ordering::SeqCst);
         GROW_HITS.store(0, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
         FAIL_HITS.store(0, Ordering::SeqCst);
         REL_HITS.store(0, Ordering::SeqCst);
     }
 
     #[test]
     fn reg_read_lanes() {
-        // Own hooks only: no foreign globals, no TEST_LOCK.
+        // Real `fn_00404c98` behind the store lanes (old refcounts
+        // stay nonzero → no dtor): hold the common owner lock.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_RegQueryValueExW = query;
             HOOK_00404DD4 = sized;
             HOOK_00405458 = data;
             HOOK_00404F00 = grow;
-            HOOK_00404C98 = store;
             HOOK_00409818 = fail;
             HOOK_004046C4 = release;
         }
@@ -324,7 +332,6 @@ mod tests {
         assert_eq!(QCALL.load(Ordering::SeqCst), 1);
         assert_eq!(QH.load(Ordering::SeqCst), HKEY as usize);
         assert_eq!(QNAME.load(Ordering::SeqCst), name_ptr as usize);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
 
         // Type-mismatch lane: type 9 vs (1, 2) → release, no store.
@@ -332,23 +339,21 @@ mod tests {
         clear();
         unsafe { fn_0040bb34(HKEY, name_ptr, slot_ptr, 1, 2) };
         assert_eq!(QCALL.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
 
-        // Zero-size lane: store(slot, null), release.
+        // Zero-size lane: real store(slot, null), release.
         script(0, 1, 0, 0, 1, 0);
         clear();
         unsafe { fn_0040bb34(HKEY, name_ptr, slot_ptr, 1, 2) };
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_A.load(Ordering::SeqCst), slot_ptr as usize);
-        assert_eq!(STORE_B_NULL.load(Ordering::SeqCst), 1);
+        assert!(unsafe { slot_of(slot_ptr) }.is_null());
         assert_eq!(SIZED_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
 
-        // Plain success: size 8, buf [A,B,0,0] → trim 4→2.
+        // Plain success: size 8, buf [A,B,0,0] → trim 4→2; real
+        // store takes the headed buffer (rc 5→6).
+        let buf = unsafe { seed_buf(&[0x41, 0x42, 0, 0]) };
         unsafe {
-            BUF_ADDR.store(core::ptr::addr_of_mut!(BUF4) as usize, Ordering::SeqCst);
-            BUF4 = [0x41, 0x42, 0, 0];
+            BUF_ADDR.store(buf as usize, Ordering::SeqCst);
         }
         script(0, 1, 8, 0, 1, 8);
         clear();
@@ -361,50 +366,56 @@ mod tests {
         assert_eq!(QCB1.load(Ordering::SeqCst), 8);
         assert_eq!(GROW_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(GROW_N.load(Ordering::SeqCst), 2);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_B_NULL.load(Ordering::SeqCst), 0);
+        assert_eq!(unsafe { slot_of(slot_ptr) }, buf);
+        assert_eq!(unsafe { rc_of(buf) }, 6);
         assert_eq!(FAIL_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
 
         // REG_MULTI_SZ lane (accepted type 7 passed as param_4):
         // buf [A,B,C,D,X] → trim stays 4, +1 → 5; NUL lands on buf[4].
+        // Same arena re-taken: release 5→4 then acquire 4→5.
+        let buf5 = unsafe { seed_buf(&[0x41, 0x42, 0x43, 0x44, 0x45]) };
         unsafe {
-            BUF_ADDR.store(core::ptr::addr_of_mut!(BUF5) as usize, Ordering::SeqCst);
-            BUF5 = [0x41, 0x42, 0x43, 0x44, 0x45];
+            BUF_ADDR.store(buf5 as usize, Ordering::SeqCst);
         }
         script(0, 7, 8, 0, 7, 8);
         clear();
         unsafe { fn_0040bb34(HKEY, name_ptr, slot_ptr, 7, 2) };
         assert_eq!(GROW_N.load(Ordering::SeqCst), 5);
-        assert_eq!(unsafe { BUF5[4] }, 0);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(unsafe { core::ptr::read_unaligned(buf5.wrapping_add(8) as *const u16) }, 0);
+        assert_eq!(unsafe { slot_of(slot_ptr) }, buf5);
+        assert_eq!(unsafe { rc_of(buf5) }, 5);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
 
         // Retry lane: second query 0xEA → loop; re-query finds
         // zero size → store null. 3 queries total.
+        let buf4b = unsafe { seed_buf(&[0x41, 0x42, 0, 0]) };
         unsafe {
-            BUF_ADDR.store(core::ptr::addr_of_mut!(BUF4) as usize, Ordering::SeqCst);
-            BUF4 = [0x41, 0x42, 0, 0];
+            BUF_ADDR.store(buf4b as usize, Ordering::SeqCst);
         }
         script(0, 1, 8, 0xea, 1, 8);
         clear();
         unsafe { fn_0040bb34(HKEY, name_ptr, slot_ptr, 1, 2) };
         assert_eq!(QCALL.load(Ordering::SeqCst), 3);
         assert_eq!(SIZED_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_B_NULL.load(Ordering::SeqCst), 1);
+        assert!(unsafe { slot_of(slot_ptr) }.is_null());
         assert_eq!(GROW_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
 
         // Overflow lane: size 0x70000000 → fail call, then the
         // re-queried size 8 trims to 2 as usual.
+        let bufo = unsafe { seed_buf(&[0x41, 0x42, 0, 0]) };
+        unsafe {
+            BUF_ADDR.store(bufo as usize, Ordering::SeqCst);
+        }
         script(0, 1, 0x7000_0000, 0, 1, 8);
         clear();
         unsafe { fn_0040bb34(HKEY, name_ptr, slot_ptr, 1, 2) };
         assert_eq!(FAIL_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(SIZED_N.load(Ordering::SeqCst), 0x3800_0000);
         assert_eq!(GROW_N.load(Ordering::SeqCst), 2);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(unsafe { slot_of(slot_ptr) }, bufo);
+        assert_eq!(unsafe { rc_of(bufo) }, 6);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
     }
 }

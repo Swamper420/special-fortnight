@@ -133,8 +133,11 @@ mod tests {
         FILL_C.store(c as usize, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn release(_arg: u32) {
+    /// Indirect slot behind real `fn_00402e20`: counts the
+    /// destructor dispatch, returns 0 so the tail never fires.
+    unsafe extern "C" fn indirect() -> u32 {
         RELEASE_HITS.fetch_add(1, Ordering::SeqCst);
+        0
     }
 
     fn reset() {
@@ -148,14 +151,18 @@ mod tests {
     #[test]
     fn count_cap_length_clamp_lanes() {
         // Done callees read their hook globals: hold the release
-        // owner lock so its writer test can't race us.
+        // owner lock plus the real destructor's lock so its writer
+        // test can't race us.
         let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        let _dtor = crate::fn_00402e20::TEST_LOCK.lock().unwrap();
+        let old_ptr;
         unsafe {
             HOOK_004047ec = convert;
             HOOK_00404f00 = size;
             HOOK_004054b4 = alloc;
             HOOK_00402fbc = fill;
-            crate::fn_004046c4::HOOK_00402E20 = release;
+            old_ptr = crate::fn_00402e20::PTR_00412740;
+            crate::fn_00402e20::PTR_00412740 = indirect;
         }
         let src = b"abc\0".as_ptr();
 
@@ -233,5 +240,8 @@ mod tests {
         assert_eq!(SIZE_HITS.load(Ordering::SeqCst), 2);
         assert_eq!(SIZE_FIRST_B.load(Ordering::SeqCst), 0x7ff);
         assert_eq!(SIZE_LAST_B.load(Ordering::SeqCst), 4);
+        unsafe {
+            crate::fn_00402e20::PTR_00412740 = old_ptr;
+        }
     }
 }

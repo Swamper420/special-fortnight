@@ -15,8 +15,6 @@ unsafe extern "C" fn default_alloc(_n: u32) -> *mut u8 {
 
 unsafe extern "C" fn default_cleanup(_a: *mut u8, _n: u32) {}
 
-unsafe extern "C" fn default_store(_a: *mut u8, _b: *mut u8) {}
-
 unsafe extern "C" fn default_grow(_a: *mut u8, _n: u32) {}
 
 unsafe extern "C" fn default_fail(_n: u32) {}
@@ -49,12 +47,8 @@ pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> *mut u8 = default_all
 /// to the real call once cross-module linkage proven.
 pub static mut HOOK_004046e8: unsafe extern "C" fn(*mut u8, u32) = default_cleanup;
 
-/// Store `0x00404c98` (`FUN_00404c98`).
-///
-/// ponytail: hook mirroring done `fn_00404c98`'s
-/// `(slot, obj)` shape, rewire to the real call once
-/// cross-module linkage proven.
-pub static mut HOOK_00404c98: unsafe extern "C" fn(*mut u8, *mut u8) = default_store;
+/// Store `0x00404c98` (`FUN_00404c98`): direct intra-reconstruction
+/// call (rewired; signatures verified `fn(*mut u8, *mut u8)`).
 
 /// Grow `0x00404f00` (`FUN_00404f00`), called with `(slot, total)`
 /// on the retain-prefix lane.
@@ -178,7 +172,7 @@ unsafe fn finalize(param_1: *mut u8, count: u32, elems: *mut *mut u8, acc: u32, 
             let rc: *mut u32 = new.wrapping_byte_offset(-8) as *mut u32;
             core::ptr::write_unaligned(rc, read_unaligned(rc as *const u32).wrapping_sub(1));
         }
-        HOOK_00404c98(param_1, new);
+        crate::fn_00404c98::fn_00404c98(param_1, new);
     } else {
         let old_len = len_of(dup);
         HOOK_00404f00(param_1, acc);
@@ -203,15 +197,13 @@ unsafe fn finalize(param_1: *mut u8, count: u32, elems: *mut *mut u8, acc: u32, 
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00402f60, HOOK_004046e8, HOOK_00404830, HOOK_00404c80, HOOK_00404c98, HOOK_00404f00, HOOK_004054b4, fn_0040513c};
+    use super::{HOOK_00402f60, HOOK_004046e8, HOOK_00404830, HOOK_00404c80, HOOK_00404f00, HOOK_004054b4, fn_0040513c};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_ARG: AtomicUsize = AtomicUsize::new(0);
     static CLEAN_HITS: AtomicUsize = AtomicUsize::new(0);
     static CLEAN_N: AtomicUsize = AtomicUsize::new(0);
-    static STORE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STORE_B: AtomicUsize = AtomicUsize::new(0);
     static GROW_HITS: AtomicUsize = AtomicUsize::new(0);
     static FAIL_HITS: AtomicUsize = AtomicUsize::new(0);
     static FAIL_ARG: AtomicUsize = AtomicUsize::new(0);
@@ -240,11 +232,6 @@ mod tests {
     unsafe extern "C" fn cleanup(_a: *mut u8, n: u32) {
         CLEAN_HITS.fetch_add(1, Ordering::SeqCst);
         CLEAN_N.store(n as usize, Ordering::SeqCst);
-    }
-
-    unsafe extern "C" fn store(_a: *mut u8, b: *mut u8) {
-        STORE_HITS.fetch_add(1, Ordering::SeqCst);
-        STORE_B.store(b as usize, Ordering::SeqCst);
     }
 
     unsafe extern "C" fn grow(_a: *mut u8, _n: u32) {
@@ -276,7 +263,6 @@ mod tests {
             HOOK_00404830 = norm;
             HOOK_004054b4 = alloc;
             HOOK_004046e8 = cleanup;
-            HOOK_00404c98 = store;
             HOOK_00404f00 = grow;
             HOOK_00402f60 = fail;
         }
@@ -290,7 +276,8 @@ mod tests {
 
         // Fresh lane: *slot=X distinct; words[2]=A(len4),
         // words[1]=B(len6) → sum 10, alloc(10), real copies
-        // (A,new,8),(B,new+8,12), cleanup(2), store(new).
+        // (A,new,8),(B,new+8,12), cleanup(2), real store(new):
+        // old X released 4→3, new 1→0→1.
         let pa = unsafe { hdr(&mut aa, 2, 4, 4) };
         let pb = unsafe { hdr(&mut ab, 2, 4, 6) };
         let px = unsafe { hdr(&mut ax, 2, 4, 1) };
@@ -311,7 +298,6 @@ mod tests {
         unsafe { slot = px };
         ALLOC_HITS.store(0, Ordering::SeqCst);
         CLEAN_HITS.store(0, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
         GROW_HITS.store(0, Ordering::SeqCst);
         FAIL_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040513c(slot_ptr, 2, words.as_mut_ptr()) };
@@ -330,10 +316,10 @@ mod tests {
         assert_eq!(CLEAN_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(CLEAN_N.load(Ordering::SeqCst), 2);
         assert_eq!(GROW_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_B.load(Ordering::SeqCst), new as usize);
+        assert_eq!(slot, new as *mut u8);
         assert_eq!(FAIL_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(unsafe { core::ptr::read_unaligned(new.wrapping_byte_offset(-8) as *const u32) }, 0);
+        assert_eq!(unsafe { core::ptr::read_unaligned(new.wrapping_byte_offset(-8) as *const u32) }, 1);
+        assert_eq!(unsafe { core::ptr::read_unaligned(px.wrapping_byte_offset(-8) as *const u32) }, 3);
 
         // Overflow lane: words[2] len 0x40000000 → first add
         // trips (0x40000000 & 0xc0000000 != 0) → tail, no alloc.
@@ -342,12 +328,10 @@ mod tests {
         let mut words2: [*mut u8; 3] = [core::ptr::null_mut(), pb, pbig];
         unsafe { slot = px };
         ALLOC_HITS.store(0, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
         FAIL_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040513c(slot_ptr, 2, words2.as_mut_ptr()) };
         assert_eq!(FAIL_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(FAIL_ARG.load(Ordering::SeqCst), 0x4000_0000);
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 0);
     }
 }

@@ -68,20 +68,33 @@ mod tests {
         FILL_C.store(c as usize, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn release(_arg: u32) {}
+    /// Indirect slot behind real `fn_00402e20` (zero skips the tail).
+    unsafe extern "C" fn indirect_zero() -> u32 {
+        0
+    }
+
+    /// Tail behind real `fn_00402e20` (unreached on the zero lane).
+    unsafe extern "C" fn tail_noop(_arg: u32) {}
 
     #[test]
     fn decimal_value_reaches_convert_and_slot() {
         // Foreign fn_00404d30/fn_00404dc4/fn_00404dd4/fn_004046c4
         // hooks and cell: hold the common owner lock.
         let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        let _dtor = crate::fn_00402e20::TEST_LOCK.lock().unwrap();
+        let (old_ptr, old_tail);
         unsafe {
             crate::fn_00404dc4::DAT_004138c8 = 0x51;
             HOOK_004047ec = convert;
             HOOK_00404f00 = size;
             crate::fn_00404dd4::HOOK_004054b4 = alloc;
             crate::fn_00404dd4::HOOK_00402fbc = fill;
-            crate::fn_004046c4::HOOK_00402E20 = release;
+            // Real destructor chain behind the release lane: zero
+            // dtor base early-returns, so the slot assertions hold.
+            old_ptr = crate::fn_00402e20::PTR_00412740;
+            old_tail = crate::fn_00402e20::TAIL_00402F60;
+            crate::fn_00402e20::PTR_00412740 = indirect_zero;
+            crate::fn_00402e20::TAIL_00402F60 = tail_noop;
         }
         // Arena mirroring fn_00404d30's own test: obj = base+12,
         // count cell = base+4 (`obj-8`); slot cell holds obj.
@@ -104,5 +117,9 @@ mod tests {
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(FILL_C.load(Ordering::SeqCst), 6);
         assert_eq!(unsafe { core::ptr::read_unaligned(slot_ptr as *const u32) }, CANNED);
+        unsafe {
+            crate::fn_00402e20::PTR_00412740 = old_ptr;
+            crate::fn_00402e20::TAIL_00402F60 = old_tail;
+        }
     }
 }

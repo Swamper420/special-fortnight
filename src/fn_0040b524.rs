@@ -16,8 +16,6 @@ unsafe extern "C" fn default_path(
 
 unsafe extern "C" fn default_take(_a: *mut u8, _b: *mut u8, _c: u32) {}
 
-unsafe extern "C" fn default_store(_a: *mut u8, _b: *mut u8) {}
-
 /// Callee `0x00404d24` (`FUN_00404d24`), called with raw `param_1`;
 /// returns the normalized name.
 ///
@@ -42,11 +40,8 @@ pub static mut HOOK_GetFullPathNameW: unsafe extern "C" fn(*const u16, u32, *mut
 pub static mut HOOK_00404DD4: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_take;
 
 /// Callee `0x00404c98` (`FUN_00404c98`), fail lane with
-/// `(param_2, RAW param_1)`; shape mirrors done `fn_00404c98`.
-///
-/// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire to
-/// the real call once cross-module test serialization exists.
-pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u8, *mut u8) = default_store;
+/// `(param_2, RAW param_1)`: direct intra-reconstruction call
+/// (rewired; signatures verified `fn(*mut u8, *mut u8)`).
 
 /// Test-only serialization for tests sharing this module's globals.
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -61,7 +56,7 @@ pub unsafe fn fn_0040b524(param_1: *const u16, param_2: *mut u8) {
     let mut part: *mut u16 = core::ptr::null_mut();
     let len = HOOK_GetFullPathNameW(name, 0x1000, buf.as_mut_ptr(), &mut part);
     if (len as i32) < 1 || (len as i32) > 0xfff {
-        HOOK_00404C98(param_2, param_1 as *mut u8);
+        crate::fn_00404c98::fn_00404c98(param_2, param_1 as *mut u8);
     } else {
         HOOK_00404DD4(param_2, buf.as_mut_ptr() as *mut u8, len);
     }
@@ -70,7 +65,7 @@ pub unsafe fn fn_0040b524(param_1: *const u16, param_2: *mut u8) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_00404C98, HOOK_00404D24, HOOK_00404DD4, HOOK_GetFullPathNameW, TEST_LOCK, fn_0040b524,
+        HOOK_00404D24, HOOK_00404DD4, HOOK_GetFullPathNameW, TEST_LOCK, fn_0040b524,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -85,11 +80,28 @@ mod tests {
     static TAKE_A: AtomicUsize = AtomicUsize::new(0);
     static TAKE_B: AtomicUsize = AtomicUsize::new(0);
     static TAKE_C: AtomicUsize = AtomicUsize::new(0);
-    static STORE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STORE_A: AtomicUsize = AtomicUsize::new(0);
-    static STORE_B: AtomicUsize = AtomicUsize::new(0);
 
     static mut NAME: [u16; 4] = [0x41, 0x42, 0, 0];
+
+    /// Headed raw name for the real `fn_00404c98` fail lane: tag 2,
+    /// refcount reset per lane (the norm/path stubs ignore content).
+    static mut RAW_ARENA: [u8; 64] = [0; 64];
+
+    unsafe fn raw_obj() -> *mut u8 {
+        let base = core::ptr::addr_of_mut!(RAW_ARENA) as *mut u8;
+        core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, 2);
+        core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, 5);
+        core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut u32, 0);
+        base.wrapping_byte_add(12)
+    }
+
+    unsafe fn rc_of(p: *mut u8) -> u32 {
+        core::ptr::read_unaligned(p.wrapping_byte_offset(-8) as *const u32)
+    }
+
+    unsafe fn slot_of(p: *mut u8) -> *mut u8 {
+        core::ptr::read_unaligned(p as *const *mut u8)
+    }
 
     unsafe extern "C" fn norm(p: *const u16) -> *const u16 {
         NORM_HITS.fetch_add(1, Ordering::SeqCst);
@@ -117,32 +129,27 @@ mod tests {
         TAKE_C.store(c as usize, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn store(a: *mut u8, b: *mut u8) {
-        STORE_HITS.fetch_add(1, Ordering::SeqCst);
-        STORE_A.store(a as usize, Ordering::SeqCst);
-        STORE_B.store(b as usize, Ordering::SeqCst);
-    }
-
     fn clear() {
         NORM_HITS.store(0, Ordering::SeqCst);
         PATH_HITS.store(0, Ordering::SeqCst);
         TAKE_HITS.store(0, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
     }
 
     #[test]
     fn resolve_lanes() {
+        // Real `fn_00404c98` behind the fail lane: hold the common
+        // owner lock alongside the own lock.
         let _guard = TEST_LOCK.lock().unwrap();
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00404D24 = norm;
             HOOK_GetFullPathNameW = path;
             HOOK_00404DD4 = take;
-            HOOK_00404C98 = store;
         }
         let raw = [0x43u16, 0];
         let p1 = raw.as_ptr();
-        let mut s = 0u8;
-        let p2 = &mut s as *mut u8;
+        let mut s = [0u8; 8];
+        let p2 = s.as_mut_ptr();
         let name = core::ptr::addr_of!(NAME) as usize;
 
         // Take lane: len=5 → take(p2, buf, 5), no store.
@@ -159,17 +166,17 @@ mod tests {
         assert_eq!(TAKE_A.load(Ordering::SeqCst), p2 as usize);
         assert_eq!(TAKE_B.load(Ordering::SeqCst), PATH_BUF.load(Ordering::SeqCst));
         assert_eq!(TAKE_C.load(Ordering::SeqCst), 5);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 0);
 
-        // Zero lane: store(p2, RAW p1), no take.
+        // Fail lanes: real store(p2, raw) takes the headed object
+        // (rc back to 6 each iteration: release 6→5, acquire 5→6).
+        let pr = unsafe { raw_obj() };
         for ret in [0usize, 0x1000, 0xffff_ffff] {
             PATH_RET.store(ret, Ordering::SeqCst);
             clear();
-            unsafe { fn_0040b524(p1, p2) };
+            unsafe { fn_0040b524(pr as *const u16, p2) };
             assert_eq!(TAKE_HITS.load(Ordering::SeqCst), 0);
-            assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-            assert_eq!(STORE_A.load(Ordering::SeqCst), p2 as usize);
-            assert_eq!(STORE_B.load(Ordering::SeqCst), p1 as usize);
+            assert_eq!(unsafe { slot_of(p2) }, pr);
+            assert_eq!(unsafe { rc_of(pr) }, 6);
         }
     }
 }

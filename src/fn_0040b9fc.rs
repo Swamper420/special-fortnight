@@ -13,8 +13,6 @@ unsafe extern "C" fn default_full(_src: *mut u8, _out: *mut u8) {}
 
 unsafe extern "C" fn default_take(_a: *mut u8, _b: *mut u8) {}
 
-unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8) {}
-
 unsafe extern "C" fn default_release(_slots: *mut u8, _n: u32) {}
 
 /// Expander `0x0040b710` (`FUN_0040b710`), called as `(name, slot)`
@@ -51,11 +49,9 @@ pub static mut HOOK_0040B524: unsafe extern "C" fn(*mut u8, *mut u8) = default_f
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_0040B2E0: unsafe extern "C" fn(*mut u8, *mut u8) = default_take;
 
-/// Store `0x00404c98` (`FUN_00404c98`), called as `(slot, local_8)`.
-///
-/// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire to
-/// the real call once cross-module test serialization exists.
-pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u8, *mut u8) = default_store;
+/// Store `0x00404c98` (`FUN_00404c98`), called as `(slot, local_8)`:
+/// direct intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, *mut u8)`).
 
 /// Release `0x00404c90` (`thunk_FUN_004046e8`), always run on
 /// `(&local_c, 2)` (SEH finally on target).
@@ -131,14 +127,14 @@ pub unsafe fn fn_0040b9fc(param_1: *mut u8) {
     HOOK_0040B524(cur, core::ptr::addr_of_mut!(local_c) as *mut u8);
     let lc: *mut u8 = core::ptr::read_unaligned(core::ptr::addr_of!(local_c));
     HOOK_0040B2E0(lc, core::ptr::addr_of_mut!(local_8) as *mut u8);
-    HOOK_00404C98(param_1, local_8);
+    crate::fn_00404c98::fn_00404c98(param_1, local_8);
     HOOK_004046E8(core::ptr::addr_of_mut!(local_c) as *mut u8, 2);
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        DAT_0040BACC, DAT_0040BAE0, DAT_0040BAF8, HOOK_004046E8, HOOK_00404C98, HOOK_0040B2E0,
+        DAT_0040BACC, DAT_0040BAE0, DAT_0040BAF8, HOOK_004046E8, HOOK_0040B2E0,
         HOOK_0040B524, HOOK_0040B6EC, HOOK_0040B710, HOOK_0040B9A4, PTR_DAT_00412C7C, fn_0040b9fc,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -157,26 +153,50 @@ mod tests {
     static FULL_A: AtomicUsize = AtomicUsize::new(0);
     static TAKE_HITS: AtomicUsize = AtomicUsize::new(0);
     static TAKE_A: AtomicUsize = AtomicUsize::new(0);
-    static STORE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STORE_A: AtomicUsize = AtomicUsize::new(0);
-    static STORE_B: AtomicUsize = AtomicUsize::new(0);
     static REL_HITS: AtomicUsize = AtomicUsize::new(0);
     static REL_N: AtomicUsize = AtomicUsize::new(0);
 
     static mut FLAG: u32 = 0;
 
-    const CANNED: usize = 0x1111_0001;
+    /// Headed take-plant for the real `fn_00404c98` tail: tag 2,
+    /// refcount reseeded on every plant.
+    static mut L8_ARENA: [u8; 64] = [0; 64];
+
+    /// Headed expand-store for the always-live slot: tag 2,
+    /// refcount reseeded on every plant (the real tail releases
+    /// it, 5→4, without a call).
+    static mut EXP_ARENA: [u8; 64] = [0; 64];
+
+    unsafe fn seed(base: *mut u8) -> *mut u8 {
+        core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, 2);
+        core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, 5);
+        core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut u32, 0);
+        base.wrapping_byte_add(12)
+    }
+
+    unsafe fn plant_l8() -> *mut u8 {
+        seed(core::ptr::addr_of_mut!(L8_ARENA) as *mut u8)
+    }
+
+    unsafe fn plant_exp() -> *mut u8 {
+        seed(core::ptr::addr_of_mut!(EXP_ARENA) as *mut u8)
+    }
+
+    unsafe fn rc_of(p: *mut u8) -> u32 {
+        core::ptr::read_unaligned(p.wrapping_byte_offset(-8) as *const u32)
+    }
+
     const CANNED_LC: usize = 0x1111_0002;
-    const CANNED_L8: usize = 0x1111_0003;
 
     unsafe extern "C" fn expand(name: *mut u8, slot: *mut u8) {
         let i = EXPAND_HITS.fetch_add(1, Ordering::SeqCst);
         if i < 3 {
             EXPAND_NAMES[i].store(name as usize, Ordering::SeqCst);
         }
-        // Scripted lane: the STORE_AT-th expand stores CANNED.
+        // Scripted lane: the STORE_AT-th expand stores the headed
+        // object (the real tail releases it, 5→4, without a call).
         let v = if i == STORE_AT.load(Ordering::SeqCst) {
-            CANNED as *mut u8
+            plant_exp()
         } else {
             core::ptr::null_mut()
         };
@@ -201,13 +221,7 @@ mod tests {
     unsafe extern "C" fn take(a: *mut u8, b: *mut u8) {
         TAKE_HITS.fetch_add(1, Ordering::SeqCst);
         TAKE_A.store(a as usize, Ordering::SeqCst);
-        core::ptr::write_unaligned(b as *mut *mut u8, CANNED_L8 as *mut u8);
-    }
-
-    unsafe extern "C" fn store(a: *mut u8, b: *mut u8) {
-        STORE_HITS.fetch_add(1, Ordering::SeqCst);
-        STORE_A.store(a as usize, Ordering::SeqCst);
-        STORE_B.store(b as usize, Ordering::SeqCst);
+        core::ptr::write_unaligned(b as *mut *mut u8, plant_l8());
     }
 
     unsafe extern "C" fn release(_slots: *mut u8, n: u32) {
@@ -221,7 +235,6 @@ mod tests {
         WINDIR_HITS.store(0, Ordering::SeqCst);
         FULL_HITS.store(0, Ordering::SeqCst);
         TAKE_HITS.store(0, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
         REL_HITS.store(0, Ordering::SeqCst);
     }
 
@@ -231,14 +244,15 @@ mod tests {
 
     #[test]
     fn resolve_tail_lanes() {
-        // Own hooks/cell only: no foreign globals, no TEST_LOCK.
+        // Real `fn_00404c98` behind the tail (slot starts null each
+        // lane → no dtor): hold the common owner lock.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_0040B710 = expand;
             HOOK_0040B6EC = probe;
             HOOK_0040B9A4 = windir;
             HOOK_0040B524 = full;
             HOOK_0040B2E0 = take;
-            HOOK_00404C98 = store;
             HOOK_004046E8 = release;
             PTR_DAT_00412C7C = core::ptr::addr_of_mut!(FLAG) as *mut u32;
         }
@@ -260,12 +274,14 @@ mod tests {
         assert_eq!(PROBE_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(WINDIR_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(FULL_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(FULL_A.load(Ordering::SeqCst), CANNED);
+        assert_eq!(FULL_A.load(Ordering::SeqCst), unsafe { core::ptr::addr_of_mut!(EXP_ARENA) as *mut u8 }.wrapping_byte_add(12) as usize);
         assert_eq!(TAKE_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(TAKE_A.load(Ordering::SeqCst), CANNED_LC);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_A.load(Ordering::SeqCst), slot_ptr as usize);
-        assert_eq!(STORE_B.load(Ordering::SeqCst), CANNED_L8);
+        let l8 = unsafe { core::ptr::addr_of_mut!(L8_ARENA) as *mut u8 }.wrapping_byte_add(12);
+        let exp = unsafe { core::ptr::addr_of_mut!(EXP_ARENA) as *mut u8 }.wrapping_byte_add(12);
+        assert_eq!(slot, l8);
+        assert_eq!(unsafe { rc_of(slot) }, 6);
+        assert_eq!(unsafe { rc_of(exp) }, 4);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(REL_N.load(Ordering::SeqCst), 2);
 
@@ -278,7 +294,7 @@ mod tests {
         assert_eq!(unsafe { name_of(1) }, temp);
         assert_eq!(PROBE_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(WINDIR_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(FULL_A.load(Ordering::SeqCst), CANNED);
+        assert_eq!(FULL_A.load(Ordering::SeqCst), unsafe { core::ptr::addr_of_mut!(EXP_ARENA) as *mut u8 }.wrapping_byte_add(12) as usize);
 
         // Low-byte-mask lane: probe 0x100 (low byte 0) falls
         // through to TEMP despite the nonzero high byte.
@@ -311,7 +327,7 @@ mod tests {
         assert_eq!(EXPAND_HITS.load(Ordering::SeqCst), 3);
         assert_eq!(unsafe { name_of(2) }, user);
         assert_eq!(WINDIR_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(FULL_A.load(Ordering::SeqCst), CANNED);
+        assert_eq!(FULL_A.load(Ordering::SeqCst), unsafe { core::ptr::addr_of_mut!(EXP_ARENA) as *mut u8 }.wrapping_byte_add(12) as usize);
 
         // Userprofile-miss lane: flag == 2, third expand null →
         // windir fallback.

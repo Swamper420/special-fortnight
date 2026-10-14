@@ -11,8 +11,6 @@ unsafe extern "C" fn default_class(_w: u16) -> u32 {
 
 unsafe extern "C" fn default_take(_a: *mut u8, _b: *mut u8, _c: *mut u8) {}
 
-unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8) {}
-
 /// Tag lookup `0x0040b5fc` (`FUN_0040b5fc`), called with the object
 /// address; returns the tag-word pointer (`short *`).
 ///
@@ -37,12 +35,8 @@ pub static mut HOOK_00405058: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) =
     default_take;
 
 /// Target `0x00404c98` (`FUN_00404c98`), null/tagged lane with
-/// `(param_2, param_1)`.
-///
-/// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire to
-/// the real call once cross-module test serialization exists (its
-/// own test mutates shared hook globals under its own locks).
-pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u8, *mut u8) = default_store;
+/// `(param_2, param_1)`: direct intra-reconstruction call (rewired;
+/// signatures verified `fn(*mut u8, *mut u8)`).
 
 /// Cell observed as `DAT_0040b328`; image bytes are `u32 0x5c`
 /// followed by code, so one 4-byte word traveling by address as
@@ -70,12 +64,12 @@ pub unsafe fn fn_0040b2e0(param_1: *mut u8, param_2: *mut u8) {
             return;
         }
     }
-    HOOK_00404C98(param_2, param_1);
+    crate::fn_00404c98::fn_00404c98(param_2, param_1);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{DAT_0040b328, HOOK_00405058, HOOK_00404C98, HOOK_0040B334, HOOK_0040B5FC, fn_0040b2e0};
+    use super::{DAT_0040b328, HOOK_00405058, HOOK_0040B334, HOOK_0040B5FC, fn_0040b2e0};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TAG_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -87,11 +81,24 @@ mod tests {
     static TAKE_A: AtomicUsize = AtomicUsize::new(0);
     static TAKE_B: AtomicUsize = AtomicUsize::new(0);
     static TAKE_C: AtomicUsize = AtomicUsize::new(0);
-    static STORE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static STORE_A: AtomicUsize = AtomicUsize::new(0);
-    static STORE_B: AtomicUsize = AtomicUsize::new(0);
 
     static mut WORD: u16 = 0;
+
+    /// Headed store source for the real `fn_00404c98` tagged lane:
+    /// tag 2, refcount reset per lane.
+    static mut OBJ_ARENA: [u8; 64] = [0; 64];
+
+    unsafe fn headed() -> *mut u8 {
+        let base = core::ptr::addr_of_mut!(OBJ_ARENA) as *mut u8;
+        core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, 2);
+        core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, 5);
+        core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut u32, 0);
+        base.wrapping_byte_add(12)
+    }
+
+    unsafe fn rc_of(p: *mut u8) -> u32 {
+        core::ptr::read_unaligned(p.wrapping_byte_offset(-8) as *const u32)
+    }
 
     unsafe extern "C" fn tag(obj: usize) -> *mut u16 {
         TAG_HITS.fetch_add(1, Ordering::SeqCst);
@@ -112,44 +119,40 @@ mod tests {
         TAKE_C.store(c as usize, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn store(a: *mut u8, b: *mut u8) {
-        STORE_HITS.fetch_add(1, Ordering::SeqCst);
-        STORE_A.store(a as usize, Ordering::SeqCst);
-        STORE_B.store(b as usize, Ordering::SeqCst);
-    }
-
     fn clear() {
         TAG_HITS.store(0, Ordering::SeqCst);
         CLASS_HITS.store(0, Ordering::SeqCst);
         TAKE_HITS.store(0, Ordering::SeqCst);
-        STORE_HITS.store(0, Ordering::SeqCst);
+    }
+
+    unsafe fn slot_of(p: *mut u8) -> *mut u8 {
+        core::ptr::read_unaligned(p as *const *mut u8)
     }
 
     #[test]
     fn null_tagged_zero_tag_lanes() {
-        // Own hooks/cell only: no foreign globals, no TEST_LOCK.
+        // Real `fn_00404c98` behind the store lanes (null old → no
+        // dtor): hold the common owner lock.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_0040B5FC = tag;
             HOOK_0040B334 = class;
             HOOK_00405058 = take;
-            HOOK_00404C98 = store;
         }
-        let mut o = 0u8;
-        let mut s = 0u8;
-        let p1 = &mut o as *mut u8;
-        let p2 = &mut s as *mut u8;
-        // Null lane: no tag/class/take, store(p2, p1).
+        let mut s = [0u8; 8];
+        let p2 = s.as_mut_ptr();
+        // Null lane: no tag/class/take, real store(p2, null) no-op.
         clear();
         unsafe { fn_0040b2e0(core::ptr::null_mut(), p2) };
         assert_eq!(TAG_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(CLASS_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(TAKE_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_A.load(Ordering::SeqCst), p2 as usize);
-        assert_eq!(STORE_B.load(Ordering::SeqCst), 0);
-        // Tagged lane: class low byte nonzero → store(p2, p1).
+        assert!(unsafe { slot_of(p2) }.is_null());
+        // Tagged lane: class low byte nonzero → real store(p2, obj)
+        // takes the headed object (rc 5→6).
         unsafe { WORD = 0x25c };
         CLASS_RET.store(0x101, Ordering::SeqCst);
+        let p1 = unsafe { headed() };
         clear();
         unsafe { fn_0040b2e0(p1, p2) };
         assert_eq!(TAG_HITS.load(Ordering::SeqCst), 1);
@@ -157,9 +160,8 @@ mod tests {
         assert_eq!(CLASS_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(CLASS_ARG.load(Ordering::SeqCst), 0x25c);
         assert_eq!(TAKE_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(STORE_A.load(Ordering::SeqCst), p2 as usize);
-        assert_eq!(STORE_B.load(Ordering::SeqCst), p1 as usize);
+        assert_eq!(unsafe { slot_of(p2) }, p1);
+        assert_eq!(unsafe { rc_of(p1) }, 6);
         // Zero-tag lane: take(p2, p1, &DAT), no store.
         CLASS_RET.store(0x500, Ordering::SeqCst);
         clear();
@@ -171,6 +173,5 @@ mod tests {
             TAKE_C.load(Ordering::SeqCst),
             core::ptr::addr_of!(DAT_0040b328) as usize
         );
-        assert_eq!(STORE_HITS.load(Ordering::SeqCst), 0);
     }
 }
