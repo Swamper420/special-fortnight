@@ -1,99 +1,76 @@
 //! Original procedure `0x0040d244` (118 bytes, `0x0040d244–0x0040d2b9`).
 //! Evidence: `evidence/0040d244_fn_0040d244.md`.
 
-unsafe extern "C" fn default_bit(_t: *mut u16, _s: *mut u8) -> u32 {
-    0
-}
-
-unsafe extern "C" fn default_tree(_base: usize, _n: u32, _s: *mut u8) -> i32 {
-    0
-}
-
-/// Target `0x0040d094` (`FUN_0040d094`) bit decode, both `d094` sites.
-///
-/// ponytail: hook standing in for same-batch `fn_0040d094`.
-pub static mut HOOK_0040D094: unsafe extern "C" fn(*mut u16, *mut u8) -> u32 = default_bit;
-
-/// Target `0x0040d11c` (`FUN_0040d11c`) tree decode, all three `d11c` sites.
-///
-/// ponytail: hook standing in for same-batch `fn_0040d11c`.
-pub static mut HOOK_0040D11C: unsafe extern "C" fn(usize, u32, *mut u8) -> i32 = default_tree;
 
 /// Two-bit prefix + tree dispatch; returns `d11c` value (`+8`/`+0x10` biased).
 /// `param_1` EAX / `param_2` EDX / `param_3` ECX per `__register` observation.
 pub unsafe fn fn_0040d244(param_1: *mut u16, param_2: *mut u8, param_3: i32) -> i32 {
-    if HOOK_0040D094(param_1, param_2) == 0 {
+    if crate::fn_0040d094::fn_0040d094(param_1, param_2) == 0 {
         // ponytail: `SHL EAX,3; ADD EAX,EAX` byte math; `wrapping` matches wrap.
         let t: u32 = (param_3 as u32).wrapping_shl(3);
         let base = (param_1 as usize)
             .wrapping_add(t.wrapping_add(t) as usize)
             .wrapping_add(4);
-        HOOK_0040D11C(base, 3, param_2)
-    } else if HOOK_0040D094(param_1.wrapping_byte_add(2), param_2) == 0 {
+        crate::fn_0040d11c::fn_0040d11c(base, 3, param_2)
+    } else if crate::fn_0040d094::fn_0040d094(param_1.wrapping_byte_add(2), param_2) == 0 {
         let t: u32 = (param_3 as u32).wrapping_shl(3);
         let base = (param_1 as usize)
             .wrapping_add(t.wrapping_add(t) as usize)
             .wrapping_add(0x104);
-        HOOK_0040D11C(base, 3, param_2).wrapping_add(8)
+        crate::fn_0040d11c::fn_0040d11c(base, 3, param_2).wrapping_add(8)
     } else {
-        HOOK_0040D11C((param_1 as usize).wrapping_add(0x204), 8, param_2).wrapping_add(0x10)
+        crate::fn_0040d11c::fn_0040d11c((param_1 as usize).wrapping_add(0x204), 8, param_2).wrapping_add(0x10)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_0040D094, HOOK_0040D11C, fn_0040d244};
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use super::fn_0040d244;
 
-    static BIT0: AtomicUsize = AtomicUsize::new(0);
-    static BIT1: AtomicUsize = AtomicUsize::new(0);
-    static N: AtomicUsize = AtomicUsize::new(0);
-    static BASE: AtomicUsize = AtomicUsize::new(0);
-    static COUNT: AtomicUsize = AtomicUsize::new(0);
-
-    unsafe extern "C" fn bit(_t: *mut u16, _s: *mut u8) -> u32 {
-        let i = N.fetch_add(1, Ordering::SeqCst);
-        if i % 2 == 0 {
-            BIT0.load(Ordering::SeqCst) as u32
-        } else {
-            BIT1.load(Ordering::SeqCst) as u32
+    fn state(range: u32, code: u32) -> [u8; 16] {
+        let mut s = [0u8; 16];
+        unsafe {
+            core::ptr::write_unaligned(s.as_mut_ptr().wrapping_byte_add(8) as *mut u32, range);
+            core::ptr::write_unaligned(s.as_mut_ptr().wrapping_byte_add(0xc) as *mut u32, code);
         }
+        s
     }
 
-    unsafe extern "C" fn tree(base: usize, n: u32, _s: *mut u8) -> i32 {
-        BASE.store(base, Ordering::SeqCst);
-        COUNT.store(n as usize, Ordering::SeqCst);
-        5
-    }
-
+    // Prefix + tree bits driven through the real `fn_0040d094` /
+    // `fn_0040d11c`; per-cell probs force each bit with `range` staying
+    // `>= 0x1000000` (no renormalize). `param_3 = 1`.
     #[test]
     fn zero_mid_and_far_lanes() {
-        unsafe {
-            HOOK_0040D094 = bit;
-            HOOK_0040D11C = tree;
+        // Zero lane: prefix bit 0 (cell+0 @0x400: bound 0x4000000 > code),
+        // tree at `+20` count 3 of zero bits → node 8 − 8 = 0.
+        let mut probs = [0x400u16; 512];
+        probs[11] = 0x800;
+        probs[12] = 0x800;
+        probs[14] = 0x800;
+        let mut st = state(0x8000000, 0x100000);
+        let r = unsafe { fn_0040d244(probs.as_mut_ptr(), st.as_mut_ptr(), 1) };
+        assert_eq!(r, 0);
+        // Mid lane: bits 1 then 0 (cells +0 @0x100, +2 @0x400),
+        // tree at `+0x114` count 3 of zeros → 0 + 8.
+        let mut probs = [0x400u16; 512];
+        probs[0] = 0x100;
+        probs[1] = 0x400;
+        probs[0x8b] = 0x800;
+        probs[0x8c] = 0x800;
+        probs[0x8e] = 0x800;
+        let mut st = state(0x8000000, 0x4000000);
+        let r = unsafe { fn_0040d244(probs.as_mut_ptr(), st.as_mut_ptr(), 1) };
+        assert_eq!(r, 8);
+        // Far lane: bits 1 then 1, tree at `+0x204` count 8 of zeros →
+        // node 256 − 256 = 0, + 0x10.
+        let mut probs = [0x400u16; 512];
+        probs[0] = 0x100;
+        probs[1] = 0x100;
+        for node in [1u16, 2, 4, 8, 16, 32, 64, 128] {
+            probs[0x102 + node as usize] = 0x800;
         }
-        let mut cell: u16 = 0x400;
-        // Zero lane: first bit 0 → base param_1+param_3*16+4, count 3.
-        BIT0.store(0, Ordering::SeqCst);
-        N.store(0, Ordering::SeqCst);
-        let r = unsafe { fn_0040d244(&mut cell, core::ptr::null_mut(), 1) };
-        assert_eq!(r, 5);
-        assert_eq!(BASE.load(Ordering::SeqCst), (&cell as *const u16 as usize).wrapping_add(20));
-        assert_eq!(COUNT.load(Ordering::SeqCst), 3);
-        // Mid lane: 1 then 0 → +0x104 base, count 3, +8 bias.
-        BIT0.store(1, Ordering::SeqCst);
-        BIT1.store(0, Ordering::SeqCst);
-        N.store(0, Ordering::SeqCst);
-        let r = unsafe { fn_0040d244(&mut cell, core::ptr::null_mut(), 1) };
-        assert_eq!(r, 13);
-        assert_eq!(COUNT.load(Ordering::SeqCst), 3);
-        // Far lane: 1 then 1 → +0x204 base, count 8, +0x10 bias.
-        BIT0.store(1, Ordering::SeqCst);
-        BIT1.store(1, Ordering::SeqCst);
-        N.store(0, Ordering::SeqCst);
-        let r = unsafe { fn_0040d244(&mut cell, core::ptr::null_mut(), 1) };
-        assert_eq!(r, 21);
-        assert_eq!(BASE.load(Ordering::SeqCst), (&cell as *const u16 as usize).wrapping_add(0x204));
-        assert_eq!(COUNT.load(Ordering::SeqCst), 8);
+        let mut st = state(0x8000000, 0x4000000);
+        let r = unsafe { fn_0040d244(probs.as_mut_ptr(), st.as_mut_ptr(), 1) };
+        assert_eq!(r, 16);
     }
 }

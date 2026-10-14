@@ -1,7 +1,6 @@
 //! Original procedure `0x0040ce24` (195 bytes, `0x0040ce24–0x0040cee6`).
 //! Evidence: `evidence/0040ce24_fn_0040ce24.md`.
 
-unsafe extern "C" fn default_fail(_c: u32) {}
 unsafe extern "C" fn default_fill(_s: *mut u8, _n: u32, _v: u8) {}
 unsafe extern "C" fn default_parse(
     _s: *mut u8,
@@ -13,18 +12,14 @@ unsafe extern "C" fn default_parse(
 ) -> i32 {
     0
 }
-unsafe extern "C" fn default_free_one(_p: *mut u8) {}
 unsafe extern "C" fn default_alloc(_a: u32, _s: u32, _t: u32, _p: u32) -> u32 {
     0
 }
 unsafe extern "C" fn default_emit(_s: *mut u8, _d: usize, _o: usize) {}
 unsafe extern "C" fn default_oom() {}
 
-/// `0x0040cc3c` reporter (codes 1/3/7).
-///
-/// ponytail: hook standing in for same-batch `fn_0040cc3c`, rewire once
-/// cross-module linkage proven.
-pub static mut HOOK_0040CC3C: unsafe extern "C" fn(u32) = default_fail;
+/// `0x0040cc3c` reporter (codes 1/3/7): direct intra-cluster call
+/// (rewired; signatures verified `fn(u32)`).
 
 /// `0x00403250` fill `(state,0x50,0)`.
 ///
@@ -37,10 +32,8 @@ pub static mut HOOK_00403250: unsafe extern "C" fn(*mut u8, u32, u8) = default_f
 pub static mut HOOK_0040D9D8: unsafe extern "C" fn(*mut u8, u32, *const u8, *mut u32, *mut i32, u32) -> i32 =
     default_parse;
 
-/// `0x0040cdcc` free lane.
-///
-/// ponytail: hook standing in for same-batch `fn_0040cdcc`.
-pub static mut HOOK_0040CDCC: unsafe extern "C" fn(*mut u8) = default_free_one;
+/// `0x0040cdcc` free lane: direct intra-cluster call
+/// (rewired; signatures verified `fn(*mut u8)`).
 
 /// Thunk `0x0040684c` (`KERNEL32.DLL::VirtualAlloc`).
 ///
@@ -66,7 +59,7 @@ pub unsafe fn fn_0040ce24(param_1: *mut u8) {
     let read: unsafe extern "C" fn(u32, *mut u8, u32) -> i32 = core::mem::transmute(target);
     let mut hdr = [0u8; 8];
     if read(arg0, hdr.as_mut_ptr(), 5) != 5 {
-        HOOK_0040CC3C(1);
+        crate::fn_0040cc3c::fn_0040cc3c(1);
     }
     HOOK_00403250(param_1.wrapping_byte_add(0x14), 0x50, 0);
     let mut out_sz: u32 = 0;
@@ -80,15 +73,15 @@ pub unsafe fn fn_0040ce24(param_1: *mut u8) {
         5,
     ) != 0
     {
-        HOOK_0040CC3C(3);
+        crate::fn_0040cc3c::fn_0040cc3c(3);
     }
     if out_sz > 0x4000000 {
-        HOOK_0040CC3C(7);
+        crate::fn_0040cc3c::fn_0040cc3c(7);
     }
     // ponytail: `ADD ESI,[ESP+0xc]` wraps on target; `wrapping_add` here.
     let total: u32 = (out_off as u32).wrapping_add(out_sz);
     if total != core::ptr::read_unaligned(param_1.wrapping_byte_add(0x68) as *const u32) {
-        HOOK_0040CDCC(param_1);
+        crate::fn_0040cdcc::fn_0040cdcc(param_1);
         let p = HOOK_VirtualAlloc(0, total, 0x1000, 4);
         core::ptr::write_unaligned(param_1.wrapping_byte_add(0x64) as *mut u32, p);
         if p == 0 {
@@ -109,7 +102,7 @@ pub unsafe fn fn_0040ce24(param_1: *mut u8) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_00409818, HOOK_00403250, HOOK_0040CC3C, HOOK_0040CDCC, HOOK_0040D9D8,
+        HOOK_00409818, HOOK_00403250, HOOK_0040D9D8,
         HOOK_0040DA28, HOOK_VirtualAlloc, fn_0040ce24,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -123,7 +116,18 @@ mod tests {
     static EMIT: AtomicUsize = AtomicUsize::new(0);
     static READ_RET: AtomicUsize = AtomicUsize::new(0);
 
-    unsafe extern "C" fn fail(c: u32) {
+    // Fail codes observed through the real `fn_0040cc3c`: it forwards
+    // `[code, 0]` to its format hook and the format result to die.
+    unsafe extern "C" fn fmt_fail(
+        _p1: usize,
+        _p2: u8,
+        _p3: *const u16,
+        _p4: u32,
+        blk: *mut u8,
+    ) -> u32 {
+        core::ptr::read_unaligned(blk as *const u32)
+    }
+    unsafe extern "C" fn die_fail(c: u32) {
         FAIL.store(c as usize, Ordering::SeqCst);
     }
     unsafe extern "C" fn fill(_s: *mut u8, _n: u32, _v: u8) {}
@@ -139,8 +143,10 @@ mod tests {
         *o2 = OFF.load(Ordering::SeqCst) as i32;
         PARSE_RET.load(Ordering::SeqCst) as i32
     }
-    unsafe extern "C" fn free1(_p: *mut u8) {
+    // Frees observed through the real `fn_0040cdcc`'s `VirtualFree` hook.
+    unsafe extern "C" fn vfree(_p: u32, _s: u32, _t: u32) -> u32 {
         FREE.fetch_add(1, Ordering::SeqCst);
+        1
     }
     unsafe extern "C" fn alloc(_a: u32, _s: u32, _t: u32, _p: u32) -> u32 {
         ALLOC.fetch_add(1, Ordering::SeqCst);
@@ -168,10 +174,11 @@ mod tests {
     #[test]
     fn lanes() {
         unsafe {
-            HOOK_0040CC3C = fail;
+            crate::fn_0040cc3c::HOOK_00409860 = fmt_fail;
+            crate::fn_0040cc3c::HOOK_00403F88 = die_fail;
             HOOK_00403250 = fill;
             HOOK_0040D9D8 = parse;
-            HOOK_0040CDCC = free1;
+            crate::fn_0040cdcc::HOOK_VirtualFree = vfree;
             HOOK_VirtualAlloc = alloc;
             HOOK_0040DA28 = emit;
             HOOK_00409818 = oom;
