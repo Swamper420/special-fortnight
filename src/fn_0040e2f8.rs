@@ -4,9 +4,6 @@
 unsafe extern "C" fn default_retain(_p: i32) {}
 unsafe extern "C" fn default_mkname(_d: *mut u8, _s: *mut u32) {}
 unsafe extern "C" fn default_take(_d: *mut u32, _s: u32) {}
-unsafe extern "C" fn default_seed(_n: u32) -> u32 {
-    0
-}
 unsafe extern "C" fn default_stat(_s: u32, _o: *mut i32) -> u32 {
     0
 }
@@ -29,8 +26,8 @@ pub static mut HOOK_0040493C: unsafe extern "C" fn(i32) = default_retain;
 pub static mut HOOK_0040B2E0: unsafe extern "C" fn(*mut u8, *mut u32) = default_mkname;
 /// ponytail: hook for `fn_00404cec`.
 pub static mut HOOK_00404CEC: unsafe extern "C" fn(*mut u32, u32) = default_take;
-/// ponytail: hook for `fn_004030e4` (seed).
-pub static mut HOOK_004030E4: unsafe extern "C" fn(u32) -> u32 = default_seed;
+/// ponytail: hook for `fn_004030e4` (seed): direct intra-reconstruction
+/// call (rewired; signatures verified `fn(u32) -> u32`).
 /// ponytail: hook for `fn_0040b62c`.
 pub static mut HOOK_0040B62C: unsafe extern "C" fn(u32, *mut i32) -> u32 = default_stat;
 /// Target `0x0040df20` cycle-fatal message.
@@ -64,7 +61,7 @@ pub unsafe fn fn_0040e2f8(param_1: u8, param_2: *mut u8, param_3: u32, param_4: 
     let mut tmp: u32 = 0;
     HOOK_0040B2E0(param_2, &mut tmp);
     HOOK_00404CEC(&mut cur, tmp);
-    let seed = HOOK_004030E4(0x2000000);
+    let seed = crate::fn_004030e4::fn_004030e4(0x2000000);
     // ponytail: `INC; CMP 0x1ffffff; JLE / XOR` wrap + `CMP seed; JNZ` cycle-fatal order matches.
     let mut ctr = seed;
     loop {
@@ -111,9 +108,6 @@ mod tests {
     static STORED: AtomicUsize = AtomicUsize::new(0);
     static NAMES: AtomicUsize = AtomicUsize::new(0);
 
-    unsafe extern "C" fn seed(_n: u32) -> u32 {
-        0x100
-    }
     unsafe extern "C" fn name(_id: u32, _d: *mut u32) {
         NAMES.fetch_add(1, Ordering::SeqCst);
     }
@@ -133,7 +127,6 @@ mod tests {
 
     fn reset() {
         unsafe {
-            HOOK_004030E4 = seed;
             HOOK_0040E280 = name;
             HOOK_0040513C = alloc;
             HOOK_0040E1E0 = gate;
@@ -144,6 +137,11 @@ mod tests {
 
     #[test]
     fn exits_first_iter_and_stores() {
+        // Real `fn_004030e4` behind the seed (seed cell shared):
+        // hold the owner lock; seed 0 → seed 1 → (0x2000000*1)>>32
+        // == 0, so ctr=1, gate 0 breaks after one name call.
+        let _seed = crate::fn_004030e4::TEST_LOCK.lock().unwrap();
+        unsafe { crate::fn_004030e4::CELL_00412008 = 0 };
         reset();
         GATE.store(0, Ordering::SeqCst);
         NAMES.store(0, Ordering::SeqCst);

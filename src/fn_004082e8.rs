@@ -110,7 +110,6 @@ mod tests {
     static SCAN_ARG: AtomicUsize = AtomicUsize::new(0);
     static SCAN_RET: AtomicUsize = AtomicUsize::new(0);
     static NORM_HITS: AtomicUsize = AtomicUsize::new(0);
-    static FWD_HITS: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_ARG: AtomicUsize = AtomicUsize::new(0);
     static FILL_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -155,10 +154,6 @@ mod tests {
         FILL_C.store(c as usize, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn fwd(_slot: *mut u8, _src: *mut u8) {
-        FWD_HITS.fetch_add(1, Ordering::SeqCst);
-    }
-
     unsafe extern "C" fn p00_alloc(n: u32) -> *mut u8 {
         P00_ALLOC_HITS.fetch_add(1, Ordering::SeqCst);
         P00_ALLOC_ARG.store(n as usize, Ordering::SeqCst);
@@ -195,7 +190,6 @@ mod tests {
     fn reset() {
         SCAN_HITS.store(0, Ordering::SeqCst);
         NORM_HITS.store(0, Ordering::SeqCst);
-        FWD_HITS.store(0, Ordering::SeqCst);
         ALLOC_HITS.store(0, Ordering::SeqCst);
         FILL_HITS.store(0, Ordering::SeqCst);
         P00_ALLOC_HITS.store(0, Ordering::SeqCst);
@@ -223,7 +217,6 @@ mod tests {
         let s4820 = unsafe { crate::fn_00404820::CALLEE_00404E6C };
         let sdd_a = unsafe { crate::fn_00404dd4::HOOK_004054b4 };
         let sdd_f = unsafe { crate::fn_00404dd4::HOOK_00402fbc };
-        let sc98 = unsafe { crate::fn_00404c98::HOOK_00404e6c };
         let s00_a = unsafe { crate::fn_00404f00::HOOK_004054b4 };
         let s00_r = unsafe { crate::fn_00404f00::HOOK_00402e38 };
         let s00_n = unsafe { crate::fn_00404f00::HOOK_00404e6c };
@@ -234,7 +227,6 @@ mod tests {
             crate::fn_00404820::CALLEE_00404E6C = norm_callee;
             crate::fn_00404dd4::HOOK_004054b4 = alloc;
             crate::fn_00404dd4::HOOK_00402fbc = fill;
-            crate::fn_00404c98::HOOK_00404e6c = fwd;
             crate::fn_00404f00::HOOK_004054b4 = p00_alloc;
             crate::fn_00404f00::HOOK_00402e38 = p00_realloc;
             crate::fn_00404f00::HOOK_00404e6c = p00_norm;
@@ -298,11 +290,12 @@ mod tests {
         unsafe { fn_004082e8(pc, oc16, 0x4444_4444, 0x5555_5555) };
         assert_eq!(SCAN_HITS.load(Ordering::SeqCst), 1);
         // Only scan: in-loop format against the grown buffer.
+        // (The real `fn_00404c98` forward lane never fires here:
+        // lanes use null/tag-2 objects only.)
         assert_eq!(SCAN_ARG.load(Ordering::SeqCst), 0xc00);
         assert_eq!(P00_ALLOC_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(P00_ALLOC_ARG.load(Ordering::SeqCst), 0x1800);
         assert_eq!(NORM_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(FWD_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(P00_NORM_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(P00_FAIL_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(P00_REALLOC_HITS.load(Ordering::SeqCst), 1);
@@ -316,7 +309,6 @@ mod tests {
             crate::fn_00404820::CALLEE_00404E6C = s4820;
             crate::fn_00404dd4::HOOK_004054b4 = sdd_a;
             crate::fn_00404dd4::HOOK_00402fbc = sdd_f;
-            crate::fn_00404c98::HOOK_00404e6c = sc98;
             crate::fn_00404f00::HOOK_004054b4 = s00_a;
             crate::fn_00404f00::HOOK_00402e38 = s00_r;
             crate::fn_00404f00::HOOK_00404e6c = s00_n;

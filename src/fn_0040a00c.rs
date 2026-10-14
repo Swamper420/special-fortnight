@@ -112,6 +112,11 @@ pub static mut SLOT_00412B14: usize = 0;
 /// then 8 double-deref slot stores. Operand direction kept per
 /// site (slot-first ×6, immediate-first ×2). Addresses form on
 /// `usize` (never `as u32` on pointers).
+///
+/// Test-only serialization for tests sharing this module's
+/// hooks/DATs/SLOTs.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 pub unsafe fn fn_0040a00c() {
     DAT_00415C9C = HOOK_004098E0(
         SRC_00406EB0 as *mut u8,
@@ -169,7 +174,7 @@ mod tests {
 
     #[test]
     fn calls_then_slot_stores() {
-        // Own hooks/slots only: no foreign globals, no TEST_LOCK.
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe { HOOK_004098E0 = make };
         let mut s1 = 0u8;
         let mut s2 = 0u8;

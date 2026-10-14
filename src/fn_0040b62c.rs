@@ -9,10 +9,6 @@ unsafe extern "C" fn default_at(_obj: *mut u8, _addr: *mut u8) -> *mut u16 {
     core::ptr::null_mut()
 }
 
-unsafe extern "C" fn default_class(_ch: u16) -> u32 {
-    0
-}
-
 unsafe extern "C" fn default_slice(_obj: *mut u8, _one: i32, _n: i32, _dest: *mut u8) {}
 
 /// Scanner `0x0040b3cc` (`FUN_0040b3cc`), `(obj, 1)`.
@@ -30,11 +26,8 @@ pub static mut HOOK_0040b3cc: unsafe extern "C" fn(*mut u8, u8) -> i32 = default
 pub static mut HOOK_0040b620: unsafe extern "C" fn(*mut u8, *mut u8) -> *mut u16 = default_at;
 
 /// Class test `0x0040b334` (`FUN_0040b334`), `(MOVZX ch)`.
-/// Only `AL` is observed (`TEST AL,AL`).
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire
-/// to real `fn_0040b334` once it exists.
-pub static mut HOOK_0040b334: unsafe extern "C" fn(u16) -> u32 = default_class;
+/// Only `AL` is observed (`TEST AL,AL`): direct intra-reconstruction
+/// call (rewired; signatures verified `fn(u16) -> u32`).
 
 /// Store `0x00404c98` (`FUN_00404c98`), `(dest_slot, src)`: direct
 /// intra-reconstruction call (rewired; signatures verified
@@ -63,7 +56,7 @@ pub unsafe fn fn_0040b62c(param_1: *mut u8, param_2: *mut u8) {
         let addr =
             (param_1 as usize).wrapping_add((n as u32).wrapping_mul(2) as usize) as *mut u8;
         let p = HOOK_0040b620(param_1, addr);
-        let r = HOOK_0040b334(core::ptr::read_unaligned(p as *const u16));
+        let r = crate::fn_0040b334::fn_0040b334(core::ptr::read_unaligned(p as *const u16));
         if (r as u8) == 0 {
             break;
         }
@@ -83,22 +76,21 @@ pub unsafe fn fn_0040b62c(param_1: *mut u8, param_2: *mut u8) {
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_0040525c, HOOK_0040b334, HOOK_0040b3cc, HOOK_0040b620, fn_0040b62c};
+    use super::{HOOK_0040525c, HOOK_0040b3cc, HOOK_0040b620, fn_0040b62c};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static SCAN_HITS: AtomicUsize = AtomicUsize::new(0);
     static SCAN_ONE: AtomicUsize = AtomicUsize::new(0);
     static SCAN_RET: AtomicUsize = AtomicUsize::new(0);
     static AT_ADDR: AtomicUsize = AtomicUsize::new(0);
-    static CLASS_HITS: AtomicUsize = AtomicUsize::new(0);
-    static CLASS_CH: AtomicUsize = AtomicUsize::new(0);
-    static CLASS_SEQ: AtomicUsize = AtomicUsize::new(0);
+    static AT_SEQ: AtomicUsize = AtomicUsize::new(0);
     static SLICE_HITS: AtomicUsize = AtomicUsize::new(0);
     static SLICE_B: AtomicUsize = AtomicUsize::new(0);
     static SLICE_C: AtomicUsize = AtomicUsize::new(0);
     static SLICE_D: AtomicUsize = AtomicUsize::new(0);
 
     static mut PROBE: u16 = 0x41;
+    static mut SLASH: u16 = 0x5c;
 
     unsafe extern "C" fn scan(_obj: *mut u8, one: u8) -> i32 {
         SCAN_HITS.fetch_add(1, Ordering::SeqCst);
@@ -108,18 +100,13 @@ mod tests {
 
     unsafe extern "C" fn at(_obj: *mut u8, addr: *mut u8) -> *mut u16 {
         AT_ADDR.store(addr as usize, Ordering::SeqCst);
-        core::ptr::addr_of_mut!(PROBE)
-    }
-
-    unsafe extern "C" fn class(ch: u16) -> u32 {
-        CLASS_HITS.fetch_add(1, Ordering::SeqCst);
-        CLASS_CH.store(ch as usize, Ordering::SeqCst);
-        // First call holds (nonzero LOW byte — the caller tests
-        // `AL`), then releases (zero).
-        if CLASS_SEQ.fetch_add(1, Ordering::SeqCst) == 0 {
-            0x101
+        // First call of a lane serves the slash cell (real class
+        // holds, 0x5c→1); later calls serve the probe (real class
+        // releases, 0x41→0). Lanes preset AT_SEQ to select.
+        if AT_SEQ.fetch_add(1, Ordering::SeqCst) == 0 {
+            core::ptr::addr_of_mut!(SLASH)
         } else {
-            0
+            core::ptr::addr_of_mut!(PROBE)
         }
     }
 
@@ -152,7 +139,6 @@ mod tests {
         unsafe {
             HOOK_0040b3cc = scan;
             HOOK_0040b620 = at;
-            HOOK_0040b334 = class;
             HOOK_0040525c = slice;
         }
         let mut dest: *mut u8 = core::ptr::null_mut();
@@ -167,26 +153,24 @@ mod tests {
         assert!(dest.is_null());
         assert_eq!(SLICE_HITS.load(Ordering::SeqCst), 0);
 
-        // Equal lane: len 3, scan→0, char releases at once →
-        // break at n=3 → 3==3 → real store lane; at-addr = obj+6.
-        // Headed obj taken (rc 5→6).
+        // Equal lane: len 3, scan→0, real class(0x41)==0 releases
+        // at once → break at n=3 → 3==3 → real store lane;
+        // at-addr = obj+6. Headed obj taken (rc 5→6).
         let mut a_eq = [0u32; 4];
         let obj = unsafe { hdr(&mut a_eq, 3) };
         SCAN_RET.store(0, Ordering::SeqCst);
-        CLASS_SEQ.store(1, Ordering::SeqCst);
-        CLASS_HITS.store(0, Ordering::SeqCst);
+        AT_SEQ.store(1, Ordering::SeqCst);
         SLICE_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040b62c(obj, dest_ptr) };
-        assert_eq!(CLASS_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(CLASS_CH.load(Ordering::SeqCst), 0x41);
         assert_eq!(AT_ADDR.load(Ordering::SeqCst), (obj as usize).wrapping_add(6));
         assert_eq!(dest, obj);
         assert_eq!(unsafe { rc_of(obj) }, 6);
         assert_eq!(SLICE_HITS.load(Ordering::SeqCst), 0);
 
-        // Shrink lane: reset seq so first call holds (n 3→2)
-        // then releases → break at 2 → 3!=2 → slice(obj,1,2,dest).
-        CLASS_SEQ.store(0, Ordering::SeqCst);
+        // Shrink lane: first at-call serves 0x5c (real class holds,
+        // n 3→2) then 0x41 (releases) → break at 2 → 3!=2 →
+        // slice(obj,1,2,dest).
+        AT_SEQ.store(0, Ordering::SeqCst);
         SLICE_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040b62c(obj, dest_ptr) };
         assert_eq!(SLICE_HITS.load(Ordering::SeqCst), 1);

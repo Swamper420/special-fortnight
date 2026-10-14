@@ -12,6 +12,10 @@ pub static mut HOOK_00405548: unsafe extern "C" fn(*mut u8, *mut u8, u32) =
 
 /// `tgt(param_1, param_2, 1)`; `ECX=1` set before the terminal `JMP`.
 /// Params arrive in EAX/EDX per Ghidra `__register` observation.
+///
+/// Test-only serialization for tests sharing this module's hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 pub unsafe fn fn_00405658(param_1: *mut u8, param_2: *mut u8) {
     HOOK_00405548(param_1, param_2, 1);
 }
@@ -35,6 +39,7 @@ mod tests {
 
     #[test]
     fn forwards_with_const_third_lane() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe { HOOK_00405548 = hook };
         HITS.store(0, Ordering::SeqCst);
         let mut x = [0u8; 4];

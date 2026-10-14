@@ -16,7 +16,6 @@ unsafe extern "C" fn default_alloc(_a: u32, _s: u32, _t: u32, _p: u32) -> u32 {
     0
 }
 unsafe extern "C" fn default_emit(_s: *mut u8, _d: usize, _o: usize) {}
-unsafe extern "C" fn default_oom() {}
 
 /// `0x0040cc3c` reporter (codes 1/3/7): direct intra-cluster call
 /// (rewired; signatures verified `fn(u32)`).
@@ -46,10 +45,8 @@ pub static mut HOOK_VirtualAlloc: unsafe extern "C" fn(u32, u32, u32, u32) -> u3
 /// ponytail: hook standing in for unreconstructed callee.
 pub static mut HOOK_0040DA28: unsafe extern "C" fn(*mut u8, usize, usize) = default_emit;
 
-/// `0x00409818` OOM lane.
-///
-/// ponytail: hook standing in for done `fn_00409818`.
-pub static mut HOOK_00409818: unsafe extern "C" fn() = default_oom;
+/// `0x00409818` OOM lane: direct intra-reconstruction call
+/// (rewired; signatures verified `fn()`).
 
 /// Header-read → fill → parse → size-gated realloc → emit → ready=1.
 /// First call is raw indirect `[param_1+8]`; `ADD` wraps.
@@ -85,7 +82,7 @@ pub unsafe fn fn_0040ce24(param_1: *mut u8) {
         let p = HOOK_VirtualAlloc(0, total, 0x1000, 4);
         core::ptr::write_unaligned(param_1.wrapping_byte_add(0x64) as *mut u32, p);
         if p == 0 {
-            HOOK_00409818();
+            crate::fn_00409818::fn_00409818();
         }
         core::ptr::write_unaligned(param_1.wrapping_byte_add(0x68) as *mut u32, total);
     }
@@ -102,7 +99,7 @@ pub unsafe fn fn_0040ce24(param_1: *mut u8) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_00409818, HOOK_00403250, HOOK_0040D9D8,
+        HOOK_00403250, HOOK_0040D9D8,
         HOOK_0040DA28, HOOK_VirtualAlloc, fn_0040ce24,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -155,7 +152,6 @@ mod tests {
     unsafe extern "C" fn emit(_s: *mut u8, d: usize, o: usize) {
         EMIT.store(d.wrapping_sub(o), Ordering::SeqCst);
     }
-    unsafe extern "C" fn oom() {}
     unsafe extern "C" fn read5(_a: u32, _b: *mut u8, _c: u32) -> i32 {
         READ_RET.load(Ordering::SeqCst) as i32
     }
@@ -181,7 +177,6 @@ mod tests {
             crate::fn_0040cdcc::HOOK_VirtualFree = vfree;
             HOOK_VirtualAlloc = alloc;
             HOOK_0040DA28 = emit;
-            HOOK_00409818 = oom;
         }
         // Short-read lane: fail(1), then equal-size lane skips alloc.
         SZ.store(0x10, Ordering::SeqCst);

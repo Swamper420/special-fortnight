@@ -19,11 +19,9 @@ unsafe extern "C" fn default_fail(_arg: u32) -> *mut u8 {
 /// call once cross-module test serialization exists.
 pub static mut HOOK_004046c4: unsafe extern "C" fn(*mut u8) = default_one;
 
-/// Target `0x004046e8` (`FUN_004046e8`), wide `0x0a` lane.
-///
-/// ponytail: hook standing in for done `fn_004046e8`, rewire to real
-/// call once cross-module test serialization exists.
-pub static mut HOOK_004046e8: unsafe extern "C" fn(*mut u8, u32) = default_two;
+/// Target `0x004046e8` (`FUN_004046e8`), wide `0x0a` lane: direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, u32)`).
 
 /// Target `0x00404a8c` (`FUN_00404a8c`), narrow `0x0b` lane.
 ///
@@ -103,7 +101,7 @@ pub unsafe fn fn_00405548(
     match tag {
         0x0a => {
             if (param_3 as i32) > 1 {
-                HOOK_004046e8(param_1, param_3);
+                crate::fn_004046e8::fn_004046e8(param_1, param_3);
             } else {
                 HOOK_004046c4(param_1);
             }
@@ -208,7 +206,7 @@ pub unsafe fn fn_00405548(
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_00402f60, HOOK_004046c4, HOOK_004046e8, HOOK_00404a8c,
+        HOOK_00402f60, HOOK_004046c4, HOOK_00404a8c,
         HOOK_00404aa4, HOOK_00404c88, HOOK_00404c90, HOOK_004054f8,
         HOOK_00405530, HOOK_00405ae4, HOOK_00406274, fn_00405548,
     };
@@ -264,7 +262,6 @@ mod tests {
     fn dispatch_lanes() {
         unsafe {
             HOOK_004046c4 = one;
-            HOOK_004046e8 = two;
             HOOK_00404a8c = one;
             HOOK_00404aa4 = two;
             HOOK_00404c88 = one;
@@ -284,15 +281,14 @@ mod tests {
         assert_eq!(unsafe { fn_00405548(pi, d.as_mut_ptr(), 0) }, pi);
         assert_eq!(HITS.load(Ordering::SeqCst), 0);
 
-        // 0x0a narrow/wide.
+        // 0x0a narrow (real 46c4 stubbed) vs wide (real 46e8 over
+        // the zeroed arena: all lanes null, no-op, returns base).
         HITS.store(0, Ordering::SeqCst);
         assert_eq!(unsafe { fn_00405548(pi, d.as_mut_ptr(), 1) }, pi);
         assert_eq!(HITS.load(Ordering::SeqCst), 1);
         assert_eq!(ARG0.load(Ordering::SeqCst), pi as usize);
         assert_eq!(unsafe { fn_00405548(pi, d.as_mut_ptr(), 3) }, pi);
-        assert_eq!(HITS.load(Ordering::SeqCst), 2);
-        assert_eq!(ARG0.load(Ordering::SeqCst), pi as usize);
-        assert_eq!(ARG1.load(Ordering::SeqCst), 3);
+        assert_eq!(HITS.load(Ordering::SeqCst), 1);
 
         // 0x12 narrow/wide (thunk hooks, separate from 0x0a).
         let mut d = tag_arena(0x12);

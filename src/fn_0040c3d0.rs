@@ -14,8 +14,6 @@ unsafe extern "C" fn default_get_err() -> u32 {
     0
 }
 
-unsafe extern "C" fn default_report(_first: *const u8) {}
-
 /// Import `KERNEL32.DLL::SetFilePointer` (`CALL 0x0040682c`).
 ///
 /// ponytail: hook standing in for the import (also keeps host tests
@@ -32,11 +30,8 @@ pub static mut HOOK_SetFilePointer: unsafe extern "C" fn(u32, i32, *mut i32, u32
 pub static mut HOOK_GetLastError: unsafe extern "C" fn() -> u32 = default_get_err;
 
 /// Target `0x0040c1e4` (`FUN_0040c1e4`), `(*param_1)` on the
-/// failed-with-code lane.
-///
-/// ponytail: hook standing in for done `fn_0040c1e4`, rewire to the real
-/// call once cross-module linkage proven.
-pub static mut HOOK_0040C1E4: unsafe extern "C" fn(*const u8) = default_report;
+/// failed-with-code lane: direct intra-reconstruction call
+/// (rewired; signatures verified `fn(*const u8)`).
 
 /// `if SetFilePointer(obj[1], off[0], &copy(off[1]), 0)==-1 &&
 /// GetLastError()!=0 { report(*obj) }`. `param_1` in EAX, `param_2`
@@ -53,14 +48,14 @@ pub unsafe fn fn_0040c3d0(param_1: *const u8, param_2: *const i32) {
     let r = HOOK_SetFilePointer(handle, low, &mut high, 0);
     if r == 0xffffffff {
         if HOOK_GetLastError() != 0 {
-            HOOK_0040C1E4(core::ptr::read_unaligned(param_1 as *const *const u8));
+            crate::fn_0040c1e4::fn_0040c1e4(core::ptr::read_unaligned(param_1 as *const *const u8));
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_0040C1E4, HOOK_GetLastError, HOOK_SetFilePointer, fn_0040c3d0};
+    use super::{HOOK_GetLastError, HOOK_SetFilePointer, fn_0040c3d0};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static RET: AtomicUsize = AtomicUsize::new(0);
@@ -72,8 +67,9 @@ mod tests {
     static SET_HIGH_VAL: AtomicUsize = AtomicUsize::new(0);
     static SET_HOW: AtomicUsize = AtomicUsize::new(0);
     static ERR_HITS: AtomicUsize = AtomicUsize::new(0);
-    static REPORT_HITS: AtomicUsize = AtomicUsize::new(0);
-    static REPORT_ARG: AtomicUsize = AtomicUsize::new(0);
+    static DOWN_ERR: AtomicUsize = AtomicUsize::new(0);
+    static DOWN_P1: AtomicUsize = AtomicUsize::new(0);
+    static DOWN_ERR_ARG: AtomicUsize = AtomicUsize::new(0);
 
     unsafe extern "C" fn set_ptr(handle: u32, low: i32, high: *mut i32, how: u32) -> u32 {
         SET_HITS.fetch_add(1, Ordering::SeqCst);
@@ -92,17 +88,29 @@ mod tests {
         ERR.load(Ordering::SeqCst) as u32
     }
 
-    unsafe extern "C" fn report(first: *const u8) {
-        REPORT_HITS.fetch_add(1, Ordering::SeqCst);
-        REPORT_ARG.store(first as usize, Ordering::SeqCst);
+    /// Observers behind the real `fn_0040c1e4` report chain.
+    unsafe extern "C" fn down_err() -> u32 {
+        DOWN_ERR.load(Ordering::SeqCst) as u32
+    }
+
+    unsafe extern "C" fn down_report(p1: *const u8, err: u32) {
+        DOWN_P1.store(p1 as usize, Ordering::SeqCst);
+        DOWN_ERR_ARG.store(err as usize, Ordering::SeqCst);
     }
 
     #[test]
     fn seek_lanes() {
+        // Real `fn_0040c1e4` behind the report lane: hold the owner
+        // lock so its writer test can't race us.
+        let _down = crate::fn_0040c1e4::TEST_LOCK.lock().unwrap();
+        let (old_err, old_rep);
         unsafe {
             HOOK_SetFilePointer = set_ptr;
             HOOK_GetLastError = get_err;
-            HOOK_0040C1E4 = report;
+            old_err = crate::fn_0040c1e4::GET_LAST_ERROR_00406700;
+            old_rep = crate::fn_0040c1e4::REPORT_0040c130;
+            crate::fn_0040c1e4::GET_LAST_ERROR_00406700 = down_err;
+            crate::fn_0040c1e4::REPORT_0040c130 = down_report;
         }
         let target = 0x1234 as *const u8;
         let mut obj = [target as usize, 0x44usize];
@@ -113,7 +121,7 @@ mod tests {
         RET.store(5, Ordering::SeqCst);
         SET_HITS.store(0, Ordering::SeqCst);
         ERR_HITS.store(0, Ordering::SeqCst);
-        REPORT_HITS.store(0, Ordering::SeqCst);
+        DOWN_P1.store(0, Ordering::SeqCst);
         unsafe { fn_0040c3d0(p1, p2) };
         assert_eq!(SET_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(SET_HANDLE.load(Ordering::SeqCst), 0x44);
@@ -126,19 +134,25 @@ mod tests {
         );
         assert_eq!(off[1], 0x22);
         assert_eq!(ERR_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(REPORT_HITS.load(Ordering::SeqCst), 0);
+        assert_eq!(DOWN_P1.load(Ordering::SeqCst), 0);
         // Fail-without-code lane: error call only.
         RET.store(0xffffffff, Ordering::SeqCst);
         ERR.store(0, Ordering::SeqCst);
         unsafe { fn_0040c3d0(p1, p2) };
         assert_eq!(SET_HITS.load(Ordering::SeqCst), 2);
         assert_eq!(ERR_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(REPORT_HITS.load(Ordering::SeqCst), 0);
-        // Fail-with-code lane: report fires with *param_1.
+        assert_eq!(DOWN_P1.load(Ordering::SeqCst), 0);
+        // Fail-with-code lane: real report chain forwards (*param_1,
+        // GetLastError()).
         ERR.store(7, Ordering::SeqCst);
+        DOWN_ERR.store(9, Ordering::SeqCst);
         unsafe { fn_0040c3d0(p1, p2) };
         assert_eq!(ERR_HITS.load(Ordering::SeqCst), 2);
-        assert_eq!(REPORT_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(REPORT_ARG.load(Ordering::SeqCst), target as usize);
+        assert_eq!(DOWN_P1.load(Ordering::SeqCst), target as usize);
+        assert_eq!(DOWN_ERR_ARG.load(Ordering::SeqCst), 9);
+        unsafe {
+            crate::fn_0040c1e4::GET_LAST_ERROR_00406700 = old_err;
+            crate::fn_0040c1e4::REPORT_0040c130 = old_rep;
+        }
     }
 }

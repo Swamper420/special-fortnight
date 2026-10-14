@@ -8,6 +8,10 @@ unsafe extern "C" fn default_dispatch(_arg: u32) {}
 /// ponytail: hook standing in for the function-pointer slot call.
 pub static mut HOOK_00418520: unsafe extern "C" fn(u32) = default_dispatch;
 
+/// Test-only serialization for tests sharing this module's hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Conditional dispatch on flag byte; arg is dword at `+4`.
 /// `param_1` EAX per `__register` observation.
 pub unsafe fn fn_0040e158(param_1: *mut u8) {
@@ -18,7 +22,7 @@ pub unsafe fn fn_0040e158(param_1: *mut u8) {
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00418520, fn_0040e158};
+    use super::{HOOK_00418520, TEST_LOCK, fn_0040e158};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static HITS: AtomicUsize = AtomicUsize::new(0);
@@ -31,6 +35,7 @@ mod tests {
 
     #[test]
     fn flag_gates_dispatch() {
+        let _guard = TEST_LOCK.lock().unwrap();
         unsafe { HOOK_00418520 = dispatch };
         let mut s = [0u8; 8];
         HITS.store(0, Ordering::SeqCst);

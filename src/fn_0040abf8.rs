@@ -47,6 +47,11 @@ pub static mut DAT_00412810: usize = 0;
 /// Fallback `LAB_00408068` (observed code bytes, address stored, not called).
 pub const FALLBACK_00408068: usize = 0x00408068;
 
+/// Test-only serialization for tests sharing this module's
+/// hooks/cell.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// `h=GetModuleHandleW(kernel32); if h { DAT=resolve(h, name) };
 /// if DAT==0 { DAT=fallback }`. No params per Ghidra `__register`
 /// observation. EBX save/restore has no Rust equivalent.
@@ -91,7 +96,7 @@ mod tests {
 
     #[test]
     fn resolve_and_fallback_lanes() {
-        // Own hooks/cell only: no foreign globals, no TEST_LOCK.
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             GETMODULEHANDLEW_00406718 = gmh;
             HOOK_00406728 = resolve;

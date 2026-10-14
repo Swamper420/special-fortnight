@@ -83,7 +83,6 @@ mod tests {
     static INIT_AT: AtomicUsize = AtomicUsize::new(0);
     static FIN_INIT_AT: AtomicUsize = AtomicUsize::new(0);
     static FIN_INIT_ARG: AtomicUsize = AtomicUsize::new(0);
-    static FIN_RUN_AT: AtomicUsize = AtomicUsize::new(0);
 
     unsafe extern "C" fn module_handle(name: *const u16) -> u32 {
         GMH_HITS.fetch_add(1, Ordering::SeqCst);
@@ -101,24 +100,18 @@ mod tests {
         FIN_INIT_AT.store(SEQ.fetch_add(1, Ordering::SeqCst), Ordering::SeqCst);
     }
 
-    /// Real `fn_004042d0` runner lane.
-    unsafe extern "C" fn fin_run() {
-        FIN_RUN_AT.store(SEQ.fetch_add(1, Ordering::SeqCst), Ordering::SeqCst);
-    }
-
     #[test]
     fn cells_then_init_then_final_in_order() {
         // Real `fn_004042d0` under its owner's lock (shared cells);
-        // its init/runner hooks saved + restored.
+        // its init hook saved + restored; the runner is the real
+        // `fn_00404268` (zeroed anchor → count 0 → no-op).
         let _shared = crate::fn_00404204::TEST_LOCK.lock().unwrap();
-        let (old_init, old_run);
+        let old_init;
         unsafe {
             old_init = crate::fn_004042d0::HOOK_004041BC;
-            old_run = crate::fn_004042d0::HOOK_00404268;
             GET_MODULE_HANDLE_W_00406510 = module_handle;
             CALLEE_004065c8 = init;
             crate::fn_004042d0::HOOK_004041BC = fin_init;
-            crate::fn_004042d0::HOOK_00404268 = fin_run;
             TLS_INDEX_004127ac = 0xdead;
             DAT_00415b48 = 0xdead;
             DAT_004127b8 = 0xdead;
@@ -140,11 +133,10 @@ mod tests {
         assert_eq!(INIT_AT.load(Ordering::SeqCst), 0);
         assert_eq!(FIN_INIT_AT.load(Ordering::SeqCst), 1);
         assert_eq!(FIN_INIT_ARG.load(Ordering::SeqCst), 0x00415ae4);
-        assert_eq!(FIN_RUN_AT.load(Ordering::SeqCst), 2);
         assert_eq!(unsafe { crate::fn_00404204::DAT_00415aec }, param_1);
+        assert_eq!(unsafe { crate::fn_00404204::DAT_00415af0 }, 0);
         unsafe {
             crate::fn_004042d0::HOOK_004041BC = old_init;
-            crate::fn_004042d0::HOOK_00404268 = old_run;
         }
     }
 }

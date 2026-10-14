@@ -32,13 +32,16 @@ pub unsafe fn fn_0040c1e4(param_1: *const u8) {
     REPORT_0040c130(saved, err);
 }
 
+/// Test-only serialization for tests sharing GET_LAST_ERROR/REPORT
+/// globals (also held by cross-module tests that call `fn_0040c1e4`
+/// directly).
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
-    use super::{GET_LAST_ERROR_00406700, REPORT_0040c130, fn_0040c1e4};
+    use super::{GET_LAST_ERROR_00406700, REPORT_0040c130, TEST_LOCK, fn_0040c1e4};
     use std::sync::atomic::{AtomicUsize, Ordering};
-
-    /// Test-only serialization for tests sharing GET_LAST_ERROR/REPORT globals.
-    static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     static ERR_RET: AtomicUsize = AtomicUsize::new(0);
     static GOT_P1: AtomicUsize = AtomicUsize::new(0);

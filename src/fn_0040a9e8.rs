@@ -1,10 +1,6 @@
 //! Original procedure `0x0040a9e8` (147 bytes, `0x0040a9e8–0x0040aa7a`).
 //! Evidence: `evidence/0040a9e8_fn_0040a9e8.md`.
 
-unsafe extern "C" fn default_strlen(_s: *const u8) -> u32 {
-    0
-}
-
 unsafe extern "C" fn default_mbtwc(
     _cp: u32,
     _flags: u32,
@@ -26,11 +22,9 @@ unsafe extern "C" fn default_alloc(_bytes: u32) -> *mut u8 {
 
 unsafe extern "C" fn default_free(_p: *mut u8) {}
 
-/// Length callee `0x00404914` (`FUN_00404914`), `EAX` in/out.
-///
-/// ponytail: hook standing in for done `fn_00404914`, rewire to the
-/// real call once cross-module test serialization exists.
-pub static mut HOOK_00404914: unsafe extern "C" fn(*const u8) -> u32 = default_strlen;
+/// Length callee `0x00404914` (`FUN_00404914`), `EAX` in/out:
+/// direct intra-reconstruction call (rewired; signatures verified
+/// `fn(*const u8) -> u32`).
 
 /// Import `KERNEL32.DLL::MultiByteToWideChar` (`CALL 0x004067f4` ×2:
 /// size query with `(NULL,0)`, then conversion).
@@ -69,7 +63,7 @@ pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 /// `cch>=1`, signed `DEC/TEST/JL`) → free iff not the stack area.
 /// `param_1` arrives in EAX; returns the hash in EAX.
 pub unsafe fn fn_0040a9e8(param_1: *const u8) -> u32 {
-    let len = HOOK_00404914(param_1);
+    let len = crate::fn_00404914::fn_00404914(param_1);
     let cch = HOOK_MultiByteToWideChar(0xfde9, 0, param_1, len as i32, core::ptr::null_mut(), 0);
     let mut stack = [0u16; 0x104];
     let wide: *mut u16 = if cch > 0x104 {
@@ -100,32 +94,29 @@ pub unsafe fn fn_0040a9e8(param_1: *const u8) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_00402E04, HOOK_00402E20, HOOK_00404914, HOOK_CharUpperBuffW,
+        HOOK_00402E04, HOOK_00402E20, HOOK_CharUpperBuffW,
         HOOK_MultiByteToWideChar, TEST_LOCK, fn_0040a9e8,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    static LEN: AtomicUsize = AtomicUsize::new(0);
     static CCH: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
     static FREE_HITS: AtomicUsize = AtomicUsize::new(0);
     static FREE_ARG: AtomicUsize = AtomicUsize::new(0);
     static UPPER_HITS: AtomicUsize = AtomicUsize::new(0);
     static UPPER_N: AtomicUsize = AtomicUsize::new(0);
+    static CB: AtomicUsize = AtomicUsize::new(0);
     static HEAP: AtomicUsize = AtomicUsize::new(0);
-
-    unsafe extern "C" fn strlen_hook(_s: *const u8) -> u32 {
-        LEN.load(Ordering::SeqCst) as u32
-    }
 
     unsafe extern "C" fn mbtwc_hook(
         _cp: u32,
         _flags: u32,
         _mb: *const u8,
-        _cb: i32,
+        cb: i32,
         wc: *mut u16,
         _cc: u32,
     ) -> u32 {
+        CB.store(cb as usize, Ordering::SeqCst);
         let cch = CCH.load(Ordering::SeqCst) as u32;
         if !wc.is_null() {
             // First two words fixed; rest NUL (heap lane loops all).
@@ -152,8 +143,8 @@ mod tests {
     }
 
     fn reset() {
-        LEN.store(0, Ordering::SeqCst);
         CCH.store(0, Ordering::SeqCst);
+        CB.store(0, Ordering::SeqCst);
         ALLOC_HITS.store(0, Ordering::SeqCst);
         FREE_HITS.store(0, Ordering::SeqCst);
         UPPER_HITS.store(0, Ordering::SeqCst);
@@ -163,20 +154,20 @@ mod tests {
     fn hash_lanes() {
         let _guard = TEST_LOCK.lock().unwrap();
         unsafe {
-            HOOK_00404914 = strlen_hook;
             HOOK_MultiByteToWideChar = mbtwc_hook;
             HOOK_CharUpperBuffW = upper_hook;
             HOOK_00402E04 = alloc_hook;
             HOOK_00402E20 = free_hook;
         }
         let input = b"ab\0";
-        // Stack lane: cch=2 → rotl5(0)^0x41=0x41,
+        // Stack lane: real strlen("ab")==2 reaches the size query
+        // as cb=2; cch=2 → rotl5(0)^0x41=0x41,
         // rotl5(0x41)=0x820 ^0x42=0x862; no alloc/free.
         reset();
-        LEN.store(3, Ordering::SeqCst);
         CCH.store(2, Ordering::SeqCst);
         let r = unsafe { fn_0040a9e8(input.as_ptr()) };
         assert_eq!(r, 0x862);
+        assert_eq!(CB.load(Ordering::SeqCst), 2);
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(FREE_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(UPPER_HITS.load(Ordering::SeqCst), 1);

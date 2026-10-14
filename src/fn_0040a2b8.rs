@@ -10,6 +10,10 @@ pub static mut PTR_00412BB0: *mut u32 = core::ptr::null_mut();
 
 /// `obj=[0x00412bb0]; [obj]=0x004129c4` (address of
 /// `PTR_LAB_004129c4`, stored as a `u32` of observed width).
+///
+/// Test-only serialization for tests sharing this module's slot.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 pub unsafe fn fn_0040a2b8() {
     let obj: *mut u32 = core::ptr::read_unaligned(
         core::ptr::addr_of!(PTR_00412BB0) as *const *mut u32,
@@ -23,7 +27,7 @@ mod tests {
 
     #[test]
     fn stores_slot_address() {
-        // Own slot only; no foreign globals, no lock.
+        let _guard = super::TEST_LOCK.lock().unwrap();
         let mut cell = 0u32;
         unsafe {
             PTR_00412BB0 = core::ptr::addr_of_mut!(cell);

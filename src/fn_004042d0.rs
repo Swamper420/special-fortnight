@@ -38,13 +38,8 @@ unsafe extern "C" fn default_init(_arg: u32) {}
 /// (host-unmapped); rewire once Windows-target linkage proven.
 pub static mut HOOK_004041BC: unsafe extern "C" fn(u32) = default_init;
 
-unsafe extern "C" fn default_runner() {}
-
-/// Second callee `0x00404268` (`FUN_00404268`), no args.
-///
-/// ponytail: hook standing in for same-batch `fn_00404268`; rewire to
-/// a direct call once module wiring is proven.
-pub static mut HOOK_00404268: unsafe extern "C" fn() = default_runner;
+/// Second callee `0x00404268` (`FUN_00404268`), no args: direct
+/// intra-reconstruction call (rewired; signatures verified `fn()`).
 
 /// Initializer: publishes table anchor/params and immediates, then
 /// `init(0x00415ae4)` and `runner()`. `param_1` (EAX) feeds
@@ -60,14 +55,14 @@ pub unsafe fn fn_004042d0(param_1: *mut u8, param_2: *mut u8) {
     DAT_00413034 = core::ptr::read_unaligned(param_2.wrapping_byte_add(4) as *const u32);
     HOOK_004041BC(0x00415ae4);
     DAT_0041303c = 0;
-    HOOK_00404268();
+    crate::fn_00404268::fn_00404268();
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
         DAT_00413014, DAT_00413018, DAT_00413034, DAT_0041303c, DAT_00415af4, HOOK_004041BC,
-        HOOK_00404268, fn_004042d0,
+        fn_004042d0,
     };
     use crate::fn_00404204::{DAT_00415aec, DAT_00415af0, TEST_LOCK};
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -75,15 +70,10 @@ mod tests {
     static SEQ: AtomicUsize = AtomicUsize::new(0);
     static INIT_AT: AtomicUsize = AtomicUsize::new(0);
     static INIT_ARG: AtomicUsize = AtomicUsize::new(0);
-    static RUN_AT: AtomicUsize = AtomicUsize::new(0);
 
     unsafe extern "C" fn init(arg: u32) {
         INIT_ARG.store(arg as usize, Ordering::SeqCst);
         INIT_AT.store(SEQ.fetch_add(1, Ordering::SeqCst), Ordering::SeqCst);
-    }
-
-    unsafe extern "C" fn runner() {
-        RUN_AT.store(SEQ.fetch_add(1, Ordering::SeqCst), Ordering::SeqCst);
     }
 
     #[test]
@@ -91,7 +81,6 @@ mod tests {
         let _guard = TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_004041BC = init;
-            HOOK_00404268 = runner;
             let mut anchor_obj = [0u8; 8];
             let mut param2 = [0u32; 2];
             param2[1] = 0xdead_beef;
@@ -106,7 +95,8 @@ mod tests {
             assert_eq!(DAT_0041303c, 0);
             assert_eq!(INIT_ARG.load(Ordering::SeqCst), 0x00415ae4);
             assert_eq!(INIT_AT.load(Ordering::SeqCst), 0);
-            assert_eq!(RUN_AT.load(Ordering::SeqCst), 1);
+            // Real runner over the zeroed anchor: count 0 → no-op,
+            // `DAT_00415af0` stays 0.
 
             DAT_00415aec = core::ptr::null_mut();
             DAT_00415af0 = 0;

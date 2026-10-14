@@ -1,7 +1,6 @@
 //! Original procedure `0x0040567c` (319 bytes, `0x0040567c–0x004057ba`).
 //! Evidence: `evidence/0040567c_fn_0040567c.md`.
 
-unsafe extern "C" fn default_copy(_a: *mut u8, _b: *mut u8, _n: u32) {}
 unsafe extern "C" fn default_ab(_a: usize, _b: usize) {}
 unsafe extern "C" fn default_a(_a: usize) {}
 unsafe extern "C" fn default_abc(_a: usize, _b: usize, _c: *mut u8) {}
@@ -9,12 +8,9 @@ unsafe extern "C" fn default_abcd(_a: usize, _b: usize, _c: *mut u8, _d: u32) {}
 unsafe extern "C" fn default_tail(_a: u32) {}
 
 /// Block copy `0x00402fbc` (`FUN_00402fbc`), lanes
-/// `(param_2+off, param_1+off, len)` per `EAX/EDX/ECX` observation.
-///
-/// ponytail: hook standing in for done `fn_00402fbc`, rewire to real
-/// call once cross-module test serialization exists.
-pub static mut HOOK_00402FBC: unsafe extern "C" fn(*mut u8, *mut u8, u32) =
-    default_copy;
+/// `(param_2+off, param_1+off, len)` per `EAX/EDX/ECX` observation:
+/// direct intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, *mut u8, u32)`).
 
 /// `0x00404718` lane (tag `0x0a`), args `(p1+i3, *(p2+i3))`.
 ///
@@ -70,7 +66,7 @@ pub static mut TAIL_00402F60: unsafe extern "C" fn(u32) = default_tail;
 unsafe fn gap_copy(p1: usize, p2: usize, cur: u32, off: u32) {
     let n = off.wrapping_sub(cur);
     if (n as i32) > 0 {
-        HOOK_00402FBC(
+        crate::fn_00402fbc::fn_00402fbc(
             p2.wrapping_add(cur as usize) as *mut u8,
             p1.wrapping_add(cur as usize) as *mut u8,
             n,
@@ -177,21 +173,14 @@ pub unsafe fn fn_0040567c(param_1: usize, param_2: usize, param_3: *mut u8) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_00402FBC, HOOK_00405664, TAIL_00402F60, fn_0040567c,
+        HOOK_00405664, TAIL_00402F60, fn_0040567c,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    static COPY_HITS: AtomicUsize = AtomicUsize::new(0);
-    static COPY_N: AtomicUsize = AtomicUsize::new(0);
     static LANE_HITS: AtomicUsize = AtomicUsize::new(0);
     static LANE_ARG: AtomicUsize = AtomicUsize::new(0);
     static TAIL_HITS: AtomicUsize = AtomicUsize::new(0);
     static TAIL_ARG: AtomicUsize = AtomicUsize::new(0);
-
-    unsafe extern "C" fn copy(_a: *mut u8, _b: *mut u8, n: u32) {
-        COPY_HITS.fetch_add(1, Ordering::SeqCst);
-        COPY_N.store(n as usize, Ordering::SeqCst);
-    }
 
     unsafe extern "C" fn lane(a: usize) {
         LANE_HITS.fetch_add(1, Ordering::SeqCst);
@@ -227,7 +216,6 @@ mod tests {
     #[test]
     fn lane_step_and_fail_tail() {
         unsafe {
-            HOOK_00402FBC = copy;
             HOOK_00405664 = lane;
             TAIL_00402F60 = tail;
         }
@@ -241,24 +229,25 @@ mod tests {
 
         // count=1, limit=0x10, off=0, tag 0x0c: no gap copy, lane(p1),
         // cur=0x10, tail gap 0 -> no copy, no fail tail.
-        COPY_HITS.store(0, Ordering::SeqCst);
         LANE_HITS.store(0, Ordering::SeqCst);
         TAIL_HITS.store(0, Ordering::SeqCst);
         unsafe { plant(d, 0, 0x10, 1, c, t, 0) };
         unsafe { fn_0040567c(p1b, p2b, d) };
         assert_eq!(LANE_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(LANE_ARG.load(Ordering::SeqCst), p1b);
-        assert_eq!(COPY_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 0);
 
-        // Unknown tag, off=0x100: head gap (0x100) fires, then
-        // fail tail over i3=0x100 -> (0x100 & ~0xff) | 2 = 0x102.
+        // Unknown tag, off=16: head gap (16) moves 16 real bytes
+        // p2→p1, then fail tail over i3=16 -> (16 & ~0xff)|2 = 2.
         let mut tagxx = [0x00u8; 4];
-        unsafe { plant(d, 0, 0x10, 1, c, tagxx.as_mut_ptr(), 0x100) };
+        for (i, b) in p2.iter_mut().enumerate() {
+            *b = (0xA0 + i) as u8;
+        }
+        p1.fill(0);
+        unsafe { plant(d, 0, 0x20, 1, c, tagxx.as_mut_ptr(), 16) };
         unsafe { fn_0040567c(p1b, p2b, d) };
-        assert_eq!(COPY_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(COPY_N.load(Ordering::SeqCst), 0x100);
+        assert_eq!(&p1[..16], &p2[..16]);
         assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(TAIL_ARG.load(Ordering::SeqCst), 0x102);
+        assert_eq!(TAIL_ARG.load(Ordering::SeqCst), 2);
     }
 }

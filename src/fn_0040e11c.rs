@@ -20,6 +20,11 @@ pub static mut HOOK_0041851C: unsafe extern "C" fn(*mut u8) -> u32 = default_pro
 /// ponytail: address-named static; semantics unproven.
 pub static mut DAT_00418524: u8 = 0;
 
+/// Test-only serialization for tests sharing this module's
+/// hooks/DAT.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Probe gate: zero `*out` first; `flag==0`→true; disabled→SetLastError(1)/false;
 /// else callback(`out+4`) mapped `1→1 else→0`, setting `*out=1` on nonzero.
 /// `param_1` AL / `param_2` EDX per `__register` observation.
@@ -43,7 +48,7 @@ pub unsafe fn fn_0040e11c(param_1: u8, param_2: *mut u8) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{DAT_00418524, HOOK_0041851C, HOOK_SetLastError, fn_0040e11c};
+    use super::{DAT_00418524, HOOK_0041851C, HOOK_SetLastError, TEST_LOCK, fn_0040e11c};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static ERR: AtomicUsize = AtomicUsize::new(0);
@@ -69,6 +74,7 @@ mod tests {
 
     #[test]
     fn three_lanes() {
+        let _guard = TEST_LOCK.lock().unwrap();
         reset();
         let mut out = [0xCCu8; 12];
         // Zero flag → true, out zeroed, no hooks.

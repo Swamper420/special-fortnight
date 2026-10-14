@@ -4,14 +4,10 @@
 use crate::fn_00402e20::fn_00402e20;
 use crate::fn_00404dd4::{HOOK_00402fbc, HOOK_004054b4};
 
-unsafe extern "C" fn default_forward(_slot: *mut u8, _src: *mut u8) {}
-
 /// Target `0x00404e6c` (`FUN_00404e6c`), reached by a terminal `JMP`
-/// on the non-`2` tag lane (decompiler shows call+return).
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to
-/// real `fn_00404e6c` once it exists.
-pub static mut HOOK_00404e6c: unsafe extern "C" fn(*mut u8, *mut u8) = default_forward;
+/// on the non-`2` tag lane (decompiler shows call+return): direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, *mut u8)`).
 
 /// Acquire `param_2` (null → skip; tag `[p2-10]!=2` → forward lane
 /// and return; refcount `[p2-8]>=0` → locked inc, else alloc the
@@ -33,7 +29,7 @@ pub unsafe fn fn_00404c98(param_1: *mut u8, param_2: *mut u8) {
     let mut cur = param_2;
     if !param_2.is_null() {
         if core::ptr::read_unaligned(param_2.wrapping_byte_offset(-10) as *const u16) != 2 {
-            HOOK_00404e6c(param_1, param_2);
+            crate::fn_00404e6c::fn_00404e6c(param_1, param_2);
             return;
         }
         let rc = core::ptr::read_unaligned(param_2.wrapping_byte_offset(-8) as *const u32);
@@ -62,13 +58,10 @@ pub unsafe fn fn_00404c98(param_1: *mut u8, param_2: *mut u8) {
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00404e6c, fn_00404c98};
+    use super::fn_00404c98;
     use crate::fn_00404dd4::{HOOK_00402fbc, HOOK_004054b4};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    static FWD_HITS: AtomicUsize = AtomicUsize::new(0);
-    static FWD_A: AtomicUsize = AtomicUsize::new(0);
-    static FWD_B: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
     static ALLOC_ARG: AtomicUsize = AtomicUsize::new(0);
     static FILL_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -78,12 +71,6 @@ mod tests {
     static DTOR_HITS: AtomicUsize = AtomicUsize::new(0);
 
     const CANNED: u32 = 0x1122_3344;
-
-    unsafe extern "C" fn forward(slot: *mut u8, src: *mut u8) {
-        FWD_HITS.fetch_add(1, Ordering::SeqCst);
-        FWD_A.store(slot as usize, Ordering::SeqCst);
-        FWD_B.store(src as usize, Ordering::SeqCst);
-    }
 
     unsafe extern "C" fn alloc(n: u32) -> u32 {
         ALLOC_HITS.fetch_add(1, Ordering::SeqCst);
@@ -129,7 +116,6 @@ mod tests {
         let saved = unsafe { crate::fn_00402e20::PTR_00412740 };
         unsafe {
             crate::fn_00402e20::PTR_00412740 = indirect;
-            HOOK_00404e6c = forward;
             HOOK_004054b4 = alloc;
             HOOK_00402fbc = fill;
         }
@@ -139,13 +125,11 @@ mod tests {
         let slot_ptr = &mut slot as *mut *mut u8 as *mut u8;
 
         // Null/null lane: no-op.
-        FWD_HITS.store(0, Ordering::SeqCst);
         ALLOC_HITS.store(0, Ordering::SeqCst);
         FILL_HITS.store(0, Ordering::SeqCst);
         DTOR_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_00404c98(slot_ptr, core::ptr::null_mut()) };
         assert!(slot.is_null());
-        assert_eq!(FWD_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(FILL_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(DTOR_HITS.load(Ordering::SeqCst), 0);
@@ -158,16 +142,14 @@ mod tests {
         assert_eq!(unsafe { *arena.as_mut_ptr().wrapping_add(1) }, 0);
         assert_eq!(DTOR_HITS.load(Ordering::SeqCst), 1);
 
-        // Foreign-tag lane: forward only, slot untouched.
+        // Foreign-tag lane: real `fn_00404e6c` → `fn_00404d30` with
+        // len 0 → `fn_004046c4(slot)` on the null slot (no-op).
+        // Slot untouched, refcount kept, no alloc/fill.
         let mut fwd_arena = [0u32; 4];
-        let p2 = unsafe { hdr(&mut fwd_arena, 3, 5, 8) };
+        let p2 = unsafe { hdr(&mut fwd_arena, 3, 5, 0) };
         slot = core::ptr::null_mut();
-        FWD_HITS.store(0, Ordering::SeqCst);
         ALLOC_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_00404c98(slot_ptr, p2) };
-        assert_eq!(FWD_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(FWD_A.load(Ordering::SeqCst), slot_ptr as usize);
-        assert_eq!(FWD_B.load(Ordering::SeqCst), p2 as usize);
         assert!(slot.is_null());
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(unsafe { rc_of(p2) }, 5);
