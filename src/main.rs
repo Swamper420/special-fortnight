@@ -150,6 +150,26 @@ mod fn_00404c98;
 mod fn_00404cec;
 mod fn_00404d30;
 mod fn_00404dc4;
+mod fn_00404e6c;
+mod fn_00404e94;
+mod fn_00404ecc;
+mod fn_00404f00;
+mod fn_00404f98;
+mod fn_00405058;
+mod fn_00405082;
+mod fn_0040513c;
+mod fn_0040525c;
+mod fn_0040532c;
+mod fn_00405458;
+mod fn_004054b4;
+mod fn_004054f8;
+mod fn_00405530;
+mod fn_00405548;
+mod fn_00405658;
+mod fn_00405664;
+mod fn_0040567c;
+mod fn_004057bc;
+mod fn_004058d4;
 
 fn main() {
     // Entry point (original 0x004117dc) not yet reconstructed.
