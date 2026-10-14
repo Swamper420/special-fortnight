@@ -50,6 +50,10 @@ pub unsafe fn fn_004018f8(param_1: u32) -> *mut u32 {
     HOOK_SMALL_ALLOC(param_1.wrapping_add(3) >> 3, param_1)
 }
 
+/// Test-only serialization for tests assigning the alloc hooks
+/// (also held by cross-module tests that install a host heap).
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{HOOK_BUCKET_ALLOC, HOOK_LARGE_ALLOC, HOOK_SMALL_ALLOC, fn_004018f8};
@@ -85,6 +89,7 @@ mod tests {
 
     #[test]
     fn dispatch_and_size_math() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_SMALL_ALLOC = small;
             HOOK_BUCKET_ALLOC = bucket;

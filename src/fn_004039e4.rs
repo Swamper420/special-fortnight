@@ -34,30 +34,34 @@ pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 /// Signed-`DL >= 0` guard calls `[param_1-12]`, then links SEH record
 /// and publishes it at `FS:[0]`. Caller regs preserved.
-/// `param_1` in EAX, `param_2` in DL, `param_3` in ECX per Ghidra
-/// `__register` observation.
 ///
-/// ponytail: indirect callee is `extern "C"` placeholder, upgrade to real
-/// Borland register convention once call sites prove register layout.
+/// Returns EAX: the dispatch result on the taken lane, `param_1`
+/// untouched on the skip lane (no EAX write besides the callee).
+/// Callers that need the object back (e.g. `fn_0040c238`) take it;
+/// the rest ignore it exactly as the originals do.
 pub unsafe fn fn_004039e4(
     param_1: *const u8,
     param_2: u8,
     param_3: u32,
     record: *mut SehRecord004039e4,
-) {
-    if (param_2 as i8) >= 0 {
+) -> *const u8 {
+    let out = if (param_2 as i8) >= 0 {
         let slot = core::ptr::read_unaligned(
             param_1.wrapping_byte_sub(12) as *const *const core::ffi::c_void
         );
-        let f: unsafe extern "C" fn(*const u8, u8, u32) = core::mem::transmute(slot);
-        f(param_1, param_2, param_3);
-    }
+        let f: unsafe extern "C" fn(*const u8, u8, u32) -> *const u8 =
+            core::mem::transmute(slot);
+        f(param_1, param_2, param_3)
+    } else {
+        param_1
+    };
     let prev = SEH_HEAD_FS0;
     (*record).prev = prev;
     (*record).ebp = EBP_004039e4;
     (*record).handler = HANDLER_00403A0D;
     (*record).data = param_1;
     SEH_HEAD_FS0 = record as *mut u8;
+    out
 }
 
 #[cfg(test)]
@@ -73,11 +77,12 @@ mod tests {
     static GOT_P2: AtomicUsize = AtomicUsize::new(0);
     static GOT_P3: AtomicUsize = AtomicUsize::new(0);
 
-    unsafe extern "C" fn mock(p1: *const u8, p2: u8, p3: u32) {
+    unsafe extern "C" fn mock(p1: *const u8, p2: u8, p3: u32) -> *const u8 {
         HITS.fetch_add(1, Ordering::SeqCst);
         GOT_P1.store(p1 as usize, Ordering::SeqCst);
         GOT_P2.store(p2 as usize, Ordering::SeqCst);
         GOT_P3.store(p3 as usize, Ordering::SeqCst);
+        p1
     }
 
     #[test]
@@ -103,7 +108,8 @@ mod tests {
         }
         // Taken lane: dispatches, links record, publishes head.
         HITS.store(0, Ordering::SeqCst);
-        unsafe { fn_004039e4(obj, 0x01, 0x09, &mut rec) };
+        let r = unsafe { fn_004039e4(obj, 0x01, 0x09, &mut rec) };
+        assert_eq!(r, obj);
         assert_eq!(HITS.load(Ordering::SeqCst), 1);
         assert_eq!(GOT_P1.load(Ordering::SeqCst), obj as usize);
         assert_eq!(GOT_P2.load(Ordering::SeqCst), 0x01);
@@ -116,7 +122,8 @@ mod tests {
         // Skip lane (`0xff` signed-negative): no dispatch, record still linked.
         HITS.store(0, Ordering::SeqCst);
         let mut rec2: SehRecord004039e4 = unsafe { core::mem::zeroed() };
-        unsafe { fn_004039e4(obj, 0xff, 0x09, &mut rec2) };
+        let r2 = unsafe { fn_004039e4(obj, 0xff, 0x09, &mut rec2) };
+        assert_eq!(r2, obj);
         assert_eq!(HITS.load(Ordering::SeqCst), 0);
         assert_eq!(rec2.prev, &mut rec as *mut _ as *mut u8);
         assert_eq!(rec2.handler, HANDLER_00403A0D);

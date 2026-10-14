@@ -12,7 +12,10 @@
 /// same order); `for _ in 1..(N>>2)` equals `DEC; REP STOSD` for
 /// `N>=4`, no-ops for `N<4` where original wraps ECX and trashes
 /// memory — upgrade only if sub-4 sizes ever observed.
-pub unsafe fn fn_004038a0(obj: *const u8, dest: *mut u8) {
+///
+/// Returns `dest` (`mov %edx,%eax` before the patch walk; no later
+/// EAX write on the return path): callers thread it as the object.
+pub unsafe fn fn_004038a0(obj: *const u8, dest: *mut u8) -> *mut u8 {
     let base = dest;
     core::ptr::write_unaligned(base as *mut u32, obj as u32);
     let size = core::ptr::read_unaligned(obj.wrapping_byte_sub(0x34) as *const u32);
@@ -53,6 +56,7 @@ pub unsafe fn fn_004038a0(obj: *const u8, dest: *mut u8) {
             count = count.wrapping_sub(1);
         }
     }
+    base
 }
 
 #[cfg(test)]

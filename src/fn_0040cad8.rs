@@ -8,7 +8,11 @@ unsafe extern "C" fn default_refill(_o: *mut u8, _d: *mut u8, _r: u32) {}
 /// ponytail: hook standing in for done `fn_0040ca08`, rewire to the
 /// real call once cross-module linkage proven. Buffer lanes widened
 /// to pointer-sized (never `as u32` on pointers).
-pub static mut HOOK_0040ca08: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_refill;
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040ca08(o: *mut u8, d: *mut u8, r: u32) {
+    crate::fn_0040ca08::fn_0040ca08(o, d as u32, r)
+}
+pub static mut HOOK_0040ca08: unsafe extern "C" fn(*mut u8, *mut u8, u32) = adapt_0040ca08;
 
 /// Copy target `0x00402fbc`, `(src, dst, chunk)`: direct
 /// intra-reconstruction call (rewired; signatures verified

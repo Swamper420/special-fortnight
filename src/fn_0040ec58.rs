@@ -11,11 +11,12 @@ unsafe extern "C" fn default_format(
 
 unsafe extern "C" fn default_raise(_msg: u32) {}
 
-/// Base observed at `[0x00412c08]`; slot `+0x278` is zero-check + message.
-///
-/// ponytail: absolute-address cell modeled as mutable static, upgrade to real
-/// image-relative import once data layout proven.
-pub static mut BASE_00412c08: *const u8 = core::ptr::null();
+/// Image-absolute dword cell (`mov addr,%reg` in the original).
+/// Reads 32 bits and zero-extends: image addresses fit either way,
+/// and a 64-bit host must not swallow adjacent stack bytes.
+unsafe fn img_ptr(addr: u32) -> *const u8 {
+    core::ptr::read_unaligned(addr as *const u32) as usize as *const u8
+}
 
 /// Context observed at `[0x00406d5c]`, EAX lane of `0x00409824` both branches.
 ///
@@ -46,11 +47,9 @@ pub static mut RAISE_00403f88: unsafe extern "C" fn(u32) = default_raise;
 /// Fatal helper: slot `!= 0` formats stored message, else formats fallback;
 /// then raises formatted value. No params, void return.
 pub unsafe fn fn_0040ec58() {
-    let slot = core::ptr::read_unaligned(
-        BASE_00412c08.wrapping_byte_add(0x278) as *const u32
-    );
+    let base = img_ptr(0x00412c08);
+    let slot = core::ptr::read_unaligned(base.wrapping_byte_add(0x278) as *const u32);
     if slot != 0 {
-        let base = BASE_00412c08;
         let msg = core::ptr::read_unaligned(
             base.wrapping_byte_add(0x278) as *const u32
         ) as *const u8;
@@ -70,7 +69,7 @@ static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 #[cfg(test)]
 mod tests {
     use super::{
-        BASE_00412c08, CTX_00406d5c, FALLBACK_MSG_0040eca8, FORMAT_00409824,
+        CTX_00406d5c, FALLBACK_MSG_0040eca8, FORMAT_00409824,
         RAISE_00403f88, TEST_LOCK, fn_0040ec58,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -103,17 +102,26 @@ mod tests {
     #[test]
     fn slot_selects_stored_or_fallback_message() {
         let _guard = TEST_LOCK.lock().unwrap();
+        // Body reads the image cell `[0x00412c08]+0x278`: map the image
+        // on Linux, drive the slot through the private mapping.
+        #[cfg(target_os = "linux")]
+        crate::host_image::map_original_image();
         static mut CTX_CELL: u32 = 0;
-        let mut fake = [0u8; 0x27c];
+        // Slot address: [0x00412c08] -> base, +0x278 (u32 cell,
+        // zero-extended: a 64-bit host must not read adjacent bytes).
+        let slot_ptr = unsafe {
+            let base =
+                core::ptr::read_unaligned(0x00412c08 as *const u32) as usize as *const u8;
+            base.wrapping_byte_add(0x278) as *mut u32
+        };
+        let saved = unsafe { core::ptr::read_unaligned(slot_ptr) };
         unsafe {
-            // `wrapping_byte_add` on locals: keep raw parts, join under unsafe.
-            let base = fake.as_ptr();
-            BASE_00412c08 = base;
             CTX_00406d5c = core::ptr::addr_of_mut!(CTX_CELL);
             FORMAT_00409824 = format;
             RAISE_00403f88 = raise;
             FMT_RET.store(0x77, Ordering::SeqCst);
             // Null slot: fallback literal lane, DL=1, raise passthrough.
+            core::ptr::write_unaligned(slot_ptr, 0);
             FMT_HITS.store(0, Ordering::SeqCst);
             RAISE_HITS.store(0, Ordering::SeqCst);
             fn_0040ec58();
@@ -127,10 +135,7 @@ mod tests {
             assert_eq!(RAISE_ARG.load(Ordering::SeqCst), 0x77);
             assert_eq!(RAISE_HITS.load(Ordering::SeqCst), 1);
             // Nonzero slot: stored u32 value becomes message pointer.
-            core::ptr::write_unaligned(
-                fake.as_mut_ptr().wrapping_byte_add(0x278) as *mut u32,
-                0x1234,
-            );
+            core::ptr::write_unaligned(slot_ptr, 0x1234);
             FMT_HITS.store(0, Ordering::SeqCst);
             RAISE_HITS.store(0, Ordering::SeqCst);
             fn_0040ec58();
@@ -138,6 +143,7 @@ mod tests {
             assert_eq!(FMT_FLAG.load(Ordering::SeqCst), 1);
             assert_eq!(FMT_HITS.load(Ordering::SeqCst), 1);
             assert_eq!(RAISE_HITS.load(Ordering::SeqCst), 1);
+            core::ptr::write_unaligned(slot_ptr, saved);
         }
     }
 }

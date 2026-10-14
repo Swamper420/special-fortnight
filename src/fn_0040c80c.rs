@@ -23,20 +23,23 @@ pub unsafe fn fn_0040c80c(
     param_5: u32,
 ) -> *mut u32 {
     let mut record: crate::fn_004039e4::SehRecord004039e4 = core::mem::zeroed();
+    // EAX after the link call is the dispatch result: EBX follows it
+    // (`MOV EBX,EAX`), not the entry `param_1` (same shape as
+    // `fn_0040c238`).
+    let mut ebx = param_1 as *mut u32;
     if param_2 != 0 {
-        crate::fn_004039e4::fn_004039e4(
+        ebx = crate::fn_004039e4::fn_004039e4(
             param_1 as *const u8,
             param_2,
             param_3,
             &mut record,
-        );
+        ) as *mut u32;
     }
-    // ponytail: same condition, not a callee return (`fn_004039e4`
-    // returns void; DL restored by its PUSH/POP EDX). Kept as a
-    // second `if` to match the two-TEST assembly shape.
+    // ponytail: same condition on the reloaded DL (restored by the
+    // link call's PUSH/POP EDX). Kept as a second `if` to match the
+    // two-TEST assembly shape.
     let esi = param_3;
     let saved = param_2;
-    let ebx = param_1;
     crate::fn_00403864::fn_00403864(ebx as *mut *const u8, 0, esi);
     core::ptr::write_unaligned(ebx.wrapping_add(2), param_4);
     core::ptr::write_unaligned(ebx.wrapping_add(3), param_5);
@@ -55,8 +58,9 @@ mod tests {
     static INNER_HITS: AtomicUsize = AtomicUsize::new(0);
     static OUTER_HITS: AtomicUsize = AtomicUsize::new(0);
 
-    unsafe extern "C" fn inner(_p1: *const u8, _p2: u8, _p3: u32) {
+    unsafe extern "C" fn inner(p1: *const u8, _p2: u8, _p3: u32) -> *const u8 {
         INNER_HITS.fetch_add(1, Ordering::SeqCst);
+        p1
     }
 
     unsafe extern "C" fn outer(_obj: *mut *const u8) {

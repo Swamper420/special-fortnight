@@ -115,6 +115,7 @@ mod fn_004032ec;
 mod fn_004033f8;
 mod fn_00403714;
 mod fn_00403814;
+mod fn_0040382c;
 mod fn_00403a9c;
 mod fn_00403bf4;
 mod fn_00403ea8;
@@ -321,7 +322,14 @@ mod fn_0040bf84;
 mod fn_0040c130;
 mod fn_0040c2e0;
 mod fn_0040c3d0;
+mod fn_0040c9b0;
+mod fn_0040cda0;
+mod fn_004039b8;
+mod fn_0040c328;
+mod fn_0040c360;
+mod fn_0040c390;
 mod fn_0040c410;
+mod fn_0040c42c;
 mod fn_0040c750;
 mod fn_0040c80c;
 mod fn_0040c854;
@@ -344,6 +352,7 @@ mod fn_0040d160;
 mod fn_0040d1a4;
 mod fn_0040d1d0;
 mod fn_00403980;
+mod fn_004039b4;
 mod fn_004049bc;
 mod fn_00404c80;
 mod fn_00404c88;
@@ -507,7 +516,18 @@ mod fn_0040ee68;
 mod fn_0041157c;
 mod fn_00411648;
 mod fn_004117dc;
+#[cfg(target_os = "linux")]
+mod host_image;
 fn main() {
+    // Linux host: map the original image so absolute-address reads hit
+    // original bytes (see host_image.rs). Other targets run the entry
+    // against the linked image directly.
+    #[cfg(target_os = "linux")]
+    host_image::map_original_image();
+    // Linux host: back the Delphi allocator with host memory (leaked,
+    // installer-lifetime). Module defaults stay stubs for hermetic tests.
+    #[cfg(target_os = "linux")]
+    host_image::install_host_heap();
     // Process entry point (original 0x004117dc), reconstructed 1:1.
     unsafe { crate::fn_004117dc::fn_004117dc(); }
 }

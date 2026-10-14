@@ -65,3 +65,52 @@ linker; we build with rustc/LLVM). 1:1 here means:
 - coverage is measured, not claimed: 0/624 until the ledger says otherwise.
 
 Progress lives in the obligation ledger, not in prose claims.
+
+## Linux host run
+
+Supported config (unverified end-to-end in this docs pass — another
+agent owns `src/`, and this job never runs cargo; no
+`i686-unknown-linux-musl` refs exist yet in repo files):
+
+```sh
+cargo build --target i686-unknown-linux-musl
+./target/i686-unknown-linux-musl/debug/dsj3
+```
+
+32-bit host target required: pointer widths match the 1:1 target.
+A 64-bit host build truncates pointers at the `u32` vtable/cell
+slots and reads adjacent stack garbage — documented ceiling, not a
+supported config. Image path override: `DSJ3_IMAGE=/path/to/dsj3v171.exe`.
+`WriteFile`/`SetFilePointer` sinks land in `/tmp/dsj3-write-<handle08x>`
+(host-side artifacts, never committed).
+
+What the harness does (`src/host_image.rs`, wired in `src/main.rs`
+on `target_os = "linux"` only): maps `dsj3v171.exe` sections
+`MAP_FIXED | MAP_PRIVATE` at their link VMAs (absolute-address reads
+hit original bytes; writes land on private pages; code maps without
+`X` so executing original bytes faults); zeroes the unit-init table
+count at `0x00410144` (8 live slots point at unexecutable original
+inits); zeroes the plugin-count cell `0x004185ac` (static bytes are
+`0x026402fd` garbage); patches reconstructed targets into vtable
+slots (`0x0040c098/0x0040c0b8/0x0040c088/0x0040c0a8/0x0040c0b0/0x0040c0ac/0x0040c0a4/0x0040c68c/0x0040c110/0x0040cc18/0x0040cc0c`,
+slot-by-slot as reconstructions land); installs OS shims — host heap
+for the Delphi allocator lanes, argv shims (`GetCommandLineW`,
+`GetModuleFileNameW`), resource shims (`.rsrc` walk over the mapped
+image: `Find/Sizeof/Load/LockResource`), `WriteFile` (sink append),
+`ReadFile` (sink read topped up from image bytes at same offset on
+short reads), `GetFileSize`, `SetFilePointer` (shared seek cursor per
+handle).
+
+Known ceilings: 64-bit truncation (above); skipped unit inits +
+seeded cells (`0x00410144=0`, `0x004185ac=0` — revisit slot-by-slot);
+stubbed GUI/fatal paths continue where the original would abort;
+synthetic stream stands in for the installer self-stream (unknown
+handles read the image; short sink reads serve image bytes).
+Entry-path fixes this session (see `src/fn_004117dc.rs`): address/
+content corrections at `[0x40c04c]`, `[0x412b2c]`, `[0x40c640]`,
+`[0x40cbc0]`, `[0x4185ac]` (unverified byte-level in this pass —
+confirm against REA disassembly before citing).
+
+Non-goals: no Wine replacement, no GUI. Boundary code only:
+reconstructed functions stay unmodified; the image file is
+user-supplied, gitignored, read at runtime, never committed.

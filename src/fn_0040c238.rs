@@ -29,20 +29,22 @@ pub unsafe fn fn_0040c238(
     param_6: u8,
 ) -> *mut *const u8 {
     let mut record: crate::fn_004039e4::SehRecord004039e4 = core::mem::zeroed();
+    // EAX after the link call is the dispatch result: EBX follows it
+    // (`MOV EBX,EAX`), not the entry `param_1`.
+    let mut ebx = param_1;
     if param_2 != 0 {
-        crate::fn_004039e4::fn_004039e4(
+        ebx = crate::fn_004039e4::fn_004039e4(
             param_1 as *const u8,
             param_2,
             param_3,
             &mut record,
-        );
+        ) as *mut *const u8;
     }
     // ponytail: same condition, not a callee return (`fn_004039e4`
     // returns void; DL restored by its PUSH/POP EDX). Kept as a
     // second `if` to match the two-TEST assembly shape.
     let esi = param_3;
     let saved = param_2;
-    let ebx = param_1;
     crate::fn_00403864::fn_00403864(ebx, 0, esi);
     let vtbl = core::ptr::read_unaligned(ebx as *const *const u8);
     let slot = vtbl.wrapping_byte_add(0x14) as *const *const core::ffi::c_void;
@@ -81,8 +83,9 @@ mod tests {
     static VCALL_RET: AtomicUsize = AtomicUsize::new(0);
     static OUTER_HITS: AtomicUsize = AtomicUsize::new(0);
 
-    unsafe extern "C" fn inner(_p1: *const u8, _p2: u8, _p3: u32) {
+    unsafe extern "C" fn inner(p1: *const u8, _p2: u8, _p3: u32) -> *const u8 {
         INNER_HITS.fetch_add(1, Ordering::SeqCst);
+        p1
     }
 
     unsafe extern "C" fn vcall(

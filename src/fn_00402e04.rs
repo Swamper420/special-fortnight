@@ -1,18 +1,24 @@
 //! Original procedure `0x00402e04` (27 bytes, `0x00402e04–0x00402e1e`).
 //! Evidence: `evidence/00402e04_fn_00402e04.md`.
 
-unsafe extern "C" fn default_indirect() -> i32 {
+unsafe extern "C" fn default_indirect(_size: u32) -> i32 {
     1
 }
 
 unsafe extern "C" fn default_tail(_arg: u32) {}
 
 /// Indirect slot observed as `dword ptr [0x0041273c]` (`PTR_FUN_0041273c`,
-/// resolved target `0x004018f8`, unreconstructed).
+/// static target `0x004018f8`): rewired to the real `fn_004018f8` via a
+/// minimal ABI adapter (EAX size in, EAX buffer out; hook stays
+/// `extern "C"` so the test seam keeps working).
 ///
-/// ponytail: absolute-address cell modeled as mutable hook, upgrade to real
-/// image-relative import once data layout proven.
-pub static mut PTR_0041273C: unsafe extern "C" fn() -> i32 = default_indirect;
+/// ponytail: absolute-address cell now linked, not modeled; unify the
+/// remaining `0x004127xx` cells in `data.rs` once data layout proven.
+use crate::fn_004018f8::fn_004018f8;
+unsafe extern "C" fn adapt_004018f8(size: u32) -> i32 {
+    fn_004018f8(size) as u32 as i32
+}
+pub static mut PTR_0041273C: unsafe extern "C" fn(u32) -> i32 = adapt_004018f8;
 
 /// Tail target `0x00402f60` (`FUN_00402f60`), reached by `JMP` with `AL=1`.
 ///
@@ -24,13 +30,13 @@ pub static mut TAIL_00402F60: unsafe extern "C" fn(u32) = default_tail;
 /// held by cross-module tests that call `fn_00402e04`'s cell directly).
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-/// `if param<1 {0} else { r=[0x0041273c](); if r!=0 {r} else { tail(1); 1 } }`.
+/// `if param<1 {0} else { r=[0x0041273c](param); if r!=0 {r} else { tail(1); 1 } }`.
 /// `param_1` arrives in EAX, signed (`JLE`); returns EAX.
 pub unsafe fn fn_00402e04(param_1: i32) -> i32 {
     if param_1 < 1 {
         return 0;
     }
-    let r = PTR_0041273C();
+    let r = PTR_0041273C(param_1 as u32);
     if r != 0 {
         return r;
     }
@@ -48,7 +54,7 @@ mod tests {
     static TAIL_ARG: AtomicUsize = AtomicUsize::new(0);
     static INDIRECT_RET: AtomicUsize = AtomicUsize::new(1);
 
-    unsafe extern "C" fn indirect() -> i32 {
+    unsafe extern "C" fn indirect(_size: u32) -> i32 {
         INDIRECT_HITS.fetch_add(1, Ordering::SeqCst);
         INDIRECT_RET.load(Ordering::SeqCst) as i32
     }

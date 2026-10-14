@@ -17,26 +17,40 @@ unsafe extern "C" fn default_add(_slot: *mut u32, _v: u32) -> u32 {
     0
 }
 
-/// Link target `0x004039e4`, `(p1, p2, p3)`; returns the object lane.
-///
-/// ponytail: hook standing in for done `fn_004039e4` (which links
-/// the record through owner `SEH_HEAD_FS0`), rewire to the real
-/// call once cross-module linkage proven. Third arg widened to
-/// pointer-sized (never `as u32` on pointers).
+/// Link target `0x004039e4`, `(p1, p2, p3)`; returns the object lane:
+/// rewired to the real `fn_004039e4` via a minimal ABI adapter (the
+/// link record lives in a module slot; the SEH push/pop bracket has
+/// no host equivalent). Third arg widened to pointer-sized (never
+/// `as u32` on pointers).
+use crate::fn_004039e4::{SehRecord004039e4, fn_004039e4};
+static mut LINK_RECORD_00C854: SehRecord004039e4 = SehRecord004039e4 {
+    prev: core::ptr::null_mut(),
+    handler: 0,
+    ebp: 0,
+    data: core::ptr::null(),
+};
+unsafe extern "C" fn adapt_004039e4(p1: *mut u8, p2: u8, p3: *mut u8) -> *mut u8 {
+    fn_004039e4(p1 as *const u8, p2, p3 as u32, core::ptr::addr_of_mut!(LINK_RECORD_00C854))
+        as *mut u8
+}
 pub static mut HOOK_004039e4: unsafe extern "C" fn(*mut u8, u8, *mut u8) -> *mut u8 =
-    default_link;
+    adapt_004039e4;
 
-/// Target `0x00403864`, `(obj, 0, p3)`.
-///
-/// ponytail: hook standing in for done `fn_00403864`, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_00403864: unsafe extern "C" fn(*mut u8, u8, *mut u8) = default_void8;
+/// Target `0x00403864`, `(obj, 0, p3)`: rewired to the real
+/// `fn_00403864` via a minimal ABI adapter.
+use crate::fn_00403864::fn_00403864;
+unsafe extern "C" fn adapt_00403864(obj: *mut u8, _z: u8, p3: *mut u8) {
+    fn_00403864(obj as *mut *const u8, 0, p3 as u32)
+}
+pub static mut HOOK_00403864: unsafe extern "C" fn(*mut u8, u8, *mut u8) = adapt_00403864;
 
-/// Target `0x00403a3c`, `(obj)` on the saved-flag lane.
-///
-/// ponytail: hook standing in for done `fn_00403a3c`, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_00403a3c: unsafe extern "C" fn(*mut u8) = default_release;
+/// Target `0x00403a3c`, `(obj)` on the saved-flag lane: rewired to the
+/// real `fn_00403a3c` via a minimal ABI adapter.
+use crate::fn_00403a3c::fn_00403a3c;
+unsafe extern "C" fn adapt_00403a3c(obj: *mut u8) {
+    fn_00403a3c(obj as *mut *const u8);
+}
+pub static mut HOOK_00403a3c: unsafe extern "C" fn(*mut u8) = adapt_00403a3c;
 
 /// Error-link target `0x00409824`, `(base, 1, msg)`; returns DATA pointer.
 ///
@@ -52,17 +66,22 @@ pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u8, u8, *mut u8) -> *mut
 /// pointers are never truncated, rewire once linkage proven.
 pub static mut HOOK_00403f88: unsafe extern "C" fn(*mut u8) = default_consume;
 
-/// CRC target `0x0040c738`, `(buf5, 5)`.
-///
-/// ponytail: hook standing in for done `fn_0040c738`, rewire to the
-/// real call once CRC-table setup proven.
-pub static mut HOOK_0040c738: unsafe extern "C" fn(*const u8, u32) -> u32 = default_crc;
+/// CRC target `0x0040c738`, `(buf5, 5)`: rewired to the real
+/// `fn_0040c738` via a minimal ABI adapter.
+use crate::fn_0040c738::fn_0040c738;
+unsafe extern "C" fn adapt_0040c738(buf: *const u8, len: u32) -> u32 {
+    fn_0040c738(buf, len as i32)
+}
+pub static mut HOOK_0040c738: unsafe extern "C" fn(*const u8, u32) -> u32 = adapt_0040c738;
 
-/// Add target `0x0040b2d4`, `(local_1c, local_11lo)`.
-///
-/// ponytail: hook standing in for done `fn_0040b2d4`, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_0040b2d4: unsafe extern "C" fn(*mut u32, u32) -> u32 = default_add;
+/// Add target `0x0040b2d4`, `(local_1c, local_11lo)`: rewired to the
+/// real `fn_0040b2d4` via a minimal ABI adapter (`bool` widens to the
+/// observed `u32` lane).
+use crate::fn_0040b2d4::fn_0040b2d4;
+unsafe extern "C" fn adapt_0040b2d4(slot: *mut u32, v: u32) -> u32 {
+    fn_0040b2d4(slot, v) as u32
+}
+pub static mut HOOK_0040b2d4: unsafe extern "C" fn(*mut u32, u32) -> u32 = adapt_0040b2d4;
 
 /// Compare target `0x0040b2b4`, `(local_1c, local_24)`: direct
 /// intra-reconstruction call (rewired; signatures verified
@@ -166,8 +185,26 @@ pub unsafe fn fn_0040c854(
     }
     if window[4] != 0 {
         let slot = core::ptr::read_unaligned(param_4 as *const *const core::ffi::c_void);
-        let f: unsafe extern "C" fn(*mut *const u8, u32) -> u32 = core::mem::transmute(slot);
-        let v = f(param_4, 1);
+        // ponytail: full 5-lane call per assembly (`push %ebx; push
+        // $0x40cad8`, `DL=1`, `EAX=param_4`; callee `[EBP+8]`/`[EBP+0xc]`
+        // land `[obj+8]`/`[obj+0xc]`): last push is p4, first push
+        // (`%ebx` = our `ebx`) is p5 — the drain object lane `ce24`
+        // reads as `arg0`, so 0 starves `cad8`. Verified in
+        // `objdump -d 0x40c80c` (`mov 0x8(%ebp)→0x8(%esi)`,
+        // `mov 0xc(%ebp)→0xc(%esi)`) and the fork pushes.
+        // Linkage: the pushed `$0x40cad8` is the drain proc's address;
+        // our build links our reconstruction (same proc, same lane),
+        // exactly as `patch_vtable` does for VMT slots — original
+        // bytes are unexecutable on host.
+        let f: unsafe extern "C" fn(*mut *const u8, u32, u32, u32, u32) -> u32 =
+            core::mem::transmute(slot);
+        let v = f(
+            param_4,
+            1,
+            ebx as u32,
+            crate::fn_0040cad8::fn_0040cad8 as usize as u32,
+            ebx as u32,
+        );
         core::ptr::write_unaligned(ebx.wrapping_byte_add(4) as *mut u32, v);
     }
     core::ptr::write_unaligned(ebx.wrapping_byte_add(12) as *mut u32, window_lo);

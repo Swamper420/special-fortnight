@@ -54,7 +54,7 @@ pub unsafe fn fn_00402e38(param_1: *mut u32, param_2: u32) {
         return;
     }
     if param_2 != 0 {
-        let r = crate::fn_00402e04::PTR_0041273C();
+        let r = crate::fn_00402e04::PTR_0041273C(param_2);
         if r == 0 {
             TAIL_00402F60(1);
             return;
@@ -87,7 +87,7 @@ mod tests {
         RET_44.load(Ordering::SeqCst) as u32
     }
 
-    unsafe extern "C" fn indirect_3c() -> i32 {
+    unsafe extern "C" fn indirect_3c(_size: u32) -> i32 {
         HITS_3C.fetch_add(1, Ordering::SeqCst);
         RET_3C.load(Ordering::SeqCst) as i32
     }

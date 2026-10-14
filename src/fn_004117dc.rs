@@ -2,10 +2,6 @@
 //! Entry-region note: OS-invoked; no callers. Wired into `fn main()`.
 //! Evidence: `evidence/004117dc_fn_004117dc.md`.
 
-unsafe extern "C" fn default_read(_s: u32, _o: *mut u32, _n: u32) -> i32 {
-    0
-}
-
 // ponytail: adapter, exact parity on i686 only.
 unsafe extern "C" fn adapter_004065d4(a: u32) {
     crate::fn_004065d4::fn_004065d4(a as *mut u8)
@@ -108,8 +104,17 @@ pub static mut HOOK_0040C238: unsafe extern "C" fn(u32, u8, u32, u32, u32, u32) 
     adapter_0040c238;
 pub static mut HOOK_0040EE14: unsafe extern "C" fn() -> u32 = adapter_0040ee14;
 pub static mut HOOK_0040C738: unsafe extern "C" fn(u32, u32) -> u32 = adapter_0040c738;
-/// Vtable `+4` stream readers (two sites): vtable-indirect, no single target.
-pub static mut HOOK_STREAMREAD: unsafe extern "C" fn(u32, *mut u32, u32) -> i32 = default_read;
+/// Vtable `+4` stream readers (two sites): rewired to the real
+/// `crate::fn_0040c360::fn_0040c360` (GetFileSize lane) via a minimal
+/// ABI adapter. The entry's `n` lane is unread by the body; the
+/// adapter drops it exactly as the original does.
+use crate::fn_0040c360::fn_0040c360;
+unsafe extern "C" fn adapter_streamread(s: u32, o: *mut u32, _n: u32) -> i32 {
+    fn_0040c360(s as *const u8, o);
+    0
+}
+pub static mut HOOK_STREAMREAD: unsafe extern "C" fn(u32, *mut u32, u32) -> i32 =
+    adapter_streamread;
 pub static mut HOOK_0040EC58: unsafe extern "C" fn() = adapter_0040ec58;
 pub static mut HOOK_0040C220: unsafe extern "C" fn(u32, u32) = adapter_0040c220;
 pub static mut HOOK_0040C1F8: unsafe extern "C" fn(u32, u32, u32) = adapter_0040c1f8;
@@ -120,6 +125,14 @@ pub static mut HOOK_00402DEC: unsafe extern "C" fn(u32) -> u32 = adapter_00402de
 pub static mut HOOK_00403894: unsafe extern "C" fn(u32) = adapter_00403894;
 /// Fake backing for `DAT_00418664` fields (+0xc/+0x10/+0x20/+0x28).
 pub static mut FAKE_SETUP: [u32; 12] = [0; 12];
+
+/// Image-absolute dword cell (`mov addr,%reg` in the original).
+/// Valid on Windows (linked image) and on a Linux host after
+/// `host_image::map_original_image()`. Exact on i686; on a 64-bit
+/// test host the value is still the true 32-bit cell.
+unsafe fn img_u32(addr: u32) -> u32 {
+    core::ptr::read_unaligned(addr as *const u32)
+}
 
 /// Entry spine. `ok` mirrors `uVar4` (version/stream gate).
 /// Skips nothing: both `ec58` conditional sites kept in order.
@@ -134,7 +147,7 @@ pub unsafe fn fn_004117dc() {
     let mut arg0: u32 = 0;
     HOOK_0040B8FC(0, &mut arg0);
     HOOK_00404C98(0x00418658, arg0);
-    DAT_0041865C = HOOK_0040C238(0x0040c04c, 1, DAT_00418658, 1, 0, 2);
+    DAT_0041865C = HOOK_0040C238(img_u32(0x0040c04c), 1, img_u32(0x00418658), 1, 0, 2);
     DAT_00418664 = HOOK_0040EE14();
     let mut ok = false;
     let mut skip_first_ec58 = false;
@@ -167,13 +180,13 @@ pub unsafe fn fn_004117dc() {
     HOOK_0040C220(DAT_0041865C, FAKE_SETUP[8]);
     HOOK_0040C1F8(DAT_0041865C, 0x00418674, 0x40);
     // ponytail: decompiler lifts trailing `JZ` as `if (!uVar4)`; return value unused.
-    let _ = HOOK_004031E0(0x00418674, 0x00412b2c, 0x40);
+    let _ = HOOK_004031E0(0x00418674, img_u32(0x00412b2c), 0x40);
     if !ok {
         HOOK_0040EC58();
     }
-    DAT_004186B8 = HOOK_0040C854(0x0040c698, 1, DAT_0041865C, 0x0040cc18);
+    DAT_004186B8 = HOOK_0040C854(img_u32(0x0040c640), 1, DAT_0041865C, img_u32(0x0040cbc0));
     HOOK_0040DA38(DAT_004186B8, 0x0041852c, 0x11d, 4, 0x1c);
-    let count = FAKE_SETUP[11];
+    let count = img_u32(0x004185ac);
     DAT_00418650 = count;
     // ponytail: `IMUL count,0x3d` alloc size exact.
     DAT_0041864C = HOOK_00402DEC(count.wrapping_mul(0x3d));
@@ -407,6 +420,9 @@ mod tests {
     #[test]
     fn missing_setup_calls_ec58_and_help_exits() {
         let _guard = LOCK.lock().unwrap();
+        // Entry now reads image-absolute cells: map the image on Linux.
+        #[cfg(target_os = "linux")]
+        crate::host_image::map_original_image();
         let snap = unsafe { save() };
         unsafe {
             install_stubs();
@@ -439,6 +455,9 @@ mod tests {
         // stubs for wild-pointer lanes (65d4/b8fc/4c98/c238/c220/c1f8/31e0/
         // c854/da38), vtable stream reads, and the fatal-format ec58 path.
         let _guard = LOCK.lock().unwrap();
+        // Entry now reads image-absolute cells: map the image on Linux.
+        #[cfg(target_os = "linux")]
+        crate::host_image::map_original_image();
         let snap = unsafe { save() };
         unsafe {
             HOOK_004065D4 = stub_u32arg;

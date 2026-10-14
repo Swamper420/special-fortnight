@@ -12,11 +12,14 @@ unsafe extern "C" fn default_fail(_wrapped: u32) -> *mut u8 {
 }
 
 /// Target `0x00402e04` (`FUN_00402e04`), called with `2n+14`; result is
-/// the object base (`+12` is the data pointer).
-///
-/// ponytail: hook standing in for done `fn_00402e04`, rewire to real
-/// call once cross-module pointer-sized linkage exists.
-pub static mut HOOK_00402e04: unsafe extern "C" fn(u32) -> *mut u8 = default_heap;
+/// the object base (`+12` is the data pointer): rewired to the real
+/// `fn_00402e04` via a minimal ABI adapter (real fn threads the
+/// allocator result as `i32`; exact on the i686 target).
+use crate::fn_00402e04::fn_00402e04;
+unsafe extern "C" fn adapt_00402e04(n: u32) -> *mut u8 {
+    fn_00402e04(n as i32) as *mut u8
+}
+pub static mut HOOK_00402e04: unsafe extern "C" fn(u32) -> *mut u8 = adapt_00402e04;
 
 /// Fail target `0x0040380c` (`thunk_FUN_00402f60`), reached by terminal
 /// `JMP` with the wrapped size in EAX.

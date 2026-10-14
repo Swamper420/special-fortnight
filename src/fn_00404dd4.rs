@@ -10,18 +10,25 @@ unsafe extern "C" fn default_alloc(_n: u32) -> u32 {
 unsafe extern "C" fn default_fill(_a: *mut u8, _b: u32, _c: u32) {}
 
 /// Target `0x004054b4` (`FUN_004054b4`), called with `param_3`, result
-/// forwarded to fill and stored to `*param_1`.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to
-/// real `fn_004054b4` once it exists.
-pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> u32 = default_alloc;
+/// forwarded to fill and stored to `*param_1`: rewired to the real
+/// `fn_004054b4` via a minimal ABI adapter (real fn returns a pointer;
+/// hook stays `u32`-lane so the test seam keeps working; exact on the
+/// i686 target).
+use crate::fn_004054b4::fn_004054b4;
+unsafe extern "C" fn adapt_004054b4(n: u32) -> u32 {
+    fn_004054b4(n as i32) as u32
+}
+pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> u32 = adapt_004054b4;
 
 /// Target `0x00402fbc` (`FUN_00402fbc`), called with
-/// `(param_2, result, param_3<<1)` on the non-null lane.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to
-/// real `fn_00402fbc` once it exists.
-pub static mut HOOK_00402fbc: unsafe extern "C" fn(*mut u8, u32, u32) = default_fill;
+/// `(param_2, result, param_3<<1)` on the non-null lane: rewired to the
+/// real `fn_00402fbc` via a minimal ABI adapter (same `u32`-lane
+/// ceiling as above).
+use crate::fn_00402fbc::fn_00402fbc;
+unsafe extern "C" fn adapt_00402fbc(a: *mut u8, b: u32, c: u32) {
+    fn_00402fbc(a, b as *mut u8, c)
+}
+pub static mut HOOK_00402fbc: unsafe extern "C" fn(*mut u8, u32, u32) = adapt_00402fbc;
 
 /// `r=54b4(p3); if p2!=0 { 02fbc(p2,r,p3<<1) }; 446c4(p1); *p1=r`.
 /// Params arrive in EAX/EDX/ECX per Ghidra `__register` observation.
