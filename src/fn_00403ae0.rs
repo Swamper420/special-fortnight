@@ -4,11 +4,15 @@
 /// `ret = obj + [vtbl-0x34] - 4` where `vtbl=[obj]`.
 /// `param_1` arrives in EAX per Ghidra `__register` observation;
 /// caller `0x403a9c` derefs result as pointer. Pointer links read
-/// pointer-sized; dword field stays `u32`; 32-bit wrap via `u32`.
+/// pointer-sized; dword field stays `u32`.
+///
+/// ponytail: address math runs full-width `usize` on host (low 32 bits
+/// identical to the target `u32` wrap; high bits preserved so host
+/// pointers stay valid). Revisit with image-relative data layout.
 pub unsafe fn fn_00403ae0(param_1: *mut u8) -> *mut u8 {
     let vtbl = core::ptr::read_unaligned(param_1 as *const *mut u8);
     let field = core::ptr::read_unaligned(vtbl.wrapping_byte_sub(0x34) as *const u32);
-    (param_1 as u32).wrapping_add(field).wrapping_sub(4) as *mut u8
+    (param_1 as usize).wrapping_add(field as usize).wrapping_sub(4) as *mut u8
 }
 
 #[cfg(test)]
