@@ -42,6 +42,12 @@ pub unsafe fn fn_0040e168(param_1: u8, param_2: *mut u8) -> i32 {
     ok
 }
 
+/// Test-only serialization for tests sharing the lane hooks (held
+/// here and by the rewired `fn_0040e5dc` test driving the real
+/// delete).
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,6 +90,7 @@ mod tests {
     #[test]
     fn gate_fail_returns_zero() {
         let _lock = LOCK.lock().unwrap();
+        let _shared = super::TEST_LOCK.lock().unwrap();
         // Real gate with the cell disabled: SetLastError(1), false.
         let _g11 = crate::fn_0040e11c::TEST_LOCK.lock().unwrap();
         let (old_sle, old_probe, old_dat);
@@ -113,6 +120,7 @@ mod tests {
     #[test]
     fn gate_pass_deletes() {
         let _lock = LOCK.lock().unwrap();
+        let _shared = super::TEST_LOCK.lock().unwrap();
         // Real gate enabled with probe 1: ctx[0]=1; the real
         // teardown reads [ctx+4]==0 and dispatches it.
         let _g11 = crate::fn_0040e11c::TEST_LOCK.lock().unwrap();

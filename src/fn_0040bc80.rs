@@ -24,6 +24,10 @@ pub unsafe fn fn_0040bc80(param_1: u32, param_2: *const u16, param_3: *mut u32) 
     HOOK_0040BB34(param_1, param_2, param_3, 2, 1);
 }
 
+/// Test-only serialization for tests sharing the lane hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{HOOK_0040BB34, fn_0040bc80};
@@ -47,7 +51,10 @@ mod tests {
 
     #[test]
     fn forwards_with_const_tail() {
-        // Own hook only: no foreign globals, no TEST_LOCK.
+        // Own hook only: hold the owner lock so the rewired
+        // `fn_0040bcb4` test (which pins this hook behind the real
+        // call) can't race us.
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe { HOOK_0040BB34 = bb34 };
         let sub = [0x41u16, 0];
         let mut out = 0u32;

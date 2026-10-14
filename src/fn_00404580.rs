@@ -11,7 +11,6 @@ unsafe extern "C" fn default_sink_ptr(_p: *mut u8) {}
 
 unsafe extern "C" fn default_sink_pu32(_p: *mut u32) {}
 
-unsafe extern "C" fn default_void() {}
 
 unsafe extern "C" fn default_exit(_code: u32) {}
 
@@ -109,11 +108,10 @@ pub static mut HOOK_004044C4: unsafe extern "C" fn(*mut u8) = default_sink_ptr;
 /// proven.
 pub static mut HOOK_00403894: unsafe extern "C" fn(*mut u8) = default_sink_ptr;
 
-/// `FUN_00404204`, called once per loop iteration.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_00404204` once it exists.
-pub static mut HOOK_00404204: unsafe extern "C" fn() = default_void;
+/// `FUN_00404204`, called once per loop iteration: direct
+/// intra-reconstruction call (rewired; signatures verified `fn()`).
+/// The null-anchor lane runs here (anchor pinned null under the
+/// callee lock), so no SEH/dispatch state is touched.
 
 /// `FUN_00406204`, called with `[ESI+0x10]` (EDX/ECX residues unmodeled).
 ///
@@ -177,7 +175,7 @@ pub unsafe fn fn_00404580() {
             }
             HOOK_00403894(p as usize as *mut u8);
         }
-        HOOK_00404204();
+        crate::fn_00404204::fn_00404204();
         // `CMP state,1; JBE` = unsigned ≤1, else needs exit code set.
         if state() <= 1 || CELL_00412000 != 0 {
             if STRUCT_00415AE4[4] != 0 {
@@ -234,7 +232,6 @@ mod tests {
     static H3894: AtomicUsize = AtomicUsize::new(0);
     static mut TAKE_CTX: *const u8 = core::ptr::null();
     static mut TAKE_WORDS: [u32; 3] = [0; 3];
-    static H4204: AtomicUsize = AtomicUsize::new(0);
     static H6204: AtomicUsize = AtomicUsize::new(0);
     static HFINI: AtomicUsize = AtomicUsize::new(0);
     static HEXIT: AtomicUsize = AtomicUsize::new(0);
@@ -279,10 +276,6 @@ mod tests {
         A3894.store(p as usize, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn s4204() {
-        H4204.fetch_add(1, Ordering::SeqCst);
-    }
-
     unsafe extern "C" fn s6204(_p: *mut u32) {
         H6204.fetch_add(1, Ordering::SeqCst);
     }
@@ -301,6 +294,9 @@ mod tests {
         let _guard = super::TEST_LOCK.lock().unwrap();
         let _take = crate::fn_00402ec8::TEST_LOCK.lock().unwrap();
         let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        // Real `fn_00404204` behind the loop (null anchor → early
+        // return, no dispatch): hold the callee lock, pin null.
+        let _callee = crate::fn_00404204::TEST_LOCK.lock().unwrap();
         // Real take chain: slow TLS path to the take slot, no
         // indirect callback.
         let (old_flag, old_tls_hook, old_index, old_cb);
@@ -311,7 +307,6 @@ mod tests {
             HOOK_004041DC = s41dc;
             HOOK_004044C4 = s44c4;
             HOOK_00403894 = s3894;
-            HOOK_00404204 = s4204;
             HOOK_00406204 = s6204;
             HOOK_EXITPROCESS = sexit;
             old_flag = crate::fn_00406588::FLAG_00415b44;
@@ -328,6 +323,7 @@ mod tests {
             CELL_00412000 = 0x5a;
             CELL_00415B18 = 1;
             CELL_00415B40 = 0x1234;
+            crate::fn_00404204::DAT_00415aec = core::ptr::null_mut();
             TID_RET.store(0x1234, Ordering::SeqCst);
             STRUCT_00415AE4 = [0; 12];
             SLOT_00413048 = Some(sdrain);
@@ -345,7 +341,6 @@ mod tests {
         assert_eq!(H3894.load(Ordering::SeqCst), 1);
         assert_eq!(A3894.load(Ordering::SeqCst), 0x77);
         assert_eq!(unsafe { TAKE_WORDS[2] }, 0);
-        assert_eq!(H4204.load(Ordering::SeqCst), 1);
         assert_eq!(H6204.load(Ordering::SeqCst), 0);
         assert_eq!(HFINI.load(Ordering::SeqCst), 1);
         assert_eq!(HEXIT.load(Ordering::SeqCst), 1);

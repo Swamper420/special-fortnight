@@ -69,15 +69,7 @@ unsafe extern "C" fn default_bc8c(
     1
 }
 
-unsafe extern "C" fn default_bc80(_h: u32, _s: *const u16, _o: *mut u32) {}
-
 unsafe extern "C" fn default_close(_h: u32) -> u32 {
-    0
-}
-
-unsafe extern "C" fn default_5058(_a: *mut u8, _b: *mut u8, _c: *mut u8) {}
-
-unsafe extern "C" fn default_32ec(_s: *const u16, _o: *mut u32) -> u32 {
     0
 }
 
@@ -106,11 +98,11 @@ pub static mut HOOK_00406728: unsafe extern "C" fn(u32, *const u8) -> usize = de
 pub static mut HOOK_0040BC8C: unsafe extern "C" fn(u8, u32, *const u16, *mut u32, u32, u32) -> u32 =
     default_bc8c;
 
-/// Sibling `0x0040bc80` (`FUN_0040bc80`).
-///
-/// ponytail: hook mirrors done `fn_0040bc80`'s shape, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_0040BC80: unsafe extern "C" fn(u32, *const u16, *mut u32) = default_bc80;
+/// Sibling `0x0040bc80` (`FUN_0040bc80`): direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(u32, *const u16, *mut u32)`). Its `HOOK_0040BB34` stays
+/// (pointer-const mismatch), pinned by the test under the owner
+/// lock.
 
 /// Import `ADVAPI32.DLL::RegCloseKey` (`CALL 0x00406628` ×2).
 ///
@@ -119,18 +111,16 @@ pub static mut HOOK_0040BC80: unsafe extern "C" fn(u32, *const u16, *mut u32) = 
 pub static mut HOOK_RegCloseKey: unsafe extern "C" fn(u32) -> u32 = default_close;
 
 /// Target `0x00405058` (`FUN_00405058`), called with
-/// `(&slot10, 0x0040bec4, local_8)`.
+/// `(&slot10, &SENTINEL_0040bec4, local_8)`: direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, *mut u8, *mut u8)`).
 ///
-/// ponytail: hook standing in for done `fn_00405058`, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_00405058: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) = default_5058;
-
+/// ponytail: the `0x0040bec4` image address has no host mapping,
+/// so a fenced host-side stand-in travels instead (same lane
+/// shape; see `SENTINEL_0040BEC4`).
 /// Target `0x004032ec` (`FUN_004032ec`), called with
-/// `(slot10_value, &local_10)`.
-///
-/// ponytail: hook standing in for done `fn_004032ec`, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_004032EC: unsafe extern "C" fn(*const u16, *mut u32) -> u32 = default_32ec;
+/// `(slot10_value, &local_10)`: direct intra-reconstruction call
+/// (rewired; signatures verified `fn(*const u16, *mut u32) -> u32`).
 
 /// Thunk `0x00404c88` (`thunk_FUN_004046c4`), epilogue releases of
 /// both slots.
@@ -148,6 +138,33 @@ static DEFAULT_FLAG_00412C7C: u32 = 0;
 /// ponytail: absolute-address cell modeled as mutable hook, upgrade
 /// to real image-relative data once data layout proven.
 pub static mut PTR_DAT_00412C7C: *const u32 = &DEFAULT_FLAG_00412C7C as *const u32;
+
+/// Fenced host-side stand-in for the `0x0040bec4` image bytes
+/// (`LAB_0040bec4`, passed as `EDX` to the `0x00405058` take).
+/// The image address has no host mapping and the real take treats
+/// the word as an acquire source (`fn_00404c98` inc lane), so the
+/// fence carries a tag-2 header (`obj = base+12`, refcount seed 5,
+/// length 0) over zero pad: the take stores the object, and the
+/// trailing `0x004032ec` wide-char parse stops at the first NUL
+/// (empty-string lane, returns 0, `used = 1`). Refcount climbs one
+/// per call (releases stay hooks); identity, not the count, is
+/// asserted.
+///
+/// ponytail: an image-memory mapping replaces this fence once
+/// data layout is proven.
+pub static mut SENTINEL_0040BEC4: [u8; 64] = {
+    let mut arena = [0u8; 64];
+    arena[2] = 2;
+    arena[4] = 5;
+    arena
+};
+
+/// Object word of the sentinel fence (`base+12`, the header
+/// layout `tag @ -10 / refcount @ -8 / length @ -4` mirrors
+/// `fn_00404c98`'s contract).
+fn sentinel_obj() -> *mut u8 {
+    unsafe { SENTINEL_0040BEC4.as_mut_ptr().wrapping_byte_add(12) }
+}
 
 /// Locale init: resolve the proc; nonzero → call it; null → read
 /// the flag slot, open the HKCU/HKLM locale key, fetch the value on
@@ -174,7 +191,7 @@ pub unsafe fn fn_0040bcb4() {
                 0,
             );
             if st == 0 {
-                HOOK_0040BC80(
+                crate::fn_0040bc80::fn_0040bc80(
                     local_c,
                     STR_LOCALE_0040BE58.as_ptr(),
                     &mut local_8 as *mut *mut u8 as *mut u32,
@@ -191,7 +208,7 @@ pub unsafe fn fn_0040bcb4() {
                 0,
             );
             if st == 0 {
-                HOOK_0040BC80(
+                crate::fn_0040bc80::fn_0040bc80(
                     local_c,
                     STR_EMPTY_0040BEB4.as_ptr(),
                     &mut local_8 as *mut *mut u8 as *mut u32,
@@ -199,12 +216,12 @@ pub unsafe fn fn_0040bcb4() {
                 HOOK_RegCloseKey(local_c);
             }
         }
-        HOOK_00405058(
+        crate::fn_00405058::fn_00405058(
             &mut slot10 as *mut *mut u8 as *mut u8,
-            0x0040_bec4 as *mut u8,
+            sentinel_obj(),
             local_8,
         );
-        HOOK_004032EC(slot10 as *const u16, &mut local_10);
+        crate::fn_004032ec::fn_004032ec(slot10 as *const u16, &mut local_10);
     }
     HOOK_004046C4(&mut slot10 as *mut *mut u8 as *mut u8);
     HOOK_004046C4(&mut local_8 as *mut *mut u8 as *mut u8);
@@ -213,9 +230,9 @@ pub unsafe fn fn_0040bcb4() {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_004032EC, HOOK_004046C4, HOOK_00405058, HOOK_00406728, HOOK_0040BC80, HOOK_0040BC8C,
-        HOOK_GetModuleHandleW, HOOK_RegCloseKey, PTR_DAT_00412C7C, STR_INTL_0040BE0C,
-        STR_KERNEL32_0040BDF0, STR_LOCALE_0040BE58, fn_0040bcb4,
+        HOOK_004046C4, HOOK_00406728, HOOK_0040BC8C, HOOK_GetModuleHandleW, HOOK_RegCloseKey,
+        PTR_DAT_00412C7C, STR_EMPTY_0040BEB4, STR_INTL_0040BE0C, STR_KERNEL32_0040BDF0,
+        STR_LOCALE_0040BE58, STR_RESLOCALE_0040BE68, fn_0040bcb4, sentinel_obj,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -228,15 +245,13 @@ mod tests {
     static BC8C_HKEY: AtomicUsize = AtomicUsize::new(0);
     static BC8C_SUB: AtomicUsize = AtomicUsize::new(0);
     static BC8C_RET: AtomicUsize = AtomicUsize::new(0);
-    static BC80_HITS: AtomicUsize = AtomicUsize::new(0);
-    static BC80_HKEY: AtomicUsize = AtomicUsize::new(0);
-    static BC80_SUB: AtomicUsize = AtomicUsize::new(0);
+    static BB34_HITS: AtomicUsize = AtomicUsize::new(0);
+    static BB34_H: AtomicUsize = AtomicUsize::new(0);
+    static BB34_S: AtomicUsize = AtomicUsize::new(0);
+    static BB34_A3: AtomicUsize = AtomicUsize::new(0);
+    static BB34_A4: AtomicUsize = AtomicUsize::new(0);
     static CLOSE_HITS: AtomicUsize = AtomicUsize::new(0);
     static CLOSE_ARG: AtomicUsize = AtomicUsize::new(0);
-    static T058_HITS: AtomicUsize = AtomicUsize::new(0);
-    static T058_B: AtomicUsize = AtomicUsize::new(0);
-    static T058_C: AtomicUsize = AtomicUsize::new(0);
-    static T32EC_HITS: AtomicUsize = AtomicUsize::new(0);
     static REL_HITS: AtomicUsize = AtomicUsize::new(0);
 
     unsafe extern "C" fn gmh(name: *const u16) -> u32 {
@@ -269,10 +284,22 @@ mod tests {
         BC8C_RET.load(Ordering::SeqCst) as u32
     }
 
-    unsafe extern "C" fn bc80(h: u32, s: *const u16, o: *mut u32) {
-        BC80_HITS.fetch_add(1, Ordering::SeqCst);
-        BC80_HKEY.store(h as usize, Ordering::SeqCst);
-        BC80_SUB.store(s as usize, Ordering::SeqCst);
+    /// Real `fn_0040bc80`'s `HOOK_0040BB34` behind the gated pair:
+    /// records the const tail, plants the fetched value slot
+    /// (never derefed on the take fallthrough lane, so a canned
+    /// non-null stands in for the registry bytes).
+    unsafe extern "C" fn bb34(
+        h: u32,
+        s: *const u16,
+        o: *mut u32,
+        a: u32,
+        b: u32,
+    ) {
+        BB34_HITS.fetch_add(1, Ordering::SeqCst);
+        BB34_H.store(h as usize, Ordering::SeqCst);
+        BB34_S.store(s as usize, Ordering::SeqCst);
+        BB34_A3.store(a as usize, Ordering::SeqCst);
+        BB34_A4.store(b as usize, Ordering::SeqCst);
         unsafe { core::ptr::write_unaligned(o, 0x1000) };
     }
 
@@ -280,18 +307,6 @@ mod tests {
         CLOSE_HITS.fetch_add(1, Ordering::SeqCst);
         CLOSE_ARG.store(h as usize, Ordering::SeqCst);
         0
-    }
-
-    unsafe extern "C" fn t058(_a: *mut u8, b: *mut u8, c: *mut u8) {
-        T058_HITS.fetch_add(1, Ordering::SeqCst);
-        T058_B.store(b as usize, Ordering::SeqCst);
-        T058_C.store(c as usize, Ordering::SeqCst);
-    }
-
-    unsafe extern "C" fn t32ec(_s: *const u16, o: *mut u32) -> u32 {
-        T32EC_HITS.fetch_add(1, Ordering::SeqCst);
-        unsafe { core::ptr::write_unaligned(o, 0) };
-        3
     }
 
     unsafe extern "C" fn rel(_slot: *mut u8) {
@@ -303,24 +318,29 @@ mod tests {
         RESOLVE_HITS.store(0, Ordering::SeqCst);
         INDIRECT_HITS.store(0, Ordering::SeqCst);
         BC8C_HITS.store(0, Ordering::SeqCst);
-        BC80_HITS.store(0, Ordering::SeqCst);
+        BB34_HITS.store(0, Ordering::SeqCst);
         CLOSE_HITS.store(0, Ordering::SeqCst);
-        T058_HITS.store(0, Ordering::SeqCst);
-        T32EC_HITS.store(0, Ordering::SeqCst);
         REL_HITS.store(0, Ordering::SeqCst);
+    }
+
+    unsafe fn rc_of(p: *mut u8) -> u32 {
+        unsafe { core::ptr::read_unaligned(p.wrapping_byte_offset(-8) as *const u32) }
     }
 
     #[test]
     fn resolve_and_registry_lanes() {
-        // Own hooks only: no foreign globals, no TEST_LOCK.
+        // Real `fn_0040bc80`/`fn_00405058`/`fn_004032ec` behind the
+        // null-resolve lane: hold the callee lock (shared
+        // `HOOK_0040BB34`) then the common owner lock (shared take
+        // store path), pin the fetch hook.
+        let _callee = crate::fn_0040bc80::TEST_LOCK.lock().unwrap();
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_GetModuleHandleW = gmh;
             HOOK_00406728 = resolve;
             HOOK_0040BC8C = bc8c;
-            HOOK_0040BC80 = bc80;
+            crate::fn_0040bc80::HOOK_0040BB34 = bb34;
             HOOK_RegCloseKey = close;
-            HOOK_00405058 = t058;
-            HOOK_004032EC = t32ec;
             HOOK_004046C4 = rel;
         }
         // Resolve-nonzero lane: indirect fires once, registry
@@ -332,11 +352,11 @@ mod tests {
         assert_eq!(GMH_ARG.load(Ordering::SeqCst), STR_KERNEL32_0040BDF0.as_ptr() as usize);
         assert_eq!(INDIRECT_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(BC8C_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(T058_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(T32EC_HITS.load(Ordering::SeqCst), 0);
+        assert_eq!(BB34_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 2);
         // Flag==2 lane: HKCU open; status 0 runs the gated pair;
-        // 5058 sees the image data address and the fetched value.
+        // the real take stores the sentinel fence object and the
+        // real parse reads it as the empty string (`used = 1`).
         clear();
         let mut flag = 2u32;
         unsafe { PTR_DAT_00412C7C = &flag as *const u32 };
@@ -346,26 +366,34 @@ mod tests {
         assert_eq!(BC8C_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(BC8C_HKEY.load(Ordering::SeqCst), 0x8000_0003);
         assert_eq!(BC8C_SUB.load(Ordering::SeqCst), STR_INTL_0040BE0C.as_ptr() as usize);
-        assert_eq!(BC80_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(BC80_HKEY.load(Ordering::SeqCst), 0x68);
-        assert_eq!(BC80_SUB.load(Ordering::SeqCst), STR_LOCALE_0040BE58.as_ptr() as usize);
+        assert_eq!(BB34_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(BB34_H.load(Ordering::SeqCst), 0x68);
+        assert_eq!(BB34_S.load(Ordering::SeqCst), STR_LOCALE_0040BE58.as_ptr() as usize);
+        assert_eq!(BB34_A3.load(Ordering::SeqCst), 2);
+        assert_eq!(BB34_A4.load(Ordering::SeqCst), 1);
         assert_eq!(CLOSE_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(CLOSE_ARG.load(Ordering::SeqCst), 0x68);
-        assert_eq!(T058_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(T058_B.load(Ordering::SeqCst), 0x0040_bec4);
-        assert_eq!(T058_C.load(Ordering::SeqCst), 0x1000);
-        assert_eq!(T32EC_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 2);
-        // Flag!=2 lane: HKLM open; nonzero status skips the pair.
+        // Real take stored the fence (inc lane 5→6).
+        assert_eq!(unsafe { rc_of(sentinel_obj()) }, 6);
+        // Flag!=2 lane: HKLM open; status 0 runs the gated pair
+        // with the empty value name. The open-fail lane (nonzero
+        // status, null value) stays host-untestable: the real take
+        // would enter its concat lane with a null source, which
+        // derefs off-image memory (see evidence).
         clear();
         flag = 7;
-        BC8C_RET.store(9, Ordering::SeqCst);
+        BC8C_RET.store(0, Ordering::SeqCst);
         unsafe { fn_0040bcb4() };
         assert_eq!(BC8C_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(BC8C_HKEY.load(Ordering::SeqCst), 0x8000_0001);
-        assert_eq!(BC80_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(CLOSE_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(T058_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(BC8C_SUB.load(Ordering::SeqCst), STR_RESLOCALE_0040BE68.as_ptr() as usize);
+        assert_eq!(BB34_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(CLOSE_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 2);
+        // Second real take on the fence (6→7).
+        assert_eq!(unsafe { rc_of(sentinel_obj()) }, 7);
+        let _ = &STR_EMPTY_0040BEB4;
+        let _ = unsafe { sentinel_obj() };
     }
 }

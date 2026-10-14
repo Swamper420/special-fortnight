@@ -29,6 +29,10 @@ pub unsafe fn fn_0040bb10(param_1: *mut u8, param_2: u32) -> u8 {
     gt as u8
 }
 
+/// Test-only serialization for tests sharing the lane hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{HOOK_00404F00, fn_0040bb10};
@@ -53,7 +57,10 @@ mod tests {
 
     #[test]
     fn len_compare_lanes() {
-        // Own hook only: no foreign globals, no TEST_LOCK.
+        // Own hook only: hold the owner lock so the rewired
+        // `fn_0040b710` test (which pins this hook behind the real
+        // call) can't race us.
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe { HOOK_00404F00 = grow };
         let mut arena = [0u32; 4];
         let mut cell: *mut u8 = core::ptr::null_mut();

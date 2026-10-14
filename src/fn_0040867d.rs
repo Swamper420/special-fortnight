@@ -2,9 +2,6 @@
 //! `0x004086ec–0x00408903`, non-contiguous; gap is the jump table).
 //! Evidence: `evidence/0040867d_fn_0040867d.md`.
 
-unsafe extern "C" fn default_8904(_arg: u32) -> u32 {
-    0
-}
 unsafe extern "C" fn default_8480(
     _v: u32,
     _start: *mut u8,
@@ -42,11 +39,9 @@ unsafe extern "C" fn default_tail(_val: *mut u8, _width: u32, _base: u32, _curso
 }
 
 /// Fallback-loop head `0x00408904` (`FUN_00408904`), always called
-/// with 0 from the loop.
-///
-/// ponytail: hook standing in for sibling `fn_00408904`, rewire to
-/// real call once cross-module linkage proven.
-pub static mut HOOK_00408904: unsafe extern "C" fn(u32) -> u32 = default_8904;
+/// with 0 from the loop: direct intra-reconstruction call (rewired;
+/// signatures verified `fn(u32) -> u32`). Its scratch hook stays,
+/// pinned by the test under the callee lock.
 
 /// Callee `0x00408480` (`FUN_00408480`): `(v, start, count, ebx)`,
 /// returns the class char in `ECX` and the pointer in `EAX`
@@ -190,7 +185,7 @@ unsafe fn case_c(frame: *mut u8, val: u32, ecx: u32, bh: u8) -> u32 {
 /// repeat.
 unsafe fn fallback(frame: *mut u8) -> u32 {
     loop {
-        let v = HOOK_00408904(0);
+        let v = crate::fn_00408904::fn_00408904(0);
         let start = rd32(frame, -0x14) as *mut u8;
         let end = rd32(frame, -0x24);
         let count = end.wrapping_sub(start as u32).wrapping_shr(1);
@@ -355,8 +350,8 @@ pub unsafe fn fn_0040867d(frame: *mut u8, param_1: u8, param_3: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::{
-        DAT_00415B76, HOOK_00407CD8, HOOK_00408904, HOOK_00408480, HOOK_INDIRECT, TAIL_00407D38,
-        fn_0040867d, rd32, wr32,
+        DAT_00415B76, HOOK_00407CD8, HOOK_00408480, HOOK_INDIRECT, TAIL_00407D38, fn_0040867d,
+        rd32, wr32,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -367,7 +362,7 @@ mod tests {
     static IN_BASE: AtomicUsize = AtomicUsize::new(0);
     static IN_COUNT: AtomicUsize = AtomicUsize::new(0);
     static IN_VAL: AtomicUsize = AtomicUsize::new(0);
-    static B904_ARG: AtomicUsize = AtomicUsize::new(0);
+    static INNER_HITS: AtomicUsize = AtomicUsize::new(0);
     static C8480_CLS: AtomicUsize = AtomicUsize::new(0x44);
     static TAIL_W: AtomicUsize = AtomicUsize::new(0);
     static TAIL_B: AtomicUsize = AtomicUsize::new(0);
@@ -390,9 +385,10 @@ mod tests {
         core::ptr::write_unaligned(slot as *mut *mut u8, core::ptr::null_mut());
     }
 
-    unsafe extern "C" fn h8904(arg: u32) -> u32 {
-        B904_ARG.store(arg as usize, Ordering::SeqCst);
-        0
+    /// Real `fn_00408904` scratch hook behind the fallback head
+    /// (passthrough 0, fires once per fallback).
+    unsafe extern "C" fn inner(_slot: *mut u32) {
+        INNER_HITS.fetch_add(1, Ordering::SeqCst);
     }
 
     unsafe extern "C" fn h8480(
@@ -431,10 +427,15 @@ mod tests {
 
     #[test]
     fn dispatch_lanes() {
+        // Real `fn_00408904` behind the fallback head: hold its
+        // lock, pin the scratch hook, save/restore.
+        let _head = crate::fn_00408904::TEST_LOCK.lock().unwrap();
+        let old_inner;
         unsafe {
             HOOK_00407CD8 = h7cd8;
             HOOK_INDIRECT = hind;
-            HOOK_00408904 = h8904;
+            old_inner = crate::fn_00408904::HOOK_00404A8C;
+            crate::fn_00408904::HOOK_00404A8C = inner;
             HOOK_00408480 = h8480;
             TAIL_00407D38 = ttail;
         }
@@ -480,11 +481,15 @@ mod tests {
             wr32(f, -0x24, 0x1_0008);
             wr32(f, -0x4, 0x77);
         }
+        INNER_HITS.store(0, Ordering::SeqCst);
         assert_eq!(unsafe { fn_0040867d(f, b'Q', 0) }, 0x99);
-        assert_eq!(B904_ARG.load(Ordering::SeqCst), 0);
+        assert_eq!(INNER_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(CD_V.load(Ordering::SeqCst), 0x1234);
         assert_eq!(TAIL_W.load(Ordering::SeqCst), 7);
         assert_eq!(TAIL_B.load(Ordering::SeqCst), 0);
         let _ = unsafe { DAT_00415B76 };
+        unsafe {
+            crate::fn_00408904::HOOK_00404A8C = old_inner;
+        }
     }
 }

@@ -21,6 +21,10 @@ pub unsafe fn fn_00409818() {
     HOOK_00403F88(DAT_00415C9C);
 }
 
+/// Test-only serialization for tests sharing the lane hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{DAT_00415C9C, HOOK_00403F88, fn_00409818};
@@ -36,6 +40,10 @@ mod tests {
 
     #[test]
     fn forwards_cell() {
+        // Own hook only: hold the owner lock so the rewired
+        // `fn_0040bb34` test (which pins this hook behind the real
+        // call) can't race us.
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00403F88 = consume;
             DAT_00415C9C = 0xe018;

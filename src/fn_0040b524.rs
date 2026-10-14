@@ -14,8 +14,6 @@ unsafe extern "C" fn default_path(
     0
 }
 
-unsafe extern "C" fn default_take(_a: *mut u8, _b: *mut u8, _c: u32) {}
-
 /// Callee `0x00404d24` (`FUN_00404d24`), called with raw `param_1`;
 /// returns the normalized name.
 ///
@@ -32,12 +30,10 @@ pub static mut HOOK_GetFullPathNameW: unsafe extern "C" fn(*const u16, u32, *mut
     default_path;
 
 /// Callee `0x00404dd4` (`FUN_00404dd4`), take lane with
-/// `(param_2, buffer, len)`; shape mirrors done `fn_00404dd4`.
-///
-/// ponytail: hook mirroring done `fn_00404dd4`'s shape, rewire to
-/// the real call once cross-module test serialization exists (its
-/// own test mutates shared hook globals under its own locks).
-pub static mut HOOK_00404DD4: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_take;
+/// `(param_2, buffer, len)`: direct intra-reconstruction call
+/// (rewired; signatures verified `fn(*mut u8, *mut u8, u32)`).
+/// Its alloc/fill hooks stay, pinned by the test under the owner
+/// lock.
 
 /// Callee `0x00404c98` (`FUN_00404c98`), fail lane with
 /// `(param_2, RAW param_1)`: direct intra-reconstruction call
@@ -58,15 +54,13 @@ pub unsafe fn fn_0040b524(param_1: *const u16, param_2: *mut u8) {
     if (len as i32) < 1 || (len as i32) > 0xfff {
         crate::fn_00404c98::fn_00404c98(param_2, param_1 as *mut u8);
     } else {
-        HOOK_00404DD4(param_2, buf.as_mut_ptr() as *mut u8, len);
+        crate::fn_00404dd4::fn_00404dd4(param_2, buf.as_mut_ptr() as *mut u8, len);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        HOOK_00404D24, HOOK_00404DD4, HOOK_GetFullPathNameW, TEST_LOCK, fn_0040b524,
-    };
+    use super::{HOOK_00404D24, HOOK_GetFullPathNameW, TEST_LOCK, fn_0040b524};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static NORM_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -76,10 +70,13 @@ mod tests {
     static PATH_LEN: AtomicUsize = AtomicUsize::new(0);
     static PATH_BUF: AtomicUsize = AtomicUsize::new(0);
     static PATH_RET: AtomicUsize = AtomicUsize::new(0);
-    static TAKE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static TAKE_A: AtomicUsize = AtomicUsize::new(0);
-    static TAKE_B: AtomicUsize = AtomicUsize::new(0);
-    static TAKE_C: AtomicUsize = AtomicUsize::new(0);
+    static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
+    static ALLOC_ARG: AtomicUsize = AtomicUsize::new(0);
+    static FILL_A: AtomicUsize = AtomicUsize::new(0);
+    static FILL_B: AtomicUsize = AtomicUsize::new(0);
+    static FILL_C: AtomicUsize = AtomicUsize::new(0);
+
+    const CANNED: u32 = 0x1122_3344;
 
     static mut NAME: [u16; 4] = [0x41, 0x42, 0, 0];
 
@@ -122,17 +119,24 @@ mod tests {
         PATH_RET.load(Ordering::SeqCst) as u32
     }
 
-    unsafe extern "C" fn take(a: *mut u8, b: *mut u8, c: u32) {
-        TAKE_HITS.fetch_add(1, Ordering::SeqCst);
-        TAKE_A.store(a as usize, Ordering::SeqCst);
-        TAKE_B.store(b as usize, Ordering::SeqCst);
-        TAKE_C.store(c as usize, Ordering::SeqCst);
+    /// Real `fn_00404dd4` alloc/fill pair behind the take lane:
+    /// canned DATA pointer, fill recorded.
+    unsafe extern "C" fn alloc(n: u32) -> u32 {
+        ALLOC_HITS.fetch_add(1, Ordering::SeqCst);
+        ALLOC_ARG.store(n as usize, Ordering::SeqCst);
+        CANNED
+    }
+
+    unsafe extern "C" fn fill(a: *mut u8, b: u32, c: u32) {
+        FILL_A.store(a as usize, Ordering::SeqCst);
+        FILL_B.store(b as usize, Ordering::SeqCst);
+        FILL_C.store(c as usize, Ordering::SeqCst);
     }
 
     fn clear() {
         NORM_HITS.store(0, Ordering::SeqCst);
         PATH_HITS.store(0, Ordering::SeqCst);
-        TAKE_HITS.store(0, Ordering::SeqCst);
+        ALLOC_HITS.store(0, Ordering::SeqCst);
     }
 
     #[test]
@@ -144,7 +148,8 @@ mod tests {
         unsafe {
             HOOK_00404D24 = norm;
             HOOK_GetFullPathNameW = path;
-            HOOK_00404DD4 = take;
+            crate::fn_00404dd4::HOOK_004054b4 = alloc;
+            crate::fn_00404dd4::HOOK_00402fbc = fill;
         }
         let raw = [0x43u16, 0];
         let p1 = raw.as_ptr();
@@ -162,19 +167,29 @@ mod tests {
         assert_eq!(PATH_NAME.load(Ordering::SeqCst), name);
         assert_eq!(PATH_LEN.load(Ordering::SeqCst), 0x1000);
         assert_ne!(PATH_BUF.load(Ordering::SeqCst), 0);
-        assert_eq!(TAKE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(TAKE_A.load(Ordering::SeqCst), p2 as usize);
-        assert_eq!(TAKE_B.load(Ordering::SeqCst), PATH_BUF.load(Ordering::SeqCst));
-        assert_eq!(TAKE_C.load(Ordering::SeqCst), 5);
+        // Real take: alloc(5), fill(buf, canned, 10), slot takes
+        // the canned pointer.
+        assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(ALLOC_ARG.load(Ordering::SeqCst), 5);
+        assert_eq!(FILL_A.load(Ordering::SeqCst), PATH_BUF.load(Ordering::SeqCst));
+        assert_eq!(FILL_B.load(Ordering::SeqCst), CANNED as usize);
+        assert_eq!(FILL_C.load(Ordering::SeqCst), 10);
+        assert_eq!(
+            unsafe { core::ptr::read_unaligned(p2 as *const u32) },
+            CANNED
+        );
 
         // Fail lanes: real store(p2, raw) takes the headed object
         // (rc back to 6 each iteration: release 6→5, acquire 5→6).
+        // The take lane above stored the canned pointer, so clear
+        // the slot first (old must be null on entry).
+        s.fill(0);
         let pr = unsafe { raw_obj() };
         for ret in [0usize, 0x1000, 0xffff_ffff] {
             PATH_RET.store(ret, Ordering::SeqCst);
             clear();
             unsafe { fn_0040b524(pr as *const u16, p2) };
-            assert_eq!(TAKE_HITS.load(Ordering::SeqCst), 0);
+            assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
             assert_eq!(unsafe { slot_of(p2) }, pr);
             assert_eq!(unsafe { rc_of(pr) }, 6);
         }

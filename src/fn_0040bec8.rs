@@ -22,6 +22,11 @@ unsafe extern "C" fn default_4f98(_a: *mut u8, _b: *mut u8) {}
 /// ponytail: hook standing in for done `fn_0040b5fc` (same
 /// `usize -> usize` shape), rewire to the real call once
 /// cross-module linkage proven.
+///
+/// Wave 8 note: stays hooked — the `*param_2` slot read is `u32`,
+/// which truncates 64-bit object pointers before the tag lookup,
+/// so the real call is host-safe only on the 32-bit target (same
+/// class as the `fn_004063e4` direct lane).
 pub static mut HOOK_0040B5FC: unsafe extern "C" fn(usize) -> usize = default_b5fc;
 
 /// Target `0x00404f98` (`FUN_00404f98`), called with

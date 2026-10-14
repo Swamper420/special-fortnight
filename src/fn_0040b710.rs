@@ -11,10 +11,6 @@ unsafe extern "C" fn default_env(_name: *mut u8, _buf: *mut u8, _n: u32) -> u32 
     0
 }
 
-unsafe extern "C" fn default_fit(_slot: *mut u8, _n: u32) -> u8 {
-    0
-}
-
 /// Grow `0x00404f00` (`FUN_00404f00`), `(slot, total)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee,
@@ -37,11 +33,9 @@ pub static mut HOOK_GetEnvironmentVariableW: unsafe extern "C" fn(*mut u8, *mut 
     default_env;
 
 /// Fitter `0x0040bb10` (`FUN_0040bb10`), `(slot, needed)`.
-/// Success reported in AL.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire
-/// to real `fn_0040bb10` once it exists.
-pub static mut HOOK_0040bb10: unsafe extern "C" fn(*mut u8, u32) -> u8 = default_fit;
+/// Success reported in AL: direct intra-reconstruction call
+/// (rewired; signatures verified `fn(*mut u8, u32) -> u8`). Its
+/// `HOOK_00404F00` stays, pinned by the test under the callee lock.
 
 /// Store `0x00404c98` (`FUN_00404c98`), `(slot, src)`; the miss
 /// lane passes null src: direct intra-reconstruction call (rewired;
@@ -72,7 +66,7 @@ pub unsafe fn fn_0040b710(param_1: *mut u8, param_2: *mut u8) {
             crate::fn_00404c98::fn_00404c98(param_2, core::ptr::null_mut());
             break;
         }
-        if HOOK_0040bb10(param_2, r) != 0 {
+        if crate::fn_0040bb10::fn_0040bb10(param_2, r) != 0 {
             break;
         }
     }
@@ -81,8 +75,7 @@ pub unsafe fn fn_0040b710(param_1: *mut u8, param_2: *mut u8) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_00404d24, HOOK_00404f00, HOOK_0040bb10, HOOK_GetEnvironmentVariableW,
-        fn_0040b710,
+        HOOK_00404d24, HOOK_00404f00, HOOK_GetEnvironmentVariableW, fn_0040b710,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -93,7 +86,6 @@ mod tests {
     static ENV_N: AtomicUsize = AtomicUsize::new(0);
     static FIT_HITS: AtomicUsize = AtomicUsize::new(0);
     static FIT_N: AtomicUsize = AtomicUsize::new(0);
-    static FIT_RET: AtomicUsize = AtomicUsize::new(0);
 
     unsafe extern "C" fn grow(_slot: *mut u8, n: u32) {
         GROW_HITS.fetch_add(1, Ordering::SeqCst);
@@ -112,10 +104,12 @@ mod tests {
         if i < ENV_SEQ.load(Ordering::SeqCst) { 5 } else { 0 }
     }
 
-    unsafe extern "C" fn fit(_slot: *mut u8, n: u32) -> u8 {
+    /// Real `fn_0040bb10`'s grow hook behind the fit check:
+    /// records the retry size (fires on every nonzero-`r` round,
+    /// accept or retry alike).
+    unsafe extern "C" fn fit_grow(_slot: *mut u8, n: u32) {
         FIT_HITS.fetch_add(1, Ordering::SeqCst);
         FIT_N.store(n as usize, Ordering::SeqCst);
-        FIT_RET.load(Ordering::SeqCst) as u8
     }
 
     /// Header arena: obj = base+12; length at base+8 (`obj-4`).
@@ -129,13 +123,16 @@ mod tests {
     #[test]
     fn env_grow_store_lanes() {
         // Real `fn_00404c98` behind the miss lane (rc-0 old → guard
-        // exits, no dtor): hold the common owner lock.
+        // exits, no dtor) and the real `fn_0040bb10` fit check (its
+        // grow hook shared): hold the common owner lock then the
+        // callee lock, pin the retry grow.
         let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        let _fit = crate::fn_0040bb10::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00404f00 = grow;
             HOOK_00404d24 = data;
             HOOK_GetEnvironmentVariableW = env;
-            HOOK_0040bb10 = fit;
+            crate::fn_0040bb10::HOOK_00404F00 = fit_grow;
         }
         let mut arena = [0u32; 4];
         let obj = unsafe { hdr(&mut arena, 4) };
@@ -158,9 +155,10 @@ mod tests {
         assert!(cell.is_null());
         assert_eq!(FIT_HITS.load(Ordering::SeqCst), 0);
 
-        // Grow-accept lane: env→5, fit(slot,5)→1 → exit, no store.
+        // Grow-accept lane: slot holds a len-8 object, env→5, the
+        // real fit (8>5) accepts → exit, no store.
+        cell = unsafe { hdr(&mut arena, 8) };
         ENV_SEQ.store(1, Ordering::SeqCst);
-        FIT_RET.store(1, Ordering::SeqCst);
         ENV_HITS.store(0, Ordering::SeqCst);
         FIT_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040b710(name_ptr, slot) };
@@ -168,8 +166,9 @@ mod tests {
         assert_eq!(FIT_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(FIT_N.load(Ordering::SeqCst), 5);
 
-        // Retry-then-miss lane: env→5, fit→0, env→0 → store.
-        FIT_RET.store(0, Ordering::SeqCst);
+        // Retry-then-miss lane: slot holds a len-4 object, env→5,
+        // the real fit (4>5 false) retries, env→0 → store.
+        cell = unsafe { hdr(&mut arena, 4) };
         ENV_HITS.store(0, Ordering::SeqCst);
         FIT_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040b710(name_ptr, slot) };

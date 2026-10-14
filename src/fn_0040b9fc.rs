@@ -155,7 +155,15 @@ mod tests {
     }
 
     unsafe fn plant_exp() -> *mut u8 {
-        seed(core::ptr::addr_of_mut!(EXP_ARENA) as *mut u8)
+        // Length 8: the real `fn_0040bb10` fit check accepts the
+        // need-1 query (8>1), preserving the one-query-per-expand
+        // shape the env stub counts on.
+        let o = seed(core::ptr::addr_of_mut!(EXP_ARENA) as *mut u8);
+        core::ptr::write_unaligned(
+            o.wrapping_byte_offset(-4) as *mut u32,
+            8,
+        );
+        o
     }
 
     unsafe fn plant_full() -> *mut u8 {
@@ -192,9 +200,9 @@ mod tests {
         }
         if i == STORE_AT.load(Ordering::SeqCst) { 1 } else { 0 }
     }
-    unsafe extern "C" fn fit(_slot: *mut u8, _r: u32) -> u8 {
-        1
-    }
+    /// Real `fn_0040bb10` grow hook behind the fit check (fires
+    /// on every nonzero-need round).
+    unsafe extern "C" fn fit_grow(_slot: *mut u8, _n: u32) {}
 
     /// Real `fn_0040b6ec` probe hook: feeds the EAX residue.
     unsafe extern "C" fn pres(_obj: *mut u8) -> u32 {
@@ -255,11 +263,12 @@ mod tests {
         // hold the common owner lock and the probe lock.
         let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         let _probe = crate::fn_0040b6ec::TEST_LOCK.lock().unwrap();
+        let _fit = crate::fn_0040bb10::TEST_LOCK.lock().unwrap();
         unsafe {
             crate::fn_0040b710::HOOK_00404f00 = grow;
             crate::fn_0040b710::HOOK_00404d24 = data;
             crate::fn_0040b710::HOOK_GetEnvironmentVariableW = env;
-            crate::fn_0040b710::HOOK_0040bb10 = fit;
+            crate::fn_0040bb10::HOOK_00404F00 = fit_grow;
             crate::fn_0040b6ec::HOOK_0040b698 = pres;
             crate::fn_0040b9a4::HOOK_GetWindowsDirectoryW = windir_imp;
             crate::fn_00404dd4::HOOK_004054b4 = alloc4;

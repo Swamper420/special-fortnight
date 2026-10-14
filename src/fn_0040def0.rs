@@ -20,6 +20,10 @@ pub static mut HOOK_0040DD80: unsafe extern "C" fn(*mut u8, u32, i32, *mut u8) =
 /// ponytail: address-named static; slot type unproven (assumed u32), contents unknown.
 pub static mut DAT_004181A0: [u32; 0xdd] = [0; 0xdd];
 
+/// Test-only serialization for tests sharing the lane hooks/table.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Table lookup (low byte of `param_1`) → convert → decode.
 /// `param_1` EAX / `param_2` EDX / `param_3` ECX per `__register` observation.
 pub unsafe fn fn_0040def0(param_1: u32, param_2: u32, param_3: i32, param_4: *mut u8) {
@@ -52,6 +56,10 @@ mod tests {
 
     #[test]
     fn masked_lookup_forwarded() {
+        // Own hooks/table only: hold the owner lock so the rewired
+        // `fn_0040e414` test (which pins these hooks behind the real
+        // call) can't race us.
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00404D24 = convert;
             HOOK_0040DD80 = decode;

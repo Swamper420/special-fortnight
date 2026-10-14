@@ -1,7 +1,6 @@
 //! Original procedure `0x0040ce24` (195 bytes, `0x0040ce24–0x0040cee6`).
 //! Evidence: `evidence/0040ce24_fn_0040ce24.md`.
 
-unsafe extern "C" fn default_fill(_s: *mut u8, _n: u32, _v: u8) {}
 unsafe extern "C" fn default_parse(
     _s: *mut u8,
     _n: u32,
@@ -20,10 +19,8 @@ unsafe extern "C" fn default_emit(_s: *mut u8, _d: usize, _o: usize) {}
 /// `0x0040cc3c` reporter (codes 1/3/7): direct intra-cluster call
 /// (rewired; signatures verified `fn(u32)`).
 
-/// `0x00403250` fill `(state,0x50,0)`.
-///
-/// ponytail: hook standing in for done `fn_00403250`, rewire once linkage proven.
-pub static mut HOOK_00403250: unsafe extern "C" fn(*mut u8, u32, u8) = default_fill;
+/// `0x00403250` fill `(state,0x50,0)`: direct intra-reconstruction
+/// call (rewired; signatures verified `fn(*mut u8, u32, u8)`).
 
 /// `0x0040d9d8` header parse `(state,0x50,hdr,&sz,&off,5)`.
 ///
@@ -58,7 +55,7 @@ pub unsafe fn fn_0040ce24(param_1: *mut u8) {
     if read(arg0, hdr.as_mut_ptr(), 5) != 5 {
         crate::fn_0040cc3c::fn_0040cc3c(1);
     }
-    HOOK_00403250(param_1.wrapping_byte_add(0x14), 0x50, 0);
+    crate::fn_00403250::fn_00403250(param_1.wrapping_byte_add(0x14), 0x50, 0);
     let mut out_sz: u32 = 0;
     let mut out_off: i32 = 0;
     if HOOK_0040D9D8(
@@ -99,8 +96,7 @@ pub unsafe fn fn_0040ce24(param_1: *mut u8) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_00403250, HOOK_0040D9D8,
-        HOOK_0040DA28, HOOK_VirtualAlloc, fn_0040ce24,
+        HOOK_0040D9D8, HOOK_0040DA28, HOOK_VirtualAlloc, fn_0040ce24,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -128,7 +124,6 @@ mod tests {
         FAIL.store(c as usize, Ordering::SeqCst);
         c
     }
-    unsafe extern "C" fn fill(_s: *mut u8, _n: u32, _v: u8) {}
     unsafe extern "C" fn parse(
         _s: *mut u8,
         _n: u32,
@@ -183,7 +178,6 @@ mod tests {
             old_tail = crate::fn_00403f88::TAIL_00413014;
             crate::fn_00403f88::HOOK_0041301C = None;
             crate::fn_0040cc3c::HOOK_00409860 = fmt_fail;
-            HOOK_00403250 = fill;
             HOOK_0040D9D8 = parse;
             crate::fn_0040cdcc::HOOK_VirtualFree = vfree;
             HOOK_VirtualAlloc = alloc;
@@ -196,8 +190,12 @@ mod tests {
         let mut rec = rec_with(5);
         let base = rec.as_mut_ptr();
         unsafe {
+            // Real `fn_00403250` zeroes the 0x50-byte state window.
+            core::ptr::write_unaligned(base.wrapping_byte_add(0x14), 0xAAu8);
             core::ptr::write_unaligned(base.wrapping_byte_add(0x68) as *mut u32, 0x14);
             fn_0040ce24(base);
+            assert_eq!(core::ptr::read_unaligned(base.wrapping_byte_add(0x14)), 0u8);
+            assert_eq!(core::ptr::read_unaligned(base.wrapping_byte_add(0x63)), 0u8);
             assert_eq!(core::ptr::read_unaligned(base.wrapping_byte_add(0x11) as *const u8), 1);
         }
         assert_eq!(FAIL.load(Ordering::SeqCst), 0);
