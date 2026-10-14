@@ -4,7 +4,6 @@
 unsafe extern "C" fn default_match(_cb: u32, _f: u8, _w: u32, _out: *mut i32) -> u8 {
     0
 }
-unsafe extern "C" fn default_sink(_i: i32) {}
 
 /// `DAT_00418528` wanted-name cell (ECX lane).
 pub static mut DAT_00418528_EAA0: u32 = 0;
@@ -14,8 +13,15 @@ pub static mut DAT_00418635_EAA0: u8 = 0;
 /// Target `0x0040e66c` (locale matcher).
 pub static mut HOOK_0040E66C: unsafe extern "C" fn(u32, u8, u32, *mut i32) -> u8 =
     default_match;
-/// Target `0x0040ea2c` (index consumer).
-pub static mut HOOK_0040EA2C: unsafe extern "C" fn(i32) = default_sink;
+/// Target `0x0040ea2c` (index consumer), rewired to the real
+/// `crate::fn_0040ea2c::fn_0040ea2c` via a minimal ABI adapter (real fn is
+/// repo-norm plain `unsafe fn`; hook stays `extern "C"` so existing test
+/// seams keep working).
+use crate::fn_0040ea2c::fn_0040ea2c;
+unsafe extern "C" fn adapt_0040ea2c(i: i32) {
+    fn_0040ea2c(i)
+}
+pub static mut HOOK_0040EA2C: unsafe extern "C" fn(i32) = adapt_0040ea2c;
 
 /// Adapter: seeds out-index from `param_3`, runs matcher on stored globals,
 /// forwards result to `0x0040ea2c`.

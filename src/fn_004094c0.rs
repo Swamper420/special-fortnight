@@ -40,9 +40,6 @@ unsafe extern "C" fn default_vq(_addr: usize, _mbi: *mut Mbi, _len: u32) -> u32 
 unsafe extern "C" fn default_gmfn(_h: usize, _buf: *mut u16, _n: u32) -> u32 {
     0
 }
-unsafe extern "C" fn default_off(_addr: usize) -> i32 {
-    0
-}
 unsafe extern "C" fn default_rindex(_path: *const u16, _ch: u32) -> usize {
     0
 }
@@ -86,10 +83,14 @@ pub static mut HOOK_GetModuleFileNameW: unsafe extern "C" fn(usize, *mut u16, u3
     default_gmfn;
 
 /// Below-entry helper `0x004094b4`, fallback offset of `param_2`.
-///
-/// ponytail: hook standing in for unreconstructed code, rewire to real
-/// `fn_004094b4` once it exists.
-pub static mut HOOK_004094B4: unsafe extern "C" fn(usize) -> i32 = default_off;
+/// Rewired to `crate::fn_004094b4::fn_004094b4` via a minimal ABI adapter
+/// (real fn is repo-norm plain `unsafe fn`; hook stays `extern "C"` so
+/// existing test seams keep working).
+use crate::fn_004094b4::fn_004094b4;
+unsafe extern "C" fn adapt_004094b4(addr: usize) -> i32 {
+    fn_004094b4(addr)
+}
+pub static mut HOOK_004094B4: unsafe extern "C" fn(usize) -> i32 = adapt_004094b4;
 
 /// Target `0x0040a48c` (rindex `0x5c` over the module path).
 ///

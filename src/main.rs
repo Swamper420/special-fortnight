@@ -252,6 +252,7 @@ mod fn_00408f2c;
 mod fn_00408f68;
 mod fn_00409140;
 mod fn_004091f4;
+mod fn_004094b4;
 mod fn_004094c0;
 mod fn_004096ac;
 mod fn_004097f0;
@@ -496,6 +497,7 @@ mod fn_0040e640;
 mod fn_0040e66c;
 mod fn_0040e770;
 mod fn_0040e894;
+mod fn_0040ea2c;
 mod fn_0040eaa0;
 mod fn_0040eac4;
 mod fn_0040eb24;
@@ -506,5 +508,6 @@ mod fn_0041157c;
 mod fn_00411648;
 mod fn_004117dc;
 fn main() {
-    // Entry point (original 0x004117dc) not yet reconstructed.
+    // Process entry point (original 0x004117dc), reconstructed 1:1.
+    unsafe { crate::fn_004117dc::fn_004117dc(); }
 }

@@ -1,34 +1,88 @@
 //! Process entry point `0x004117dc` (522 bytes, `0x004117dc–0x004119e5`).
-//! Entry-region note: OS-invoked; no callers. Semantics kept, but this
-//! function is NOT called from `fn main()` yet (main stays as-is).
+//! Entry-region note: OS-invoked; no callers. Wired into `fn main()`.
 //! Evidence: `evidence/004117dc_fn_004117dc.md`.
 
-unsafe extern "C" fn default_u32arg(_a: u32) {}
-unsafe extern "C" fn default_none() {}
-unsafe extern "C" fn default_argv(_i: i32, _o: *mut u32) {}
-unsafe extern "C" fn default_pair(_a: u32, _b: u32) {}
-unsafe extern "C" fn default_c238(_a: u32, _b: u8, _c: u32, _d: u32, _e: u32, _f: u32) -> u32 {
-    0
-}
-unsafe extern "C" fn default_ee14() -> u32 {
-    0
-}
-unsafe extern "C" fn default_c738(_a: u32, _b: u32) -> u32 {
-    0
-}
 unsafe extern "C" fn default_read(_s: u32, _o: *mut u32, _n: u32) -> i32 {
     0
 }
-unsafe extern "C" fn default_c1f8(_a: u32, _b: u32, _c: u32) {}
-unsafe extern "C" fn default_31e0(_a: u32, _b: u32, _c: u32) -> i32 {
+
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_004065d4(a: u32) {
+    crate::fn_004065d4::fn_004065d4(a as *mut u8)
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040ed40(a: u32) {
+    crate::fn_0040ed40::fn_0040ed40(a)
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040e894() {
+    crate::fn_0040e894::fn_0040e894()
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040ee68() {
+    crate::fn_0040ee68::fn_0040ee68()
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_004046ac(a: u32) {
+    crate::fn_004046ac::fn_004046ac(a)
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040b8fc(i: i32, o: *mut u32) {
+    crate::fn_0040b8fc::fn_0040b8fc(i as u32, o as *mut u8)
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_00404c98(a: u32, b: u32) {
+    crate::fn_00404c98::fn_00404c98(a as *mut u8, b as *mut u8)
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040c238(a: u32, b: u8, c: u32, d: u32, e: u32, f: u32) -> u32 {
+    crate::fn_0040c238::fn_0040c238(a as *mut *const u8, b, c, d as u8, e as u8, f as u8)
+        as u32
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040ee14() -> u32 {
+    crate::fn_0040ee14::fn_0040ee14() as u32
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040c738(a: u32, b: u32) -> u32 {
+    crate::fn_0040c738::fn_0040c738(a as *const u8, b as i32)
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040ec58() {
+    crate::fn_0040ec58::fn_0040ec58()
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040c220(a: u32, b: u32) {
+    crate::fn_0040c220::fn_0040c220(a as *mut *const u8, b)
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040c1f8(a: u32, b: u32, c: u32) {
+    crate::fn_0040c1f8::fn_0040c1f8(a as *mut *const u8, b, c as i32)
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_004031e0(a: u32, b: u32, c: u32) -> i32 {
+    // Real fn returns `(ptr, zf)`; spine discards it. 1 preserves old stub value.
+    let _ = crate::fn_004031e0::fn_004031e0(a as *const u8, b as *const u8, c);
     1
 }
-unsafe extern "C" fn default_c854(_a: u32, _b: u8, _c: u32, _d: u32) -> u32 {
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040c854(a: u32, b: u8, c: u32, d: u32) -> u32 {
+    crate::fn_0040c854::fn_0040c854(a as *mut u8, b, c as *mut *const u8, d as *mut *const u8)
+        as u32
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_0040da38(a: u32, b: u32, c: u32, d: u32, e: u32) {
+    crate::fn_0040da38::fn_0040da38(a as *mut u8, b as *mut u32, c as i32, d as i32, e as i32)
+}
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_00402dec(n: u32) -> u32 {
+    // Real fn is a void guard (not the allocator); 0 preserves old stub value.
+    crate::fn_00402dec::fn_00402dec(n);
     0
 }
-unsafe extern "C" fn default_da38(_a: u32, _b: u32, _c: u32, _d: u32, _e: u32) {}
-unsafe extern "C" fn default_alloc(_n: u32) -> u32 {
-    0
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapter_00403894(a: u32) {
+    crate::fn_00403894::fn_00403894(a as *mut *const u8)
 }
 
 /// Image-flag cells observed on entry path.
@@ -41,29 +95,29 @@ pub static mut DAT_004186B8: u32 = 0;
 pub static mut DAT_00418650: u32 = 0;
 pub static mut DAT_0041864C: u32 = 0;
 
-/// Callee hooks in spine order (defaults no-op / zero).
-pub static mut HOOK_004065D4: unsafe extern "C" fn(u32) = default_u32arg;
-pub static mut HOOK_0040ED40: unsafe extern "C" fn(u32) = default_u32arg;
-pub static mut HOOK_0040E894: unsafe extern "C" fn() = default_none;
-pub static mut HOOK_0040EE68: unsafe extern "C" fn() = default_none;
-/// Process-exit (original `FUN_004046ac(0)`); default no-op so tests survive.
-pub static mut HOOK_004046AC: unsafe extern "C" fn(u32) = default_u32arg;
-pub static mut HOOK_0040B8FC: unsafe extern "C" fn(i32, *mut u32) = default_argv;
-pub static mut HOOK_00404C98: unsafe extern "C" fn(u32, u32) = default_pair;
+/// Callee hooks in spine order (wired to real reconstructed fns via adapters).
+pub static mut HOOK_004065D4: unsafe extern "C" fn(u32) = adapter_004065d4;
+pub static mut HOOK_0040ED40: unsafe extern "C" fn(u32) = adapter_0040ed40;
+pub static mut HOOK_0040E894: unsafe extern "C" fn() = adapter_0040e894;
+pub static mut HOOK_0040EE68: unsafe extern "C" fn() = adapter_0040ee68;
+/// Process-exit (original `FUN_004046ac(0)`); wired real, tests override with no-op.
+pub static mut HOOK_004046AC: unsafe extern "C" fn(u32) = adapter_004046ac;
+pub static mut HOOK_0040B8FC: unsafe extern "C" fn(i32, *mut u32) = adapter_0040b8fc;
+pub static mut HOOK_00404C98: unsafe extern "C" fn(u32, u32) = adapter_00404c98;
 pub static mut HOOK_0040C238: unsafe extern "C" fn(u32, u8, u32, u32, u32, u32) -> u32 =
-    default_c238;
-pub static mut HOOK_0040EE14: unsafe extern "C" fn() -> u32 = default_ee14;
-pub static mut HOOK_0040C738: unsafe extern "C" fn(u32, u32) -> u32 = default_c738;
-/// Vtable `+4` stream readers (two sites).
+    adapter_0040c238;
+pub static mut HOOK_0040EE14: unsafe extern "C" fn() -> u32 = adapter_0040ee14;
+pub static mut HOOK_0040C738: unsafe extern "C" fn(u32, u32) -> u32 = adapter_0040c738;
+/// Vtable `+4` stream readers (two sites): vtable-indirect, no single target.
 pub static mut HOOK_STREAMREAD: unsafe extern "C" fn(u32, *mut u32, u32) -> i32 = default_read;
-pub static mut HOOK_0040EC58: unsafe extern "C" fn() = default_none;
-pub static mut HOOK_0040C220: unsafe extern "C" fn(u32, u32) = default_pair;
-pub static mut HOOK_0040C1F8: unsafe extern "C" fn(u32, u32, u32) = default_c1f8;
-pub static mut HOOK_004031E0: unsafe extern "C" fn(u32, u32, u32) -> i32 = default_31e0;
-pub static mut HOOK_0040C854: unsafe extern "C" fn(u32, u8, u32, u32) -> u32 = default_c854;
-pub static mut HOOK_0040DA38: unsafe extern "C" fn(u32, u32, u32, u32, u32) = default_da38;
-pub static mut HOOK_00402DEC: unsafe extern "C" fn(u32) -> u32 = default_alloc;
-pub static mut HOOK_00403894: unsafe extern "C" fn(u32) = default_u32arg;
+pub static mut HOOK_0040EC58: unsafe extern "C" fn() = adapter_0040ec58;
+pub static mut HOOK_0040C220: unsafe extern "C" fn(u32, u32) = adapter_0040c220;
+pub static mut HOOK_0040C1F8: unsafe extern "C" fn(u32, u32, u32) = adapter_0040c1f8;
+pub static mut HOOK_004031E0: unsafe extern "C" fn(u32, u32, u32) -> i32 = adapter_004031e0;
+pub static mut HOOK_0040C854: unsafe extern "C" fn(u32, u8, u32, u32) -> u32 = adapter_0040c854;
+pub static mut HOOK_0040DA38: unsafe extern "C" fn(u32, u32, u32, u32, u32) = adapter_0040da38;
+pub static mut HOOK_00402DEC: unsafe extern "C" fn(u32) -> u32 = adapter_00402dec;
+pub static mut HOOK_00403894: unsafe extern "C" fn(u32) = adapter_00403894;
 /// Fake backing for `DAT_00418664` fields (+0xc/+0x10/+0x20/+0x28).
 pub static mut FAKE_SETUP: [u32; 12] = [0; 12];
 
@@ -146,10 +200,37 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering};
 
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     static EC58: AtomicU32 = AtomicU32::new(0);
     static EXITS: AtomicU32 = AtomicU32::new(0);
     static DA38: AtomicU32 = AtomicU32::new(0);
 
+    unsafe extern "C" fn stub_u32arg(_a: u32) {}
+    unsafe extern "C" fn stub_none() {}
+    unsafe extern "C" fn stub_argv(_i: i32, _o: *mut u32) {}
+    unsafe extern "C" fn stub_pair(_a: u32, _b: u32) {}
+    unsafe extern "C" fn stub_c238(_a: u32, _b: u8, _c: u32, _d: u32, _e: u32, _f: u32) -> u32 {
+        0
+    }
+    unsafe extern "C" fn stub_ee14() -> u32 {
+        0
+    }
+    unsafe extern "C" fn stub_c738(_a: u32, _b: u32) -> u32 {
+        0
+    }
+    unsafe extern "C" fn stub_read(_s: u32, _o: *mut u32, _n: u32) -> i32 {
+        0
+    }
+    unsafe extern "C" fn stub_c1f8(_a: u32, _b: u32, _c: u32) {}
+    unsafe extern "C" fn stub_31e0(_a: u32, _b: u32, _c: u32) -> i32 {
+        1
+    }
+    unsafe extern "C" fn stub_c854(_a: u32, _b: u8, _c: u32, _d: u32) -> u32 {
+        0
+    }
+    unsafe extern "C" fn stub_alloc(_n: u32) -> u32 {
+        0
+    }
     unsafe extern "C" fn ec58() {
         EC58.fetch_add(1, Ordering::SeqCst);
     }
@@ -160,28 +241,186 @@ mod tests {
     unsafe extern "C" fn da38(_a: u32, _b: u32, _c: u32, _d: u32, _e: u32) {
         DA38.fetch_add(1, Ordering::SeqCst);
     }
-    unsafe extern "C" fn argv0(_i: i32, _o: *mut u32) {}
-    unsafe extern "C" fn pair0(_a: u32, _b: u32) {}
-    unsafe extern "C" fn c1f8_0(_a: u32, _b: u32, _c: u32) {}
-    unsafe extern "C" fn s31e0(_a: u32, _b: u32, _c: u32) -> i32 {
-        1
+
+    /// Save every hook/DAT this module's tests mutate; returns the snapshot.
+    #[allow(clippy::type_complexity)]
+    unsafe fn save() -> (
+        unsafe extern "C" fn(u32),
+        unsafe extern "C" fn(u32),
+        unsafe extern "C" fn(),
+        unsafe extern "C" fn(),
+        unsafe extern "C" fn(u32),
+        unsafe extern "C" fn(i32, *mut u32),
+        unsafe extern "C" fn(u32, u32),
+        unsafe extern "C" fn(u32, u8, u32, u32, u32, u32) -> u32,
+        unsafe extern "C" fn() -> u32,
+        unsafe extern "C" fn(u32, u32) -> u32,
+        unsafe extern "C" fn(u32, *mut u32, u32) -> i32,
+        unsafe extern "C" fn(),
+        unsafe extern "C" fn(u32, u32),
+        unsafe extern "C" fn(u32, u32, u32),
+        unsafe extern "C" fn(u32, u32, u32) -> i32,
+        unsafe extern "C" fn(u32, u8, u32, u32) -> u32,
+        unsafe extern "C" fn(u32, u32, u32, u32, u32),
+        unsafe extern "C" fn(u32) -> u32,
+        unsafe extern "C" fn(u32),
+        u8,
+        u32,
+        u32,
+        u32,
+        u32,
+        u32,
+        u32,
+        [u32; 12],
+        u8,
+        u8,
+        u32,
+        u32,
+    ) {
+        (
+            HOOK_004065D4,
+            HOOK_0040ED40,
+            HOOK_0040E894,
+            HOOK_0040EE68,
+            HOOK_004046AC,
+            HOOK_0040B8FC,
+            HOOK_00404C98,
+            HOOK_0040C238,
+            HOOK_0040EE14,
+            HOOK_0040C738,
+            HOOK_STREAMREAD,
+            HOOK_0040EC58,
+            HOOK_0040C220,
+            HOOK_0040C1F8,
+            HOOK_004031E0,
+            HOOK_0040C854,
+            HOOK_0040DA38,
+            HOOK_00402DEC,
+            HOOK_00403894,
+            DAT_00412ADC_ENTRY,
+            DAT_00418658,
+            DAT_0041865C,
+            DAT_00418664,
+            DAT_004186B8,
+            DAT_00418650,
+            DAT_0041864C,
+            FAKE_SETUP,
+            crate::fn_0040e894::DAT_00412AE0,
+            crate::fn_0040e894::DAT_00412ADC,
+            crate::fn_0040e894::DAT_00418528,
+            crate::fn_004046ac::CELL_00412000,
+        )
+    }
+
+    #[allow(clippy::type_complexity)]
+    #[allow(clippy::too_many_arguments)]
+    unsafe fn restore(
+        s: (
+            unsafe extern "C" fn(u32),
+            unsafe extern "C" fn(u32),
+            unsafe extern "C" fn(),
+            unsafe extern "C" fn(),
+            unsafe extern "C" fn(u32),
+            unsafe extern "C" fn(i32, *mut u32),
+            unsafe extern "C" fn(u32, u32),
+            unsafe extern "C" fn(u32, u8, u32, u32, u32, u32) -> u32,
+            unsafe extern "C" fn() -> u32,
+            unsafe extern "C" fn(u32, u32) -> u32,
+            unsafe extern "C" fn(u32, *mut u32, u32) -> i32,
+            unsafe extern "C" fn(),
+            unsafe extern "C" fn(u32, u32),
+            unsafe extern "C" fn(u32, u32, u32),
+            unsafe extern "C" fn(u32, u32, u32) -> i32,
+            unsafe extern "C" fn(u32, u8, u32, u32) -> u32,
+            unsafe extern "C" fn(u32, u32, u32, u32, u32),
+            unsafe extern "C" fn(u32) -> u32,
+            unsafe extern "C" fn(u32),
+            u8,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            u32,
+            [u32; 12],
+            u8,
+            u8,
+            u32,
+            u32,
+        ),
+    ) {
+        HOOK_004065D4 = s.0;
+        HOOK_0040ED40 = s.1;
+        HOOK_0040E894 = s.2;
+        HOOK_0040EE68 = s.3;
+        HOOK_004046AC = s.4;
+        HOOK_0040B8FC = s.5;
+        HOOK_00404C98 = s.6;
+        HOOK_0040C238 = s.7;
+        HOOK_0040EE14 = s.8;
+        HOOK_0040C738 = s.9;
+        HOOK_STREAMREAD = s.10;
+        HOOK_0040EC58 = s.11;
+        HOOK_0040C220 = s.12;
+        HOOK_0040C1F8 = s.13;
+        HOOK_004031E0 = s.14;
+        HOOK_0040C854 = s.15;
+        HOOK_0040DA38 = s.16;
+        HOOK_00402DEC = s.17;
+        HOOK_00403894 = s.18;
+        DAT_00412ADC_ENTRY = s.19;
+        DAT_00418658 = s.20;
+        DAT_0041865C = s.21;
+        DAT_00418664 = s.22;
+        DAT_004186B8 = s.23;
+        DAT_00418650 = s.24;
+        DAT_0041864C = s.25;
+        FAKE_SETUP = s.26;
+        crate::fn_0040e894::DAT_00412AE0 = s.27;
+        crate::fn_0040e894::DAT_00412ADC = s.28;
+        crate::fn_0040e894::DAT_00418528 = s.29;
+        crate::fn_004046ac::CELL_00412000 = s.30;
+    }
+
+    unsafe fn install_stubs() {
+        HOOK_004065D4 = stub_u32arg;
+        HOOK_0040ED40 = stub_u32arg;
+        HOOK_0040E894 = stub_none;
+        HOOK_0040EE68 = stub_none;
+        HOOK_004046AC = exit_;
+        HOOK_0040B8FC = stub_argv;
+        HOOK_00404C98 = stub_pair;
+        HOOK_0040C238 = stub_c238;
+        HOOK_0040EE14 = stub_ee14;
+        HOOK_0040C738 = stub_c738;
+        HOOK_STREAMREAD = stub_read;
+        HOOK_0040EC58 = ec58;
+        HOOK_0040C220 = stub_pair;
+        HOOK_0040C1F8 = stub_c1f8;
+        HOOK_004031E0 = stub_31e0;
+        HOOK_0040C854 = stub_c854;
+        HOOK_0040DA38 = da38;
+        HOOK_00402DEC = stub_alloc;
+        HOOK_00403894 = stub_u32arg;
     }
 
     #[test]
     fn missing_setup_calls_ec58_and_help_exits() {
+        let _guard = LOCK.lock().unwrap();
+        let snap = unsafe { save() };
         unsafe {
-            HOOK_0040EC58 = ec58;
-            HOOK_004046AC = exit_;
-            HOOK_0040B8FC = argv0;
-            HOOK_00404C98 = pair0;
-            HOOK_0040C1F8 = c1f8_0;
-            HOOK_004031E0 = s31e0;
-            HOOK_0040DA38 = da38;
+            install_stubs();
             FAKE_SETUP = [0; 12];
             EC58.store(0, Ordering::SeqCst);
             EXITS.store(0, Ordering::SeqCst);
             DA38.store(0, Ordering::SeqCst);
             DAT_00412ADC_ENTRY = 0;
+            DAT_00418658 = 0;
+            DAT_0041865C = 0;
+            DAT_00418664 = 0;
+            DAT_004186B8 = 0;
+            DAT_00418650 = 0;
+            DAT_0041864C = 0;
             fn_004117dc();
             assert_eq!(EC58.load(Ordering::SeqCst), 2); // both ec58 sites
             // help path: fires ee68 + exit hook, host survives.
@@ -190,6 +429,59 @@ mod tests {
             EXITS.store(0, Ordering::SeqCst);
             fn_004117dc();
             assert_eq!(EXITS.load(Ordering::SeqCst), 1);
+            restore(snap);
+        }
+    }
+
+    #[test]
+    fn wired_spine_runs_without_panic() {
+        // Real adapters for host-safe callees (safe under default sub-hooks);
+        // stubs for wild-pointer lanes (65d4/b8fc/4c98/c238/c220/c1f8/31e0/
+        // c854/da38), vtable stream reads, and the fatal-format ec58 path.
+        let _guard = LOCK.lock().unwrap();
+        let snap = unsafe { save() };
+        unsafe {
+            HOOK_004065D4 = stub_u32arg;
+            HOOK_0040ED40 = adapter_0040ed40;
+            HOOK_0040E894 = adapter_0040e894;
+            HOOK_0040EE68 = adapter_0040ee68;
+            HOOK_004046AC = adapter_004046ac;
+            HOOK_0040B8FC = stub_argv;
+            HOOK_00404C98 = stub_pair;
+            HOOK_0040C238 = stub_c238;
+            HOOK_0040EE14 = adapter_0040ee14;
+            HOOK_0040C738 = adapter_0040c738;
+            HOOK_STREAMREAD = stub_read;
+            HOOK_0040EC58 = ec58;
+            HOOK_0040C220 = stub_pair;
+            HOOK_0040C1F8 = stub_c1f8;
+            HOOK_004031E0 = stub_31e0;
+            HOOK_0040C854 = stub_c854;
+            HOOK_0040DA38 = da38;
+            HOOK_00402DEC = adapter_00402dec;
+            HOOK_00403894 = adapter_00403894;
+            FAKE_SETUP = [0; 12];
+            EC58.store(0, Ordering::SeqCst);
+            EXITS.store(0, Ordering::SeqCst);
+            DA38.store(0, Ordering::SeqCst);
+            DAT_00412ADC_ENTRY = 0;
+            DAT_00418658 = 0;
+            DAT_0041865C = 0;
+            DAT_00418664 = 0;
+            DAT_004186B8 = 0;
+            DAT_00418650 = 0;
+            DAT_0041864C = 0;
+            fn_004117dc();
+            // Real ee14 finds no host resource → null → setup-missing path.
+            assert_eq!(DAT_00418664, 0);
+            assert_eq!(EC58.load(Ordering::SeqCst), 2);
+            assert_eq!(DAT_00418650, 0);
+            assert_eq!(DAT_0041864C, 0);
+            // stub da38 once (0x11d site); count 0 skips the 0x3d loop.
+            assert_eq!(DA38.load(Ordering::SeqCst), 1);
+            // Help gate skipped: real exit never fired.
+            assert_eq!(EXITS.load(Ordering::SeqCst), 0);
+            restore(snap);
         }
     }
 }
