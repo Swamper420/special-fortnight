@@ -7,8 +7,6 @@ unsafe extern "C" fn default_module_handle(_name: *const u16) -> u32 {
 
 unsafe extern "C" fn default_init() {}
 
-unsafe extern "C" fn default_final(_a: *mut u8, _b: *mut u8) {}
-
 /// TLS index observed at `0x004127ac`, cleared to 0 on entry.
 ///
 /// ponytail: absolute-address cell modeled as mutable static, upgrade
@@ -48,11 +46,9 @@ pub static mut GET_MODULE_HANDLE_W_00406510: unsafe extern "C" fn(*const u16) ->
 /// to the real call once both modules are linked.
 pub static mut CALLEE_004065c8: unsafe extern "C" fn() = default_init;
 
-/// Target `0x004042d0` (`FUN_004042d0`), `(param_1, 0x004127b4)`.
-///
-/// ponytail: hook standing in for done `fn_004042d0`, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_004042d0: unsafe extern "C" fn(*mut u8, *mut u8) = default_final;
+/// Target `0x004042d0` (`FUN_004042d0`), `(param_1, 0x004127b4)`:
+/// direct intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, *mut u8)`).
 
 /// Startup init: `tls=0; h=GetModuleHandleW(null); [0x00415b48]=h;
 /// [0x004127b8]=re-read; zeros; 004065c8();
@@ -67,7 +63,7 @@ pub unsafe fn fn_004065d4(param_1: *mut u8) {
     DAT_004127bc = 0;
     DAT_004127c0 = 0;
     CALLEE_004065c8();
-    HOOK_004042d0(
+    crate::fn_004042d0::fn_004042d0(
         param_1,
         core::ptr::addr_of_mut!(crate::fn_004065c8::DAT_004127b4) as *mut u8,
     );
@@ -77,7 +73,7 @@ pub unsafe fn fn_004065d4(param_1: *mut u8) {
 mod tests {
     use super::{
         CALLEE_004065c8, DAT_004127b8, DAT_004127bc, DAT_004127c0, DAT_00415b48,
-        GET_MODULE_HANDLE_W_00406510, HOOK_004042d0, TLS_INDEX_004127ac, fn_004065d4,
+        GET_MODULE_HANDLE_W_00406510, TLS_INDEX_004127ac, fn_004065d4,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -85,9 +81,9 @@ mod tests {
     static GMH_ARG: AtomicUsize = AtomicUsize::new(0);
     static SEQ: AtomicUsize = AtomicUsize::new(0);
     static INIT_AT: AtomicUsize = AtomicUsize::new(0);
-    static FIN_AT: AtomicUsize = AtomicUsize::new(0);
-    static FIN_A: AtomicUsize = AtomicUsize::new(0);
-    static FIN_B: AtomicUsize = AtomicUsize::new(0);
+    static FIN_INIT_AT: AtomicUsize = AtomicUsize::new(0);
+    static FIN_INIT_ARG: AtomicUsize = AtomicUsize::new(0);
+    static FIN_RUN_AT: AtomicUsize = AtomicUsize::new(0);
 
     unsafe extern "C" fn module_handle(name: *const u16) -> u32 {
         GMH_HITS.fetch_add(1, Ordering::SeqCst);
@@ -99,18 +95,30 @@ mod tests {
         INIT_AT.store(SEQ.fetch_add(1, Ordering::SeqCst), Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn fin(a: *mut u8, b: *mut u8) {
-        FIN_A.store(a as usize, Ordering::SeqCst);
-        FIN_B.store(b as usize, Ordering::SeqCst);
-        FIN_AT.store(SEQ.fetch_add(1, Ordering::SeqCst), Ordering::SeqCst);
+    /// Real `fn_004042d0` init lane `(0x00415ae4)`.
+    unsafe extern "C" fn fin_init(arg: u32) {
+        FIN_INIT_ARG.store(arg as usize, Ordering::SeqCst);
+        FIN_INIT_AT.store(SEQ.fetch_add(1, Ordering::SeqCst), Ordering::SeqCst);
+    }
+
+    /// Real `fn_004042d0` runner lane.
+    unsafe extern "C" fn fin_run() {
+        FIN_RUN_AT.store(SEQ.fetch_add(1, Ordering::SeqCst), Ordering::SeqCst);
     }
 
     #[test]
     fn cells_then_init_then_final_in_order() {
+        // Real `fn_004042d0` under its owner's lock (shared cells);
+        // its init/runner hooks saved + restored.
+        let _shared = crate::fn_00404204::TEST_LOCK.lock().unwrap();
+        let (old_init, old_run);
         unsafe {
+            old_init = crate::fn_004042d0::HOOK_004041BC;
+            old_run = crate::fn_004042d0::HOOK_00404268;
             GET_MODULE_HANDLE_W_00406510 = module_handle;
             CALLEE_004065c8 = init;
-            HOOK_004042d0 = fin;
+            crate::fn_004042d0::HOOK_004041BC = fin_init;
+            crate::fn_004042d0::HOOK_00404268 = fin_run;
             TLS_INDEX_004127ac = 0xdead;
             DAT_00415b48 = 0xdead;
             DAT_004127b8 = 0xdead;
@@ -130,11 +138,13 @@ mod tests {
         assert_eq!(unsafe { DAT_004127bc }, 0);
         assert_eq!(unsafe { DAT_004127c0 }, 0);
         assert_eq!(INIT_AT.load(Ordering::SeqCst), 0);
-        assert_eq!(FIN_AT.load(Ordering::SeqCst), 1);
-        assert_eq!(FIN_A.load(Ordering::SeqCst), param_1 as usize);
-        assert_eq!(
-            FIN_B.load(Ordering::SeqCst),
-            core::ptr::addr_of!(crate::fn_004065c8::DAT_004127b4) as usize
-        );
+        assert_eq!(FIN_INIT_AT.load(Ordering::SeqCst), 1);
+        assert_eq!(FIN_INIT_ARG.load(Ordering::SeqCst), 0x00415ae4);
+        assert_eq!(FIN_RUN_AT.load(Ordering::SeqCst), 2);
+        assert_eq!(unsafe { crate::fn_00404204::DAT_00415aec }, param_1);
+        unsafe {
+            crate::fn_004042d0::HOOK_004041BC = old_init;
+            crate::fn_004042d0::HOOK_00404268 = old_run;
+        }
     }
 }

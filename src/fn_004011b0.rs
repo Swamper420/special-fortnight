@@ -16,6 +16,10 @@ pub unsafe fn fn_004011b0() -> u32 {
     HOOK_004011B0()
 }
 
+/// Test-only serialization for tests sharing the import hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{HOOK_004011B0, fn_004011b0};
@@ -30,6 +34,7 @@ mod tests {
 
     #[test]
     fn forwards_and_echoes() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe { HOOK_004011B0 = target };
         assert_eq!(unsafe { fn_004011b0() }, 0xabcd);
         assert_eq!(HITS.load(Ordering::SeqCst), 1);

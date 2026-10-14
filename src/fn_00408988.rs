@@ -109,6 +109,10 @@ pub unsafe fn fn_00408988(
     TAIL_00408C82(count as u32);
 }
 
+/// Test-only serialization for tests sharing the lane hooks.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -152,6 +156,7 @@ mod tests {
 
     #[test]
     fn special_and_general_lanes() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00408C88 = c88;
             HOOK_00408A88 = a88;

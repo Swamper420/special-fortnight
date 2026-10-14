@@ -43,6 +43,8 @@ mod tests {
 
     #[test]
     fn call_then_reload() {
+        let _common = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        let old = unsafe { CALLEE_00404E6C };
         unsafe { CALLEE_00404E6C = callee };
         let mut cell = 0x1234u32;
         let cell_ptr = &mut cell as *mut u32;
@@ -53,5 +55,6 @@ mod tests {
         assert_eq!(GOT_A.load(Ordering::SeqCst), cell_ptr as usize);
         assert_eq!(GOT_B.load(Ordering::SeqCst), arg2 as usize);
         assert_eq!(ret, 7 as *mut u32);
+        unsafe { CALLEE_00404E6C = old };
     }
 }

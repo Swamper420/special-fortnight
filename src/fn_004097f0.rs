@@ -42,6 +42,10 @@ pub unsafe fn fn_004097f0(entry_eax: usize) {
     TAIL_00403F88(p);
 }
 
+/// Test-only serialization for tests sharing the maker/tail hooks.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{DAT_00406DD8, DAT_00412BB8, HOOK_004098E0, TAIL_00403F88, fn_004097f0};
@@ -71,6 +75,7 @@ mod tests {
 
     #[test]
     fn maker_lanes_and_tail() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_004098E0 = make;
             TAIL_00403F88 = consume;

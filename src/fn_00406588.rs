@@ -39,6 +39,10 @@ pub static mut TEB_TLS_BASE_FS2C: *const u32 = core::ptr::null();
 pub static mut TLS_GET_VALUE_00406520: unsafe extern "C" fn(u32) -> *const u8 =
     default_tls_get_value;
 
+/// Test-only serialization for tests sharing FLAG/TLS statics.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Target `0x00406544`, called on the null-TLS path before re-query.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
@@ -93,6 +97,7 @@ mod tests {
 
     #[test]
     fn fast_slow_init_fallback_lanes() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             TEB_TLS_BASE_FS2C = SLOTS.as_ptr();
             TLS_GET_VALUE_00406520 = tls_get_value;

@@ -68,6 +68,7 @@ mod tests {
         // Shares FLAG_00412020 / SEH head with owners: hold both locks.
         let _guard_b = crate::fn_00403b0c::TEST_LOCK.lock().unwrap();
         let _guard_h = crate::fn_004039e4::TEST_LOCK.lock().unwrap();
+        let _guard_tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
         let (old_flag, old_head, old_tls_flag, old_tls_hook, old_tls_index, old_tail);
         unsafe {
             old_flag = crate::fn_00403b0c::FLAG_00412020;

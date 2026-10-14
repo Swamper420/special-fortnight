@@ -31,7 +31,8 @@ mod tests {
 
     /// Context for the real `fn_00402f8c` at the end of the
     /// `fn_00403134` report lane: it stores the code at `ctx+4`.
-    unsafe extern "C" fn ctx() -> *const u8 {
+    /// Stands in for the OS import behind real `fn_00406588`.
+    unsafe extern "C" fn tls_value(_index: u32) -> *const u8 {
         core::ptr::addr_of!(CTX) as *const u8
     }
 
@@ -64,7 +65,16 @@ mod tests {
     #[test]
     fn forwards_obj_and_slot_method() {
         let _guard = TEST_LOCK.lock().unwrap();
-        unsafe { crate::fn_00402f8c::HOOK_00406588 = ctx; }
+        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        let (old_flag, old_hook, old_index);
+        unsafe {
+            old_flag = crate::fn_00406588::FLAG_00415b44;
+            old_hook = crate::fn_00406588::TLS_GET_VALUE_00406520;
+            old_index = crate::fn_00406588::TLS_INDEX_004127ac;
+            crate::fn_00406588::FLAG_00415b44 = 1;
+            crate::fn_00406588::TLS_GET_VALUE_00406520 = tls_value;
+            crate::fn_00406588::TLS_INDEX_004127ac = 0;
+        }
         for (m, want) in [
             (method_a as Method00403134, 1u32),
             (method_b as Method00403134, 2u32),
@@ -81,6 +91,11 @@ mod tests {
             // Nonzero method result flows into the real report lane.
             assert_eq!(unsafe { CTX[1] }, want);
         }
-        unsafe { CTX = [0; 2] };
+        unsafe {
+            CTX = [0; 2];
+            crate::fn_00406588::FLAG_00415b44 = old_flag;
+            crate::fn_00406588::TLS_GET_VALUE_00406520 = old_hook;
+            crate::fn_00406588::TLS_INDEX_004127ac = old_index;
+        }
     }
 }

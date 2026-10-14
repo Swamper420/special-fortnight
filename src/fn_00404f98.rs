@@ -135,6 +135,9 @@ mod tests {
         FAIL_RET.load(Ordering::SeqCst) as *mut u8
     }
 
+    /// Normalize stand-in behind real `fn_00404820`: leaves the slot.
+    unsafe extern "C" fn norm_noop(_a: *mut u32, _b: *mut u8) {}
+
     /// Arena: obj = base+12 (the DATA pointer hooks return); tag
     /// u16 @+2 (`obj-10`), refcount u32 @+4 (`obj-8`), len u32
     /// @+8 (`obj-4`). Caller scope (pointers must not dangle).
@@ -162,9 +165,13 @@ mod tests {
     fn append_lanes() {
         // Shared fn_00404dd4 hooks: hold the common owner lock.
         let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        // Real `fn_00404830` → real `fn_00404820` normalizes through
+        // its callee hook: noop keeps the slot (as the old default did).
+        let old_norm = unsafe { crate::fn_00404820::CALLEE_00404E6C };
         unsafe {
             HOOK_00404f00 = size;
             FAIL_00402F60 = fail;
+            crate::fn_00404820::CALLEE_00404E6C = norm_noop;
         }
         // Null-src lane: returns the slot pointer, nothing fires.
         reset();
@@ -283,5 +290,6 @@ mod tests {
         assert_eq!(FAIL_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(ret as usize, 0x77);
         assert_eq!(SIZE_HITS.load(Ordering::SeqCst), 0);
+        unsafe { crate::fn_00404820::CALLEE_00404E6C = old_norm };
     }
 }

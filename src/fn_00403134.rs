@@ -62,7 +62,8 @@ mod tests {
     static mut CTX: [u32; 2] = [0; 2];
 
     /// Context for the real `fn_00402f8c`: it stores the code at `ctx+4`.
-    unsafe extern "C" fn ctx() -> *const u8 {
+    /// Stands in for the OS import behind real `fn_00406588`.
+    unsafe extern "C" fn tls_value(_index: u32) -> *const u8 {
         core::ptr::addr_of!(CTX) as *const u8
     }
 
@@ -93,8 +94,17 @@ mod tests {
     fn tag_dispatch_lanes() {
         let _guard = TEST_LOCK.lock().unwrap();
         // Report lane observed through the real `fn_00402f8c`, which
-        // stores the code at `ctx+4`.
-        unsafe { crate::fn_00402f8c::HOOK_00406588 = ctx; }
+        // stores the code at `ctx+4` (real `fn_00406588` slow path).
+        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        let (old_flag, old_hook, old_index);
+        unsafe {
+            old_flag = crate::fn_00406588::FLAG_00415b44;
+            old_hook = crate::fn_00406588::TLS_GET_VALUE_00406520;
+            old_index = crate::fn_00406588::TLS_INDEX_004127ac;
+            crate::fn_00406588::FLAG_00415b44 = 1;
+            crate::fn_00406588::TLS_GET_VALUE_00406520 = tls_value;
+            crate::fn_00406588::TLS_INDEX_004127ac = 0;
+        }
         // Zero tag (t==0): 0, no method, no report.
         reset();
         assert_eq!(unsafe { fn_00403134(obj_with(0xd7b1), method) }, 0);
@@ -118,6 +128,11 @@ mod tests {
         assert_eq!(unsafe { fn_00403134(obj_with(0), method) }, 0x67);
         assert_eq!(METHOD_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(unsafe { CTX[1] }, 0x67);
-        unsafe { CTX = [0; 2] };
+        unsafe {
+            CTX = [0; 2];
+            crate::fn_00406588::FLAG_00415b44 = old_flag;
+            crate::fn_00406588::TLS_GET_VALUE_00406520 = old_hook;
+            crate::fn_00406588::TLS_INDEX_004127ac = old_index;
+        }
     }
 }

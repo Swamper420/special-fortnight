@@ -16,6 +16,10 @@ pub unsafe fn fn_00406690(dst: *mut i32, ex: i32, cmp: i32) -> i32 {
     HOOK_00406690(dst, ex, cmp)
 }
 
+/// Test-only serialization for tests sharing the import hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{HOOK_00406690, fn_00406690};
@@ -33,6 +37,7 @@ mod tests {
 
     #[test]
     fn forwards_and_echoes() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe { HOOK_00406690 = target };
         let mut v = 0i32;
         let r = unsafe { fn_00406690(&mut v, 5, 0) };

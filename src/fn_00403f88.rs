@@ -72,7 +72,9 @@ mod tests {
         TAIL_HITS.fetch_add(1, Ordering::SeqCst);
     }
 
-    unsafe extern "C" fn ctx() -> *const u8 {
+    /// Stands in for the OS import behind real `fn_00406588`
+    /// (reached via real `fn_00402efc`).
+    unsafe extern "C" fn tls_value(_index: u32) -> *const u8 {
         core::ptr::addr_of!(WORDS) as *const u8
     }
 
@@ -85,17 +87,23 @@ mod tests {
     fn alloc_raise_tail_lanes() {
         // Foreign hooks/cells (no shared locks exist): save, use in a
         // tight window, restore. Asserts run after restore.
-        let (old_hook, old_tail, old_cell, old_alloc, old_ctx);
+        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        let (old_hook, old_tail, old_cell, old_alloc);
+        let (old_flag, old_tls_hook, old_index);
         unsafe {
             old_hook = HOOK_0041301C;
             old_tail = TAIL_00413014;
             old_cell = crate::fn_004046b8::CELL_00412004;
             old_alloc = crate::fn_004046b8::HOOK_004046ac;
-            old_ctx = crate::fn_00402efc::HOOK_00406588;
+            old_flag = crate::fn_00406588::FLAG_00415b44;
+            old_tls_hook = crate::fn_00406588::TLS_GET_VALUE_00406520;
+            old_index = crate::fn_00406588::TLS_INDEX_004127ac;
             HOOK_0041301C = None;
             TAIL_00413014 = tail14;
             crate::fn_004046b8::HOOK_004046ac = alloc_tail;
-            crate::fn_00402efc::HOOK_00406588 = ctx;
+            crate::fn_00406588::FLAG_00415b44 = 1;
+            crate::fn_00406588::TLS_GET_VALUE_00406520 = tls_value;
+            crate::fn_00406588::TLS_INDEX_004127ac = 0;
             WORDS = [0, 0x99];
         }
         // Nonzero param: no alloc, null slot: no raise, tail fires.
@@ -132,7 +140,9 @@ mod tests {
             TAIL_00413014 = old_tail;
             crate::fn_004046b8::CELL_00412004 = old_cell;
             crate::fn_004046b8::HOOK_004046ac = old_alloc;
-            crate::fn_00402efc::HOOK_00406588 = old_ctx;
+            crate::fn_00406588::FLAG_00415b44 = old_flag;
+            crate::fn_00406588::TLS_GET_VALUE_00406520 = old_tls_hook;
+            crate::fn_00406588::TLS_INDEX_004127ac = old_index;
         }
     }
 }

@@ -3,14 +3,10 @@
 
 use crate::fn_00402e20::fn_00402e20;
 
-unsafe extern "C" fn default_forward(_slot: *mut u8, _src: *mut u8) {}
-
 /// Target `0x00404e6c` (`FUN_00404e6c`), reached by a terminal `JMP`
-/// on the non-`2` tag lane (decompiler shows call+return).
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to
-/// real `fn_00404e6c` once it exists.
-pub static mut HOOK_00404e6c: unsafe extern "C" fn(*mut u8, *mut u8) = default_forward;
+/// on the non-`2` tag lane (decompiler shows call+return): direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, *mut u8)`).
 
 /// Acquire `param_2` (null → skip; tag `[p2-10]!=2` → forward lane
 /// and return; refcount `[p2-8]>=0` → locked inc, else store
@@ -29,7 +25,7 @@ pub static mut HOOK_00404e6c: unsafe extern "C" fn(*mut u8, *mut u8) = default_f
 pub unsafe fn fn_00404cec(param_1: *mut u8, param_2: *mut u8) {
     if !param_2.is_null() {
         if core::ptr::read_unaligned(param_2.wrapping_byte_offset(-10) as *const u16) != 2 {
-            HOOK_00404e6c(param_1, param_2);
+            crate::fn_00404e6c::fn_00404e6c(param_1, param_2);
             return;
         }
         let rc = core::ptr::read_unaligned(param_2.wrapping_byte_offset(-8) as *const u32);
@@ -53,25 +49,51 @@ pub unsafe fn fn_00404cec(param_1: *mut u8, param_2: *mut u8) {
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00404e6c, fn_00404cec};
+    use super::fn_00404cec;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    static FWD_HITS: AtomicUsize = AtomicUsize::new(0);
-    static FWD_A: AtomicUsize = AtomicUsize::new(0);
-    static FWD_B: AtomicUsize = AtomicUsize::new(0);
     static DTOR_HITS: AtomicUsize = AtomicUsize::new(0);
-
-    unsafe extern "C" fn forward(slot: *mut u8, src: *mut u8) {
-        FWD_HITS.fetch_add(1, Ordering::SeqCst);
-        FWD_A.store(slot as usize, Ordering::SeqCst);
-        FWD_B.store(src as usize, Ordering::SeqCst);
-    }
+    static CONV_HITS: AtomicUsize = AtomicUsize::new(0);
+    static CONV_SRC: AtomicUsize = AtomicUsize::new(0);
+    static CONV_P4: AtomicUsize = AtomicUsize::new(0);
+    static CONV_N: AtomicUsize = AtomicUsize::new(0);
+    static CONV_RET: AtomicUsize = AtomicUsize::new(0);
+    static ALLOC_ARG: AtomicUsize = AtomicUsize::new(0);
+    static FILL_C: AtomicUsize = AtomicUsize::new(0);
 
     /// Probe for the done dtor's indirect slot: counts entries,
     /// returns 0 so its tail lane never fires.
     unsafe extern "C" fn indirect() -> u32 {
         DTOR_HITS.fetch_add(1, Ordering::SeqCst);
         0
+    }
+
+    /// Downstream `fn_00404d30` convert/size pair (mirrors its own
+    /// test): stack path, canned return.
+    unsafe extern "C" fn convert(
+        _dst: *mut u16,
+        _cap: u32,
+        src: *const u8,
+        p4: u32,
+        n: u32,
+    ) -> i32 {
+        CONV_HITS.fetch_add(1, Ordering::SeqCst);
+        CONV_SRC.store(src as usize, Ordering::SeqCst);
+        CONV_P4.store(p4 as usize, Ordering::SeqCst);
+        CONV_N.store(n as usize, Ordering::SeqCst);
+        CONV_RET.load(Ordering::SeqCst) as i32
+    }
+
+    unsafe extern "C" fn size(_slot: *mut u8, _n: u32) {}
+
+    /// Downstream `fn_00404dd4` alloc/fill pair: canned DATA pointer.
+    unsafe extern "C" fn alloc(n: u32) -> u32 {
+        ALLOC_ARG.store(n as usize, Ordering::SeqCst);
+        0x1122_3344
+    }
+
+    unsafe extern "C" fn fill(_a: *mut u8, _b: u32, c: u32) {
+        FILL_C.store(c as usize, Ordering::SeqCst);
     }
 
     /// Header arena: obj = base+12; tag at base+2 (`obj-10`),
@@ -89,13 +111,22 @@ mod tests {
 
     #[test]
     fn acquire_store_release_lanes() {
-        // Direct call reaches done fn_00402e20, which reads its PTR
-        // global: hold the owner lock so its writer test can't race us.
+        // Forward lane reaches done `fn_00404e6c` → `fn_00404d30` →
+        // `fn_00404dd4`: hold the common owner lock; the dtor lane
+        // reaches done fn_00402e20: hold its lock too.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         let _callee = crate::fn_00402e20::TEST_LOCK.lock().unwrap();
         let saved = unsafe { crate::fn_00402e20::PTR_00412740 };
+        let old_conv = unsafe { crate::fn_00404d30::HOOK_004047ec };
+        let old_size = unsafe { crate::fn_00404d30::HOOK_00404f00 };
+        let old_alloc = unsafe { crate::fn_00404dd4::HOOK_004054b4 };
+        let old_fill = unsafe { crate::fn_00404dd4::HOOK_00402fbc };
         unsafe {
             crate::fn_00402e20::PTR_00412740 = indirect;
-            HOOK_00404e6c = forward;
+            crate::fn_00404d30::HOOK_004047ec = convert;
+            crate::fn_00404d30::HOOK_00404f00 = size;
+            crate::fn_00404dd4::HOOK_004054b4 = alloc;
+            crate::fn_00404dd4::HOOK_00402fbc = fill;
         }
 
         let mut arena = [0u32; 4];
@@ -103,11 +134,9 @@ mod tests {
         let slot_ptr = &mut slot as *mut *mut u8 as *mut u8;
 
         // Null/null lane: no-op.
-        FWD_HITS.store(0, Ordering::SeqCst);
         DTOR_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_00404cec(slot_ptr, core::ptr::null_mut()) };
         assert!(slot.is_null());
-        assert_eq!(FWD_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(DTOR_HITS.load(Ordering::SeqCst), 0);
 
         // Null + old(1) lane: exchange, release calls dtor once.
@@ -118,38 +147,47 @@ mod tests {
         assert_eq!(unsafe { *arena.as_mut_ptr().wrapping_add(1) }, 0);
         assert_eq!(DTOR_HITS.load(Ordering::SeqCst), 1);
 
-        // Foreign-tag lane: forward only, slot untouched.
-        let mut fwd_arena = [0u32; 4];
-        let p2 = unsafe { hdr(&mut fwd_arena, 7, 5) };
+        // Foreign-tag lane: real forward → convert(src, tag2, len),
+        // stack path (ret 3): alloc(3), fill 3<<1=6; the converted
+        // object is stored into the slot (`fn_00404dd4` tail).
+        let mut fwd_arena = [0u8; 32];
+        let fbase = fwd_arena.as_mut_ptr();
+        unsafe {
+            core::ptr::write_unaligned(fbase.wrapping_add(2) as *mut u16, 7);
+            core::ptr::write_unaligned(fbase.wrapping_add(0) as *mut u16, 0x51);
+            core::ptr::write_unaligned(fbase.wrapping_add(4) as *mut u32, 5);
+            core::ptr::write_unaligned(fbase.wrapping_add(8) as *mut u32, 5);
+        }
+        let p2 = fbase.wrapping_add(12);
         slot = core::ptr::null_mut();
-        FWD_HITS.store(0, Ordering::SeqCst);
+        CONV_HITS.store(0, Ordering::SeqCst);
+        CONV_RET.store(3, Ordering::SeqCst);
         unsafe { fn_00404cec(slot_ptr, p2) };
-        assert_eq!(FWD_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(FWD_A.load(Ordering::SeqCst), slot_ptr as usize);
-        assert_eq!(FWD_B.load(Ordering::SeqCst), p2 as usize);
-        assert!(slot.is_null());
+        assert_eq!(CONV_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(CONV_SRC.load(Ordering::SeqCst), p2 as usize);
+        assert_eq!(CONV_P4.load(Ordering::SeqCst), 0x51);
+        assert_eq!(CONV_N.load(Ordering::SeqCst), 5);
+        assert_eq!(ALLOC_ARG.load(Ordering::SeqCst), 3);
+        assert_eq!(FILL_C.load(Ordering::SeqCst), 6);
+        assert_eq!(slot as usize, 0x1122_3344);
         assert_eq!(unsafe { rc_of(p2) }, 5);
 
         // Inc lane: rc 5→6, stored as-is.
         let mut inc_arena = [0u32; 4];
         let p2 = unsafe { hdr(&mut inc_arena, 2, 5) };
         slot = core::ptr::null_mut();
-        FWD_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_00404cec(slot_ptr, p2) };
         assert_eq!(slot, p2);
         assert_eq!(unsafe { rc_of(p2) }, 6);
-        assert_eq!(FWD_HITS.load(Ordering::SeqCst), 0);
 
         // Skip-inc lane: negative rc stored as-is, no hook.
         // (No realloc lane here, unlike `fn_00404c98`.)
         let mut neg_arena = [0u32; 4];
         let p2 = unsafe { hdr(&mut neg_arena, 2, 0xffff_ffff) };
         slot = core::ptr::null_mut();
-        FWD_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_00404cec(slot_ptr, p2) };
         assert_eq!(slot, p2);
         assert_eq!(unsafe { rc_of(p2) }, 0xffff_ffff);
-        assert_eq!(FWD_HITS.load(Ordering::SeqCst), 0);
 
         // Old-zero lane: exchange runs, no dec, no call.
         let mut z_arena = [0u32; 4];
@@ -171,6 +209,10 @@ mod tests {
 
         unsafe {
             crate::fn_00402e20::PTR_00412740 = saved;
+            crate::fn_00404d30::HOOK_004047ec = old_conv;
+            crate::fn_00404d30::HOOK_00404f00 = old_size;
+            crate::fn_00404dd4::HOOK_004054b4 = old_alloc;
+            crate::fn_00404dd4::HOOK_00402fbc = old_fill;
         }
     }
 }

@@ -10,8 +10,6 @@ unsafe extern "C" fn default_load_string(
     0
 }
 
-unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8, _n: u32) {}
-
 unsafe extern "C" fn default_store_wide(_slot: *mut u8, _s: *mut u16) {}
 
 /// Target `0x00405b90` (`FUN_00405b90`): rewired to
@@ -28,11 +26,8 @@ pub static mut LOAD_STRING_W_00401138: unsafe extern "C" fn(usize, u32, *mut u16
     default_load_string;
 
 /// Target `0x00404dd4` (`FUN_00404dd4`), `(param_2, buf, n)` on the
-/// resource lane.
-///
-/// ponytail: hook standing in for done `fn_00404dd4`, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_00404dd4: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_store;
+/// resource lane: direct intra-reconstruction call (rewired; signatures
+/// verified `fn(*mut u8, *mut u8, u32)`).
 
 /// Target `0x00404e14` (`FUN_00404e14`), `(param_2, [param_1+4])` on
 /// the direct lane (`[param_1+4]` passes as a pointer).
@@ -65,7 +60,7 @@ pub unsafe fn fn_004063e4(param_1: *const u8, param_2: *mut u8) {
         let key: *mut u8 = core::ptr::read_unaligned(mid as *const *mut u8);
         let h: usize = fn_00405b90(key);
         let n: i32 = LOAD_STRING_W_00401138(h, id, buf.as_mut_ptr(), 0x1000);
-        HOOK_00404dd4(param_2, buf.as_mut_ptr() as *mut u8, n as u32);
+        crate::fn_00404dd4::fn_00404dd4(param_2, buf.as_mut_ptr() as *mut u8, n as u32);
     } else {
         HOOK_00404e14(param_2, id as usize as *mut u16);
     }
@@ -73,7 +68,7 @@ pub unsafe fn fn_004063e4(param_1: *const u8, param_2: *mut u8) {
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_00404dd4, HOOK_00404e14, LOAD_STRING_W_00401138, fn_004063e4};
+    use super::{HOOK_00404e14, LOAD_STRING_W_00401138, fn_004063e4};
     use crate::fn_00405b90::DAT_0041202c;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -83,13 +78,14 @@ mod tests {
     static LS_BUF: AtomicUsize = AtomicUsize::new(0);
     static LS_CCH: AtomicUsize = AtomicUsize::new(0);
     static LS_RET: AtomicUsize = AtomicUsize::new(0);
-    static ST_HITS: AtomicUsize = AtomicUsize::new(0);
-    static ST_SLOT: AtomicUsize = AtomicUsize::new(0);
-    static ST_SRC: AtomicUsize = AtomicUsize::new(0);
-    static ST_N: AtomicUsize = AtomicUsize::new(0);
+    static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
+    static ALLOC_ARG: AtomicUsize = AtomicUsize::new(0);
+    static FILL_C: AtomicUsize = AtomicUsize::new(0);
     static W_HITS: AtomicUsize = AtomicUsize::new(0);
     static W_SLOT: AtomicUsize = AtomicUsize::new(0);
     static W_SRC: AtomicUsize = AtomicUsize::new(0);
+
+    const CANNED: u32 = 0x1122_3344;
 
     unsafe extern "C" fn load_string(h: usize, id: u32, buf: *mut u16, cch: i32) -> i32 {
         LS_HITS.fetch_add(1, Ordering::SeqCst);
@@ -100,11 +96,15 @@ mod tests {
         LS_RET.load(Ordering::SeqCst) as i32
     }
 
-    unsafe extern "C" fn store(slot: *mut u8, src: *mut u8, n: u32) {
-        ST_HITS.fetch_add(1, Ordering::SeqCst);
-        ST_SLOT.store(slot as usize, Ordering::SeqCst);
-        ST_SRC.store(src as usize, Ordering::SeqCst);
-        ST_N.store(n as usize, Ordering::SeqCst);
+    /// Downstream `fn_00404dd4` alloc/fill pair behind the real call.
+    unsafe extern "C" fn alloc(n: u32) -> u32 {
+        ALLOC_HITS.fetch_add(1, Ordering::SeqCst);
+        ALLOC_ARG.store(n as usize, Ordering::SeqCst);
+        CANNED
+    }
+
+    unsafe extern "C" fn fill(_a: *mut u8, _b: u32, c: u32) {
+        FILL_C.store(c as usize, Ordering::SeqCst);
     }
 
     unsafe extern "C" fn store_wide(slot: *mut u8, s: *mut u16) {
@@ -115,15 +115,21 @@ mod tests {
 
     fn reset() {
         LS_HITS.store(0, Ordering::SeqCst);
-        ST_HITS.store(0, Ordering::SeqCst);
+        ALLOC_HITS.store(0, Ordering::SeqCst);
         W_HITS.store(0, Ordering::SeqCst);
     }
 
     #[test]
     fn null_resource_direct_lanes() {
+        // Real `fn_00404dd4` under the common owner lock.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        let (old_alloc, old_fill);
         unsafe {
+            old_alloc = crate::fn_00404dd4::HOOK_004054b4;
+            old_fill = crate::fn_00404dd4::HOOK_00402fbc;
             LOAD_STRING_W_00401138 = load_string;
-            HOOK_00404dd4 = store;
+            crate::fn_00404dd4::HOOK_004054b4 = alloc;
+            crate::fn_00404dd4::HOOK_00402fbc = fill;
             HOOK_00404e14 = store_wide;
             // Real 00405b90 with an empty list echoes the key.
             DAT_0041202c = core::ptr::null_mut();
@@ -134,7 +140,7 @@ mod tests {
         reset();
         unsafe { fn_004063e4(core::ptr::null(), param_2) };
         assert_eq!(LS_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(ST_HITS.load(Ordering::SeqCst), 0);
+        assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(W_HITS.load(Ordering::SeqCst), 0);
         // Resource lane: id 0x1234, key through both deref levels.
         reset();
@@ -151,10 +157,14 @@ mod tests {
         assert_eq!(LS_H.load(Ordering::SeqCst), key_ptr as usize);
         assert_eq!(LS_ID.load(Ordering::SeqCst), 0x1234);
         assert_eq!(LS_CCH.load(Ordering::SeqCst), 0x1000);
-        assert_eq!(ST_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(ST_SLOT.load(Ordering::SeqCst), param_2 as usize);
-        assert_eq!(ST_SRC.load(Ordering::SeqCst), LS_BUF.load(Ordering::SeqCst));
-        assert_eq!(ST_N.load(Ordering::SeqCst), 7);
+        // Real `fn_00404dd4`: alloc(7), fill 7<<1=14, slot takes it.
+        assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(ALLOC_ARG.load(Ordering::SeqCst), 7);
+        assert_eq!(FILL_C.load(Ordering::SeqCst), 14);
+        assert_eq!(
+            unsafe { core::ptr::read_unaligned(param_2 as *const u32) },
+            CANNED
+        );
         assert_eq!(W_HITS.load(Ordering::SeqCst), 0);
         // Direct lane: id 0x10000 passes as a pointer, others silent.
         reset();
@@ -166,6 +176,10 @@ mod tests {
         assert_eq!(W_SLOT.load(Ordering::SeqCst), param_2 as usize);
         assert_eq!(W_SRC.load(Ordering::SeqCst), 0x10000);
         assert_eq!(LS_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(ST_HITS.load(Ordering::SeqCst), 0);
+        assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
+        unsafe {
+            crate::fn_00404dd4::HOOK_004054b4 = old_alloc;
+            crate::fn_00404dd4::HOOK_00402fbc = old_fill;
+        }
     }
 }

@@ -135,6 +135,10 @@ pub static mut HOOK_FREELIBRARY: unsafe extern "C" fn(u32) = default_sink_u32;
 /// and returns; real wiring must diverge), wire to the real thunk on target.
 pub static mut HOOK_EXITPROCESS: unsafe extern "C" fn(u32) = default_exit;
 
+/// Test-only serialization for tests driving the main loop.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// State byte at `[ESI+0x28]` (low byte of lane 10), re-read per compare.
 unsafe fn state() -> u8 {
     (STRUCT_00415AE4[10] & 0xff) as u8
@@ -296,6 +300,7 @@ mod tests {
 
     #[test]
     fn quick_exit_and_tid_mismatch() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00404458 = s4458;
             HOOK_004044F0 = s44f0;

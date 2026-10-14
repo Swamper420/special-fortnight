@@ -201,6 +201,7 @@ mod tests {
     fn dispatch_lanes() {
         // Shares FLAG_00412020 with fn_00403b0c: hold owner lock.
         let _guard = crate::fn_00403b0c::TEST_LOCK.lock().unwrap();
+        let _guard_tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
         let (old_flag, old_tls_flag, old_tls_hook, old_tls_index);
         unsafe {
             old_flag = crate::fn_00403b0c::FLAG_00412020;

@@ -98,6 +98,10 @@ pub unsafe fn fn_0040c130(_param_1: *const u8, param_2: u32) {
     HOOK_004046C4(&mut local_8 as *mut usize as *mut u8);
 }
 
+/// Test-only serialization for tests sharing the lane hooks.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -151,6 +155,7 @@ mod tests {
 
     #[test]
     fn error_and_ok_lanes() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_0040BF84 = bf84;
             HOOK_004082D4 = report;

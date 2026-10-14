@@ -5,10 +5,6 @@ unsafe extern "C" fn default_qpc(_li: *mut u64) -> i32 {
     0
 }
 
-unsafe extern "C" fn default_gtc() -> u32 {
-    0
-}
-
 /// Thunk `0x004011a8` (`KERNEL32.DLL::QueryPerformanceCounter`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
@@ -16,12 +12,9 @@ unsafe extern "C" fn default_gtc() -> u32 {
 /// Windows-target linkage proven.
 pub static mut HOOK_004011a8: unsafe extern "C" fn(*mut u64) -> i32 = default_qpc;
 
-/// Thunk `0x004011b0` (`KERNEL32.DLL::GetTickCount`).
-///
-/// ponytail: hook standing in for OS import (also keeps host tests
-/// linkable), rewire to raw `extern "system"` import once
-/// Windows-target linkage proven.
-pub static mut HOOK_004011b0: unsafe extern "C" fn() -> u32 = default_gtc;
+/// Thunk `0x004011b0` (`KERNEL32.DLL::GetTickCount`): direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn() -> u32`).
 
 /// `if QPC(&li) { seed=LowPart } else { seed=GTC() }`. No args, void.
 /// Seed cell shared with `fn_004030e4`; written here, never duplicated.
@@ -32,13 +25,13 @@ pub unsafe fn fn_004030bc() {
     if HOOK_004011a8(core::ptr::addr_of_mut!(li)) != 0 {
         crate::fn_004030e4::CELL_00412008 = li as u32;
     } else {
-        crate::fn_004030e4::CELL_00412008 = HOOK_004011b0();
+        crate::fn_004030e4::CELL_00412008 = crate::fn_004011b0::fn_004011b0();
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_004011a8, HOOK_004011b0, fn_004030bc};
+    use super::{HOOK_004011a8, fn_004030bc};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static QPC_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -61,12 +54,13 @@ mod tests {
     #[test]
     fn qpc_lowpart_or_tickcount_seed_lanes() {
         let _guard = crate::fn_004030e4::TEST_LOCK.lock().unwrap();
+        let _thunk = crate::fn_004011b0::TEST_LOCK.lock().unwrap();
         unsafe {
             let saved_cell = crate::fn_004030e4::CELL_00412008;
             let saved_qpc = HOOK_004011a8;
-            let saved_gtc = HOOK_004011b0;
+            let saved_gtc = crate::fn_004011b0::HOOK_004011B0;
             HOOK_004011a8 = qpc;
-            HOOK_004011b0 = gtc;
+            crate::fn_004011b0::HOOK_004011B0 = gtc;
             // QPC-ok lane stores LowPart, skips GTC.
             QPC_HITS.store(0, Ordering::SeqCst);
             GTC_HITS.store(0, Ordering::SeqCst);
@@ -87,7 +81,7 @@ mod tests {
             assert_eq!(GTC_HITS.load(Ordering::SeqCst), 1);
             crate::fn_004030e4::CELL_00412008 = saved_cell;
             HOOK_004011a8 = saved_qpc;
-            HOOK_004011b0 = saved_gtc;
+            crate::fn_004011b0::HOOK_004011B0 = saved_gtc;
         }
     }
 }

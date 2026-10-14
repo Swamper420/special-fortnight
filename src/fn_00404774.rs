@@ -41,16 +41,21 @@ pub unsafe fn fn_00404774(param_1: i32, param_2: u32) -> *mut u8 {
     }
     let size = bumped & 0xfffffffe;
     let base = ALLOC_00402E04(size);
-    *((base as usize).wrapping_add((size.wrapping_sub(2)) as usize) as *mut u16) = 0;
+    // ponytail: unaligned stores — x86 `MOV` has no alignment trap;
+    // the host allocator may hand back odd addresses (see evidence).
+    core::ptr::write_unaligned(
+        (base as usize).wrapping_add((size.wrapping_sub(2)) as usize) as *mut u16,
+        0,
+    );
     let data = base.wrapping_add(12);
-    *((data as usize).wrapping_sub(4) as *mut u32) = param_1 as u32;
-    *((data as usize).wrapping_sub(8) as *mut u32) = 1;
+    core::ptr::write_unaligned((data as usize).wrapping_sub(4) as *mut u32, param_1 as u32);
+    core::ptr::write_unaligned((data as usize).wrapping_sub(8) as *mut u32, 1);
     let mut cp = param_2;
     if cp == 0 {
         cp = DAT_004138C8;
     }
-    *((data as usize).wrapping_sub(12) as *mut u16) = cp as u16;
-    *((data as usize).wrapping_sub(10) as *mut u16) = 1;
+    core::ptr::write_unaligned((data as usize).wrapping_sub(12) as *mut u16, cp as u16);
+    core::ptr::write_unaligned((data as usize).wrapping_sub(10) as *mut u16, 1);
     data
 }
 

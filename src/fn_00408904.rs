@@ -13,6 +13,10 @@ pub static mut HOOK_00404A8C: unsafe extern "C" fn(*mut u32) = default_clear;
 /// `hook(scratch); return param_1`. `EAX` is pushed/popped across the
 /// call, so the entry value passes through; `EBX` save/restore is a
 /// frame-cookie no-op.
+/// Test-only serialization for tests sharing the callee hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 pub unsafe fn fn_00408904(param_1: u32) -> u32 {
     // ponytail: zeroed host model of uninitialized `EBP-0x10` scratch;
     // a nonzero-garbage lane is unproven (see evidence).
@@ -38,6 +42,7 @@ mod tests {
 
     #[test]
     fn scratch_call_passthrough() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe { HOOK_00404A8C = clear };
         for v in [0u32, 0x1234_5678] {
             HITS.store(0, Ordering::SeqCst);
