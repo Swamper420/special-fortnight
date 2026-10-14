@@ -1,0 +1,8 @@
+# Original binary: user-supplied, not redistributable. Verify with sha256 in README.
+*.exe
+
+# REA / Ghidra scratch (snapshots, project DBs)
+analysis/
+
+# Rust
+/target
