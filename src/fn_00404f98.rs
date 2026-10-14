@@ -177,6 +177,8 @@ mod tests {
 
     #[test]
     fn append_lanes() {
+        // Shared fn_00404dd4 hooks: hold the common owner lock.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00404f00 = size;
             HOOK_00402fbc = copy;

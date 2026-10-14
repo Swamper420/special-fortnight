@@ -57,6 +57,8 @@ mod tests {
 
     #[test]
     fn global_forwarded_as_fourth_arg() {
+        // Foreign fn_00404d30 hooks: hold the common owner lock.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         unsafe {
             DAT_004138c8 = 0x51;
             HOOK_004047ec = convert;

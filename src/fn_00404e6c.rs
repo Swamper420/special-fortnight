@@ -90,6 +90,8 @@ mod tests {
 
     #[test]
     fn dispatch_lanes() {
+        // Shared fn_00404dd4 hooks: hold the common owner lock.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         // Downstream hooks owned elsewhere (no owner locks exist):
         // set + restore everything this test's lanes can reach.
         let old_conv = unsafe { crate::fn_00404d30::HOOK_004047ec };

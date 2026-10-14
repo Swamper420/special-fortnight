@@ -190,6 +190,22 @@ mod fn_00406204;
 mod fn_00406274;
 mod fn_0040628c;
 mod fn_004062b8;
+mod fn_00404580;
+mod fn_0040633c;
+mod fn_004063d0;
+mod fn_004063e4;
+mod fn_004065c8;
+mod fn_004065d4;
+mod fn_00406698;
+mod fn_00406728;
+mod fn_004068ec;
+mod fn_00406988;
+mod fn_0040699c;
+mod fn_004069c8;
+mod fn_00407bb8;
+mod fn_00407bdc;
+mod fn_00407cd8;
+mod fn_00407cf4;
 
 fn main() {
     // Entry point (original 0x004117dc) not yet reconstructed.

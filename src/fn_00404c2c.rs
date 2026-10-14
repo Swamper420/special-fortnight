@@ -87,6 +87,8 @@ mod tests {
 
     #[test]
     fn alloc_copy_exchange_lanes() {
+        // Shared fn_00404dd4 hooks: hold the common owner lock first.
+        let _shared = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         // Done callees read their hook globals: hold both owner
         // locks so their writer tests can't race us.
         let _a = crate::fn_00404a64::TEST_LOCK.lock().unwrap();

@@ -112,6 +112,8 @@ mod tests {
 
     #[test]
     fn detach_lanes() {
+        // Shared fn_00404dd4 hooks: hold the common owner lock first.
+        let _shared = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         // Direct call reaches done fn_00402e20, which reads its PTR
         // global: hold the owner lock so its writer test can't race us.
         let _callee = crate::fn_00402e20::TEST_LOCK.lock().unwrap();
