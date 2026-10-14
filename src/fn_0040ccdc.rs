@@ -1,4 +1,4 @@
-//! Original procedure `0x0040ccdc` (43 bytes, `0x40ccdc–0x40cd06`).
+//! Original procedure `0x0040ccdc` (43 bytes, `0x0040ccdc–0x0040cd06`).
 //! Evidence: `evidence/0040ccdc_fn_0040ccdc.md`.
 
 unsafe extern "C" fn default_fmt(
@@ -12,20 +12,20 @@ unsafe extern "C" fn default_fmt(
 }
 unsafe extern "C" fn default_die(_c: u32) {}
 
-/// Target `0x409860` (`FUN_00409860`), 5 lanes `(EAX,DL,ECX,0,&block)`.
+/// Target `0x00409860` (`FUN_00409860`), 5 lanes `(EAX,DL,ECX,0,&block)`.
 ///
 /// ponytail: hook standing in for done `fn_00409860`, rewire to the real
 /// call once cross-module linkage proven.
 pub static mut HOOK_00409860: unsafe extern "C" fn(usize, u8, *const u16, u32, *mut u8) -> u32 =
     default_fmt;
 
-/// Target `0x403f88` (`FUN_00403f88`).
+/// Target `0x00403f88` (`FUN_00403f88`).
 ///
 /// ponytail: hook standing in for done `fn_00403f88`, rewire to the real
 /// call once cross-module linkage proven.
 pub static mut HOOK_00403F88: unsafe extern "C" fn(u32) = default_die;
 
-/// Cells `0x40c550` (first lane) and `0x40cd14` (`lzmadecompsmall: %s`).
+/// Cells `0x0040c550` (first lane) and `0x0040cd14` (`lzmadecompsmall: %s`).
 ///
 /// ponytail: absolute-address cells as own-module statics, unify in
 /// `data.rs` once data layout proven.

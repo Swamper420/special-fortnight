@@ -1,4 +1,4 @@
-//! Original procedure `0x0040a5a8` (734 bytes, `0x40a5a8–0x40a885`).
+//! Original procedure `0x0040a5a8` (734 bytes, `0x0040a5a8–0x0040a885`).
 //! Evidence: `evidence/0040a5a8_fn_0040a5a8.md`.
 
 use crate::fn_0040867d::DAT_00415B76;
@@ -29,70 +29,70 @@ unsafe extern "C" fn default_build(_dst: usize, _n: u32, _a: usize, _b: usize, _
 
 unsafe extern "C" fn default_release(_area: usize, _n: u32) {}
 
-/// Callee `0x40a4f0` (`FUN_0040a4f0`), no lanes.
+/// Callee `0x0040a4f0` (`FUN_0040a4f0`), no lanes.
 ///
 /// ponytail: hook standing in for done `fn_0040a4f0`, rewire to the
 /// real call once cross-module test serialization exists.
 pub static mut HOOK_0040A4F0: unsafe extern "C" fn() = default_void;
 
-/// Callee `0x408f68` (`FUN_00408f68`), no lanes.
+/// Callee `0x00408f68` (`FUN_00408f68`), no lanes.
 ///
 /// ponytail: hook standing in for done `fn_00408f68`, rewire to the
 /// real call once cross-module test serialization exists.
 pub static mut HOOK_00408F68: unsafe extern "C" fn() = default_void;
 
-/// Callee `0x409140` (`FUN_00409140`), taken iff `[0x415c3c]!=0`.
+/// Callee `0x00409140` (`FUN_00409140`), taken iff `[0x00415c3c]!=0`.
 ///
 /// ponytail: hook standing in for done `fn_00409140`, rewire to the
 /// real call once cross-module test serialization exists.
 pub static mut HOOK_00409140: unsafe extern "C" fn() = default_void;
 
-/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x4067b4`); result
+/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x004067b4`); result
 /// held in EBX across the body.
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetThreadLocale: unsafe extern "C" fn() -> u32 = default_locale;
 
-/// Callee `0x408eb4` (`FUN_00408eb4`):
+/// Callee `0x00408eb4` (`FUN_00408eb4`):
 /// `(EAX=locale, EDX=type, ECX=src, push out)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_00408eb4` once it exists.
 pub static mut HOOK_00408EB4: unsafe extern "C" fn(u32, u32, usize, usize) = default_probe;
 
-/// Callee `0x404c98` (`FUN_00404c98`): `(EAX=dst, EDX=src)`.
+/// Callee `0x00404c98` (`FUN_00404c98`): `(EAX=dst, EDX=src)`.
 ///
 /// ponytail: hook standing in for done `fn_00404c98`, rewire to the
 /// real call once cross-module test serialization exists.
 pub static mut HOOK_00404C98: unsafe extern "C" fn(usize, usize) = default_store;
 
-/// Callee `0x407f10` (`FUN_00407f10`): `(EAX=ptr, EDX=0)` → `EAX`.
+/// Callee `0x00407f10` (`FUN_00407f10`): `(EAX=ptr, EDX=0)` → `EAX`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_00407f10` once it exists.
 pub static mut HOOK_00407F10: unsafe extern "C" fn(usize, u32) -> u32 = default_measure;
 
-/// Callee `0x408f00` (`FUN_00408f00`):
+/// Callee `0x00408f00` (`FUN_00408f00`):
 /// `(EAX=locale, EDX=type, CX=seed)` → `AX`.
 ///
 /// ponytail: hook standing in for done `fn_00408f00`, rewire to the
 /// real call once cross-module test serialization exists.
 pub static mut HOOK_00408F00: unsafe extern "C" fn(u32, u32, u32) -> u32 = default_info;
 
-/// Callee `0x4091f4` (`FUN_004091f4`): `(EAX=val, EDX=&local)`.
+/// Callee `0x004091f4` (`FUN_004091f4`): `(EAX=val, EDX=&local)`.
 ///
 /// ponytail: hook standing in for done `fn_004091f4`, rewire to the
 /// real call once cross-module test serialization exists.
 pub static mut HOOK_004091F4: unsafe extern "C" fn(usize, usize) = default_expand;
 
-/// Callee `0x404cec` (`FUN_00404cec`): `(EAX=slot, EDX=src-or-0)`.
+/// Callee `0x00404cec` (`FUN_00404cec`): `(EAX=slot, EDX=src-or-0)`.
 ///
 /// ponytail: hook standing in for done `fn_00404cec`, rewire to the
 /// real call once cross-module test serialization exists.
 pub static mut HOOK_00404CEC: unsafe extern "C" fn(usize, usize) = default_store;
 
-/// Callee `0x40513c` (`FUN_0040513c`):
+/// Callee `0x0040513c` (`FUN_0040513c`):
 /// `(EAX=dst, EDX=4, push s1..s4 in push order)`.
 ///
 /// ponytail: hook standing in for done `fn_0040513c`, rewire to the
@@ -100,16 +100,16 @@ pub static mut HOOK_00404CEC: unsafe extern "C" fn(usize, usize) = default_store
 pub static mut HOOK_0040513C: unsafe extern "C" fn(usize, u32, usize, usize, usize, usize) =
     default_build;
 
-/// Thunk `0x404c90` (`thunk_FUN_004046e8`): `(EAX=&area, EDX=0x10)`.
+/// Thunk `0x00404c90` (`thunk_FUN_004046e8`): `(EAX=&area, EDX=0x10)`.
 ///
 /// ponytail: hook standing in for the thunk target, rewire to real
 /// `fn_004046e8` once cross-module linkage proven.
 pub static mut HOOK_00404C90: unsafe extern "C" fn(usize, u32) = default_release;
 
-/// Locale cells written by this body at `0x415b78+` (widths per
-/// observation). The `0x415b6c..74` blob lives in
-/// `crate::fn_00408988`, byte `0x415b76` in `crate::fn_0040867d`,
-/// and gate `0x415c3c` in `crate::fn_0040a4f0` (shared image cells).
+/// Locale cells written by this body at `0x00415b78+` (widths per
+/// observation). The `0x00415b6c..74` blob lives in
+/// `crate::fn_00408988`, byte `0x00415b76` in `crate::fn_0040867d`,
+/// and gate `0x00415c3c` in `crate::fn_0040a4f0` (shared image cells).
 ///
 /// ponytail: absolute-address cells as mutable hooks, upgrade to real
 /// image-relative data once data layout proven.
@@ -144,49 +144,49 @@ pub unsafe fn fn_0040a5a8() {
     HOOK_00408EB4(locale, 0x14, 0, &mut m10 as *mut usize as usize);
     HOOK_00404C98(core::ptr::addr_of_mut!(DAT_00415B6C) as usize, m10);
     let mut m14: usize = 0;
-    HOOK_00408EB4(locale, 0x1b, 0x40a8a0, &mut m14 as *mut usize as usize);
-    // `MOV [0x415b70],AL`: offset 4 of the shared `0x415b6c` blob.
+    HOOK_00408EB4(locale, 0x1b, 0x0040a8a0, &mut m14 as *mut usize as usize);
+    // `MOV [0x00415b70],AL`: offset 4 of the shared `0x00415b6c` blob.
     core::ptr::write_unaligned(
         (core::ptr::addr_of_mut!(DAT_00415B6C) as *mut u8).wrapping_add(4),
         HOOK_00407F10(m14, 0) as u8,
     );
     let mut m18: usize = 0;
-    HOOK_00408EB4(locale, 0x1c, 0x40a8a0, &mut m18 as *mut usize as usize);
-    // `MOV [0x415b71],AL`: offset 5.
+    HOOK_00408EB4(locale, 0x1c, 0x0040a8a0, &mut m18 as *mut usize as usize);
+    // `MOV [0x00415b71],AL`: offset 5.
     core::ptr::write_unaligned(
         (core::ptr::addr_of_mut!(DAT_00415B6C) as *mut u8).wrapping_add(5),
         HOOK_00407F10(m18, 0) as u8,
     );
-    // `MOV [0x415b72],AX`: offset 6, word.
+    // `MOV [0x00415b72],AX`: offset 6, word.
     core::ptr::write_unaligned(
         (core::ptr::addr_of_mut!(DAT_00415B6C) as *mut u16).wrapping_add(3),
         HOOK_00408F00(locale, 0x0f, 0x2c) as u16,
     );
-    // `MOV [0x415b74],AX`: offset 8, word.
+    // `MOV [0x00415b74],AX`: offset 8, word.
     core::ptr::write_unaligned(
         (core::ptr::addr_of_mut!(DAT_00415B6C) as *mut u16).wrapping_add(4),
         HOOK_00408F00(locale, 0x0e, 0x2e) as u16,
     );
     let mut m1c: usize = 0;
-    HOOK_00408EB4(locale, 0x19, 0x40a8a0, &mut m1c as *mut usize as usize);
+    HOOK_00408EB4(locale, 0x19, 0x0040a8a0, &mut m1c as *mut usize as usize);
     DAT_00415B76 = HOOK_00407F10(m1c, 0) as u8;
     DAT_00415B78 = HOOK_00408F00(locale, 0x1d, 0x2f) as u16;
     let mut m24: usize = 0;
     let mut m20: usize = 0;
-    HOOK_00408EB4(locale, 0x1f, 0x40a8b0, &mut m24 as *mut usize as usize);
+    HOOK_00408EB4(locale, 0x1f, 0x0040a8b0, &mut m24 as *mut usize as usize);
     HOOK_004091F4(m24, &mut m20 as *mut usize as usize);
     HOOK_00404C98(core::ptr::addr_of_mut!(DAT_00415B7C) as usize, m20);
     let mut m2c: usize = 0;
     let mut m28: usize = 0;
-    HOOK_00408EB4(locale, 0x20, 0x40a8cc, &mut m2c as *mut usize as usize);
+    HOOK_00408EB4(locale, 0x20, 0x0040a8cc, &mut m2c as *mut usize as usize);
     HOOK_004091F4(m2c, &mut m28 as *mut usize as usize);
     HOOK_00404C98(core::ptr::addr_of_mut!(DAT_00415B80) as usize, m28);
     DAT_00415B84 = HOOK_00408F00(locale, 0x1e, 0x3a) as u16;
     let mut m30: usize = 0;
-    HOOK_00408EB4(locale, 0x28, 0x40a8f4, &mut m30 as *mut usize as usize);
+    HOOK_00408EB4(locale, 0x28, 0x0040a8f4, &mut m30 as *mut usize as usize);
     HOOK_00404C98(core::ptr::addr_of_mut!(DAT_00415B88) as usize, m30);
     let mut m34: usize = 0;
-    HOOK_00408EB4(locale, 0x29, 0x40a908, &mut m34 as *mut usize as usize);
+    HOOK_00408EB4(locale, 0x29, 0x0040a908, &mut m34 as *mut usize as usize);
     HOOK_00404C98(core::ptr::addr_of_mut!(DAT_00415B8C) as usize, m34);
     let mut l8: usize = 0;
     let mut l4: usize = 0;
@@ -194,26 +194,26 @@ pub unsafe fn fn_0040a5a8() {
     HOOK_00404CEC(&mut l8 as *mut usize as usize, 0);
     HOOK_00404CEC(&mut lc as *mut usize as usize, 0);
     let mut m38: usize = 0;
-    HOOK_00408EB4(locale, 0x25, 0x40a8a0, &mut m38 as *mut usize as usize);
+    HOOK_00408EB4(locale, 0x25, 0x0040a8a0, &mut m38 as *mut usize as usize);
     if HOOK_00407F10(m38, 0) == 0 {
-        HOOK_00404CEC(&mut l4 as *mut usize as usize, 0x40a91c);
+        HOOK_00404CEC(&mut l4 as *mut usize as usize, 0x0040a91c);
     } else {
-        HOOK_00404CEC(&mut l4 as *mut usize as usize, 0x40a92c);
+        HOOK_00404CEC(&mut l4 as *mut usize as usize, 0x0040a92c);
     }
     let mut m3c: usize = 0;
-    HOOK_00408EB4(locale, 0x23, 0x40a8a0, &mut m3c as *mut usize as usize);
+    HOOK_00408EB4(locale, 0x23, 0x0040a8a0, &mut m3c as *mut usize as usize);
     if HOOK_00407F10(m3c, 0) == 0 {
         let mut m40: usize = 0;
         HOOK_00408EB4(
             locale,
             0x1005,
-            0x40a8a0,
+            0x0040a8a0,
             &mut m40 as *mut usize as usize,
         );
         if HOOK_00407F10(m40, 0) == 0 {
-            HOOK_00404CEC(&mut lc as *mut usize as usize, 0x40a940);
+            HOOK_00404CEC(&mut lc as *mut usize as usize, 0x0040a940);
         } else {
-            HOOK_00404CEC(&mut l8 as *mut usize as usize, 0x40a958);
+            HOOK_00404CEC(&mut l8 as *mut usize as usize, 0x0040a958);
         }
     }
     HOOK_0040513C(
@@ -221,7 +221,7 @@ pub unsafe fn fn_0040a5a8() {
         4,
         l8,
         l4,
-        0x40a970,
+        0x0040a970,
         lc,
     );
     HOOK_0040513C(
@@ -229,7 +229,7 @@ pub unsafe fn fn_0040a5a8() {
         4,
         l8,
         l4,
-        0x40a984,
+        0x0040a984,
         lc,
     );
     DAT_00415C3E = HOOK_00408F00(locale, 0x0c, 0x2c) as u16;
@@ -398,31 +398,31 @@ mod tests {
         assert_eq!(probes.len(), 10);
         assert_eq!(probes[0], (0x409, 0x14, 0, probes[0].3));
         assert_ne!(probes[0].3, 0);
-        assert_eq!(probes[4], (0x409, 0x1f, 0x40a8b0, probes[4].3));
+        assert_eq!(probes[4], (0x409, 0x1f, 0x0040a8b0, probes[4].3));
         drop(probes);
         // First store targets DAT_00415B6C with the probe-1 marker.
         let stores = LOG_4C98.lock().unwrap();
         assert_eq!(stores.len(), 5);
         assert_eq!(stores[0].1, 1);
         drop(stores);
-        // Slots: (l8,0),(lc,0),(l4,0x40a92c); 3 distinct... l8/lc/l4 slots.
+        // Slots: (l8,0),(lc,0),(l4,0x0040a92c); 3 distinct... l8/lc/l4 slots.
         let slots = LOG_4CEC.lock().unwrap();
         assert_eq!(slots.len(), 3);
-        assert_eq!([slots[0].1, slots[1].1, slots[2].1], [0, 0, 0x40a92c]);
+        assert_eq!([slots[0].1, slots[1].1, slots[2].1], [0, 0, 0x0040a92c]);
         assert_ne!(slots[0].0, slots[1].0);
         assert_ne!(slots[0].0, slots[2].0);
         assert_ne!(slots[1].0, slots[2].0);
         drop(slots);
-        // Two builds carry (l8=0, l4=0x40a92c, lc=0) + format blobs.
+        // Two builds carry (l8=0, l4=0x0040a92c, lc=0) + format blobs.
         let builds = LOG_513C.lock().unwrap();
         assert_eq!(builds.len(), 2);
-        assert_eq!((builds[0].1, builds[0].2, builds[0].3, builds[0].4, builds[0].5), (4, 0, 0x40a92c, 0x40a970, 0));
-        assert_eq!((builds[1].1, builds[1].2, builds[1].3, builds[1].4, builds[1].5), (4, 0, 0x40a92c, 0x40a984, 0));
+        assert_eq!((builds[0].1, builds[0].2, builds[0].3, builds[0].4, builds[0].5), (4, 0, 0x0040a92c, 0x0040a970, 0));
+        assert_eq!((builds[1].1, builds[1].2, builds[1].3, builds[1].4, builds[1].5), (4, 0, 0x0040a92c, 0x0040a984, 0));
         assert_ne!(builds[0].0, builds[1].0);
         drop(builds);
         assert_eq!(H_C90.load(Ordering::SeqCst), 1);
         assert_eq!(C90_ARG.load(Ordering::SeqCst), 0x10);
-        // Lane B: gate clear, zero probes → 0x40a91c + AMPM " AMPM" lanes.
+        // Lane B: gate clear, zero probes → 0x0040a91c + AMPM " AMPM" lanes.
         reset();
         *SCRIPT_7F10.lock().unwrap() = [1, 1, 1, 0, 0, 0];
         *SCRIPT_8F00.lock().unwrap() = [9, 9, 9, 9, 9];
@@ -433,13 +433,13 @@ mod tests {
         assert_eq!(LOG_8EB4.lock().unwrap()[10].1, 0x1005);
         let slots = LOG_4CEC.lock().unwrap();
         assert_eq!(slots.len(), 4);
-        assert_eq!([slots[0].1, slots[1].1, slots[2].1, slots[3].1], [0, 0, 0x40a91c, 0x40a940]);
+        assert_eq!([slots[0].1, slots[1].1, slots[2].1, slots[3].1], [0, 0, 0x0040a91c, 0x0040a940]);
         // Both lc writes hit the same slot.
         assert_eq!(slots[1].0, slots[3].0);
         drop(slots);
         let builds = LOG_513C.lock().unwrap();
-        assert_eq!((builds[0].2, builds[0].3, builds[0].4, builds[0].5), (0, 0x40a91c, 0x40a970, 0x40a940));
-        assert_eq!((builds[1].2, builds[1].3, builds[1].4, builds[1].5), (0, 0x40a91c, 0x40a984, 0x40a940));
+        assert_eq!((builds[0].2, builds[0].3, builds[0].4, builds[0].5), (0, 0x0040a91c, 0x0040a970, 0x0040a940));
+        assert_eq!((builds[1].2, builds[1].3, builds[1].4, builds[1].5), (0, 0x0040a91c, 0x0040a984, 0x0040a940));
         drop(builds);
         unsafe {
             DAT_00415B6C = saved_blob;

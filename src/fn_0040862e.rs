@@ -1,13 +1,13 @@
-//! Original procedure `0x0040862e` (79 bytes, `0x40862e–0x40867c`).
+//! Original procedure `0x0040862e` (79 bytes, `0x0040862e–0x0040867c`).
 //! Evidence: `evidence/0040862e_fn_0040862e.md`.
 
 /// Width/flag scanner with no prologue of its own: the `[EBP-0xc]`
 /// star-index cell and `[EBP+0x8]`/`[EBP+0xc]` stack words belong to
-/// the caller's (`0x408540`) frame, so they arrive as explicit params.
+/// the caller's (`0x00408540`) frame, so they arrive as explicit params.
 /// `param_1` is entry `EAX`, `cursor` the `ESI` slot (advanced in
 /// place), `param_3` the `ECX` end bound. `EDX` is untouched by the
 /// body (passthrough, no param). Returns `(EAX-out, EBX-out)` on the
-/// `RET` lanes; the `POP EAX; JMP 0x408581` end-of-input lane never
+/// `RET` lanes; the `POP EAX; JMP 0x00408581` end-of-input lane never
 /// resumes the caller, modeled as `Err(ebx)` so the caller runs the
 /// shared exit block (no invented tail hook, no double-fire).
 ///

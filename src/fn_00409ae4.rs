@@ -1,4 +1,4 @@
-//! Original procedure `0x00409ae4` (94 bytes, `0x409ae4–0x409b41`).
+//! Original procedure `0x00409ae4` (94 bytes, `0x00409ae4–0x00409b41`).
 //! Evidence: `evidence/00409ae4_fn_00409ae4.md`.
 
 unsafe extern "C" fn default_id() -> u32 {
@@ -19,13 +19,13 @@ unsafe extern "C" fn default_miss(
     core::ptr::null_mut()
 }
 
-/// Callee `0x402f9c` (`FUN_00402f9c`), id source.
+/// Callee `0x00402f9c` (`FUN_00402f9c`), id source.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_00402f9c` once cross-module linkage proven.
 pub static mut HOOK_00402F9C: unsafe extern "C" fn() -> u32 = default_id;
 
-/// Hit callee `0x409824` (`FUN_00409824`), `(EAX, DL, ECX)` =
+/// Hit callee `0x00409824` (`FUN_00409824`), `(EAX, DL, ECX)` =
 /// `(obj, 1, table value)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
@@ -33,28 +33,28 @@ pub static mut HOOK_00402F9C: unsafe extern "C" fn() -> u32 = default_id;
 pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u8, u8, u32) -> *mut u8 =
     default_hit;
 
-/// Miss callee `0x40991c` (`FUN_0040991c`), `(EAX, DL, ECX, 0, &local)`.
+/// Miss callee `0x0040991c` (`FUN_0040991c`), `(EAX, DL, ECX, 0, &local)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real call once cross-module linkage proven.
 pub static mut HOOK_0040991C: unsafe extern "C" fn(*mut u8, u8, *mut u8, u32, *mut u8) -> *mut u8 =
     default_miss;
 
-/// Key/value table at `0x4128cc`: 7 pairs, keys at even lanes, values
+/// Key/value table at `0x004128cc`: 7 pairs, keys at even lanes, values
 /// at odd lanes (`EBX*8` stride over dwords).
 ///
 /// ponytail: mutable host copy of image data, upgrade to real
 /// image-relative data once layout proven.
 pub static mut TABLE_004128CC: [u32; 14] = [0; 14];
 
-/// Cell `0x406f20` (`PTR_PTR_00406f20`): pointer loaded into EAX in
+/// Cell `0x00406f20` (`PTR_PTR_00406f20`): pointer loaded into EAX in
 /// both branches.
 ///
 /// ponytail: absolute-address cell modeled as mutable hook, upgrade
 /// to real image-relative import once data layout proven.
 pub static mut PTR_00406F20: *mut u8 = core::ptr::null_mut();
 
-/// Cell `0x412b44` (`PTR_PTR_00412b44`): pointer loaded into ECX on
+/// Cell `0x00412b44` (`PTR_PTR_00412b44`): pointer loaded into ECX on
 /// the miss lane.
 ///
 /// ponytail: absolute-address cell modeled as mutable hook, upgrade

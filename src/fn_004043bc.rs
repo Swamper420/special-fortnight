@@ -1,9 +1,9 @@
-//! Original procedure `0x004043bc` (18 bytes, `0x4043bc–0x4043ce`).
+//! Original procedure `0x004043bc` (18 bytes, `0x004043bc–0x004043ce`).
 //! Evidence: `evidence/004043bc_fn_004043bc.md`.
 
 unsafe extern "C" fn default_target(_a: u32, _b: *mut u32) {}
 
-/// Target `0x4063e4` (`FUN_004063e4`), both lanes forwarded.
+/// Target `0x004063e4` (`FUN_004063e4`), both lanes forwarded.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004063e4` once it exists.

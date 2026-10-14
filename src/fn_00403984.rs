@@ -1,10 +1,10 @@
-//! Original procedure `0x00403984` (17 bytes, `0x403982–0x403992`, entry `0x403984`).
+//! Original procedure `0x00403984` (17 bytes, `0x00403982–0x00403992`, entry `0x00403984`).
 //! Evidence: `evidence/00403984_fn_00403984.md`.
 
 /// Walk `-0x30` double-deref chain while `cur != param_2`; match lane
 /// returns `(cur & ~0xff) | 1` (mirrors `MOV AL,1`), null link
 /// returns 0. First compare uses raw entry pointer (entry skips the
-/// loop-top deref at `0x403982`).
+/// loop-top deref at `0x00403982`).
 ///
 /// ponytail: `param_1` pointer-sized with low-32 compare (`obj as u32`
 /// precedent); rewire to real Borland register convention once call

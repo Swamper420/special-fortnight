@@ -1,4 +1,4 @@
-//! Original procedure `0x00403100` (15 bytes, `0x403100–0x40310e`).
+//! Original procedure `0x00403100` (15 bytes, `0x00403100–0x0040310e`).
 //! Evidence: `evidence/00403100_fn_00403100.md`.
 
 /// Word cell observed as `word ptr [0x0041201c]`, stored from AX then

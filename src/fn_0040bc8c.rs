@@ -1,4 +1,4 @@
-//! Original procedure `0x0040bc8c` (38 bytes, `0x40bc8c–0x40bcb1`).
+//! Original procedure `0x0040bc8c` (38 bytes, `0x0040bc8c–0x0040bcb1`).
 //! Evidence: `evidence/0040bc8c_fn_0040bc8c.md`.
 
 unsafe extern "C" fn default_open(
@@ -11,7 +11,7 @@ unsafe extern "C" fn default_open(
     1
 }
 
-/// Import `ADVAPI32.DLL::RegOpenKeyExW` (`CALL 0x406630`).
+/// Import `ADVAPI32.DLL::RegOpenKeyExW` (`CALL 0x00406630`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
@@ -21,7 +21,7 @@ pub static mut HOOK_RegOpenKeyExW: unsafe extern "C" fn(u32, *const u16, u32, u3
 /// `if flag==2 { sam|=0x100 }; open(hkey, sub, opts, sam, out)`.
 /// `flag` is AL, `(hkey, sub)` EDX/ECX, rest on the stack per
 /// Ghidra `__register` observation. Returns the import status:
-/// both `0x40bcb4` call sites `TEST EAX` after the call, so the
+/// both `0x0040bcb4` call sites `TEST EAX` after the call, so the
 /// `void` decompiler label is overruled by observation.
 pub unsafe fn fn_0040bc8c(
     param_1: u8,

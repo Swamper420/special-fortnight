@@ -1,10 +1,10 @@
 //! Original procedure `0x00404268` (83 bytes, ranges
-//! `0x404268–0x4042b4` + `0x4042c9–0x4042ce`).
+//! `0x00404268–0x004042b4` + `0x004042c9–0x004042ce`).
 //! Evidence: `evidence/00404268_fn_00404268.md`.
 
 use crate::fn_00404204::{DAT_00415aec, DAT_00415af0};
 
-/// Handler pushed at `0x404285` for the unwind window.
+/// Handler pushed at `0x00404285` for the unwind window.
 pub const HANDLER_004042B5: u32 = 0x004042b5;
 
 /// Inline SEH record: `prev/handler/ebp` at `+0/+4/+8`
@@ -16,7 +16,7 @@ pub struct SehRecord00404268 {
     pub ebp: u32,
 }
 
-/// EBP value stored into the record (`PUSH EBP` at `0x404284`).
+/// EBP value stored into the record (`PUSH EBP` at `0x00404284`).
 ///
 /// ponytail: static stands in for callee-saved EBP read (host frame
 /// pointer meaningless), rewire to inline asm once Windows-target

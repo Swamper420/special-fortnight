@@ -1,4 +1,4 @@
-//! Original procedure `0x004080dc` (31 bytes, `0x4080dc–0x4080fa`).
+//! Original procedure `0x004080dc` (31 bytes, `0x004080dc–0x004080fa`).
 //! Evidence: `evidence/004080dc_fn_004080dc.md`.
 
 /// `wcslen`-shaped word scan: `*p==0 → 0`, else words up to and through

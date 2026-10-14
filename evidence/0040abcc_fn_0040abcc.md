@@ -1,6 +1,6 @@
 # 0040abcc — KERNEL32.DLL::Sleep
 
-Original address: `0x0040abcc` (body `0x40abcc–0x40abd1`, 6 bytes, contiguous, contains_entry).
+Original address: `0x0040abcc` (body `0x0040abcc–0x0040abd1`, 6 bytes, contiguous, contains_entry).
 Name status: imported `KERNEL32.DLL::Sleep`; Rust symbol stays `fn_0040abcc`.
 
 ## Evidence IDs
@@ -23,10 +23,10 @@ void __stdcall Sleep(DWORD dwMilliseconds)
 ## Assembly (observed, thunk body in full)
 
 ```text
-0x40abcc: JMP dword ptr [0x00419508]
+0x0040abcc: JMP dword ptr [0x00419508]
 ```
 
-Value flow (observed): single `CALL` through `0x419508` with `Stack[0x4]` + `RETURN` (void); `truncated: false`.
+Value flow (observed): single `CALL` through `0x00419508` with `Stack[0x4]` + `RETURN` (void); `truncated: false`.
 
 ## Callers / callees (observed)
 
@@ -34,9 +34,9 @@ Callees: none (import thunk; transfers to `EXTERNAL:0x79`).
 
 Callers (1 procedure):
 
-- `0x40e5dc FUN_0040e5dc`
+- `0x0040e5dc FUN_0040e5dc`
 
-Basic blocks (1): `0x40abcc–0x40abd2`, no successors (terminal jump).
+Basic blocks (1): `0x0040abcc–0x0040abd2`, no successors (terminal jump).
 
 ## Referenced strings
 
@@ -44,8 +44,8 @@ None.
 
 ## Referenced names
 
-- `0x419508: PTR_Sleep_00419508` (IAT slot, from `0x40abcc`)
-- `EXTERNAL:0x79: KERNEL32.DLL::Sleep` (from `0x40abcc`)
+- `0x00419508: PTR_Sleep_00419508` (IAT slot, from `0x0040abcc`)
+- `EXTERNAL:0x79: KERNEL32.DLL::Sleep` (from `0x0040abcc`)
 
 ## Native API (observed)
 

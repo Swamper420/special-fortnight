@@ -1,4 +1,4 @@
-//! Original procedure `0x00406274` (21 bytes, `0x406274–0x406288`).
+//! Original procedure `0x00406274` (21 bytes, `0x00406274–0x00406288`).
 //! Evidence: `evidence/00406274_fn_00406274.md`.
 
 /// Release slot: `obj = *p; if obj { *p = 0; vtbl_call(*(obj)+8)(obj);

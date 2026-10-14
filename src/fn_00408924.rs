@@ -1,7 +1,7 @@
-//! Original procedure `0x00408924` (98 bytes, `0x408924–0x408985`).
+//! Original procedure `0x00408924` (98 bytes, `0x00408924–0x00408985`).
 //! Evidence: `evidence/00408924_fn_00408924.md`.
 
-/// Divisor observed as `dword ptr [ESI+0x412830]` with `ESI=0`
+/// Divisor observed as `dword ptr [ESI+0x00412830]` with `ESI=0`
 /// (`DAT_00412830`).
 ///
 /// ponytail: absolute-address cell as mutable hook, upgrade to real

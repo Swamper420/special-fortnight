@@ -1,11 +1,11 @@
-//! Original procedure `0x0040c738` (24 bytes, `0x40c738–0x40c74f`).
+//! Original procedure `0x0040c738` (24 bytes, `0x0040c738–0x0040c74f`).
 //! Evidence: `evidence/0040c738_fn_0040c738.md`.
 
 unsafe extern "C" fn default_hook(_seed: u32, _buf: *const u8, _len: i32) -> u32 {
     0
 }
 
-/// Target `0x40c6e4`, called with `(0xffffffff, param_1, param_2)`.
+/// Target `0x0040c6e4`, called with `(0xffffffff, param_1, param_2)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_0040c6e4` once it exists.

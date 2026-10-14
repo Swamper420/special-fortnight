@@ -1,4 +1,4 @@
-//! Original procedure `0x00403b90` (39 bytes, `0x403b90–0x403bb6`).
+//! Original procedure `0x00403b90` (39 bytes, `0x00403b90–0x00403bb6`).
 //! Evidence: `evidence/00403b90_fn_00403b90.md`.
 
 /// Flag-gated resolve+raise: return `param_1` when owner

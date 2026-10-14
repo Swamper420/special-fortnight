@@ -1,11 +1,11 @@
-//! Original procedure `0x00402f8c` (16 bytes, `0x402f8c–0x402f9b`).
+//! Original procedure `0x00402f8c` (16 bytes, `0x00402f8c–0x00402f9b`).
 //! Evidence: `evidence/00402f8c_fn_00402f8c.md`.
 
 unsafe extern "C" fn default_ctx() -> *const u8 {
     core::ptr::null()
 }
 
-/// Target `0x406588` (`FUN_00406588`), context getter, no args.
+/// Target `0x00406588` (`FUN_00406588`), context getter, no args.
 ///
 /// ponytail: hook standing in for reconstructed `fn_00406588`, rewire to
 /// real call once cross-module test serialization exists.

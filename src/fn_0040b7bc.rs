@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b7bc` (129 bytes, `0x40b7bc–0x40b83c`).
+//! Original procedure `0x0040b7bc` (129 bytes, `0x0040b7bc–0x0040b83c`).
 //! Evidence: `evidence/0040b7bc_fn_0040b7bc.md`.
 
 use crate::fn_004046c4::fn_004046c4;
@@ -12,9 +12,9 @@ use crate::fn_0040b770::fn_0040b770;
 /// following `<=0x20` run, release the temp. `param_1` (src)
 /// arrives in EAX, `param_2` (out slot) in EDX per Ghidra
 /// `__register` observation. Returns the post-whitespace cursor:
-/// the true-exit epilogue at `0x40b844` is `MOV EAX,EBX`, and all
+/// the true-exit epilogue at `0x0040b844` is `MOV EAX,EBX`, and all
 /// three callers consume EAX as a `ushort *`. Thunk calls
-/// (`0x4054ac`/`0x404c88`, both plain `JMP` stubs) go direct to
+/// (`0x004054ac`/`0x00404c88`, both plain `JMP` stubs) go direct to
 /// the done functions. SEH scaffolding omitted (no host
 /// equivalent).
 ///

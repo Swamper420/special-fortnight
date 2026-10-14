@@ -1,4 +1,4 @@
-//! Original procedure `0x0040def0` (47 bytes, `0x40def0–0x40df1e`).
+//! Original procedure `0x0040def0` (47 bytes, `0x0040def0–0x0040df1e`).
 //! Evidence: `evidence/0040def0_fn_0040def0.md`.
 
 unsafe extern "C" fn default_convert(_e: u32) -> *mut u8 {
@@ -6,11 +6,11 @@ unsafe extern "C" fn default_convert(_e: u32) -> *mut u8 {
 }
 unsafe extern "C" fn default_decode(_s: *mut u8, _p2: u32, _p3: i32, _o: *mut u8) {}
 
-/// Target `0x404d24` (`FUN_00404d24`) entry conversion.
+/// Target `0x00404d24` (`FUN_00404d24`) entry conversion.
 ///
 /// ponytail: hook standing in for out-of-batch `fn_00404d24`.
 pub static mut HOOK_00404D24: unsafe extern "C" fn(u32) -> *mut u8 = default_convert;
-/// Target `0x40dd80` (`FUN_0040dd80`) decoder.
+/// Target `0x0040dd80` (`FUN_0040dd80`) decoder.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040dd80`.
 pub static mut HOOK_0040DD80: unsafe extern "C" fn(*mut u8, u32, i32, *mut u8) = default_decode;
@@ -23,7 +23,7 @@ pub static mut DAT_004181A0: [u32; 0xdd] = [0; 0xdd];
 /// Table lookup (low byte of `param_1`) → convert → decode.
 /// `param_1` EAX / `param_2` EDX / `param_3` ECX per `__register` observation.
 pub unsafe fn fn_0040def0(param_1: u32, param_2: u32, param_3: i32, param_4: *mut u8) {
-    // ponytail: `MOVZX EAX,BL` then `[EAX*4+0x4181a0]`; masking before index matches.
+    // ponytail: `MOVZX EAX,BL` then `[EAX*4+0x004181a0]`; masking before index matches.
     let idx = (param_1 & 0xff) as usize;
     let entry = DAT_004181A0[idx];
     let s = HOOK_00404D24(entry);

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040a3c8` (45 bytes, `0x40a3c8–0x40a3f4`).
+//! Original procedure `0x0040a3c8` (45 bytes, `0x0040a3c8–0x0040a3f4`).
 //! Evidence: `evidence/0040a3c8_fn_0040a3c8.md`.
 
 /// Surrogate-pair width probe: 4 when `w0` is a high surrogate

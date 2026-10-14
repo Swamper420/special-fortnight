@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b8fc` (151 bytes, `0x40b8fc–0x40b992`).
+//! Original procedure `0x0040b8fc` (151 bytes, `0x0040b8fc–0x0040b992`).
 //! Evidence: `evidence/0040b8fc_fn_0040b8fc.md`.
 
 use crate::fn_004046c4::fn_004046c4;
@@ -15,14 +15,14 @@ unsafe extern "C" fn default_modname(_h: u32, _buf: *mut u16, _len: u32) -> u32 
     0
 }
 
-/// Import `KERNEL32.DLL::GetCommandLineW` (`CALL 0x4066c0`), no
+/// Import `KERNEL32.DLL::GetCommandLineW` (`CALL 0x004066c0`), no
 /// args, wide-string data-pointer result.
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once the Win32 boundary is cut.
 pub static mut HOOK_GetCommandLineW: unsafe extern "C" fn() -> *mut u16 = default_cmdline;
 
-/// Import `KERNEL32.DLL::GetModuleFileNameW` (`CALL 0x406710`),
+/// Import `KERNEL32.DLL::GetModuleFileNameW` (`CALL 0x00406710`),
 /// called as `(0, buf, 0x104)`; returns the char count forwarded
 /// to the sized alloc.
 ///

@@ -1,4 +1,4 @@
-//! Original procedure `0x00406544` (68 bytes, `0x406544–0x406587`).
+//! Original procedure `0x00406544` (68 bytes, `0x00406544–0x00406587`).
 //! Evidence: `evidence/00406544_fn_00406544.md`.
 
 unsafe extern "C" fn default_size() -> u32 {
@@ -21,25 +21,25 @@ unsafe extern "C" fn default_tls_set(_index: u32, _value: *mut u8) -> i32 {
 /// image-relative import once data layout proven.
 pub static mut TLS_INDEX_004127ac: u32 = 0;
 
-/// Target `0x40653c`, returns block size (observed constant 8).
+/// Target `0x0040653c`, returns block size (observed constant 8).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_0040653c` once it exists.
 pub static mut SIZE_0040653c: unsafe extern "C" fn() -> u32 = default_size;
 
-/// Target `0x4046b8` (fatal, called with `0xe2`), tail-jumps to `0x4046ac`.
+/// Target `0x004046b8` (fatal, called with `0xe2`), tail-jumps to `0x004046ac`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004046b8` once it exists.
 pub static mut FATAL_004046b8: unsafe extern "C" fn(u32) = default_fatal;
 
-/// Target `0x406530` (`LocalAlloc(0x40, size)`), size arrives in EAX.
+/// Target `0x00406530` (`LocalAlloc(0x40, size)`), size arrives in EAX.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00406530` once it exists.
 pub static mut ALLOC_00406530: unsafe extern "C" fn(u32) -> *mut u8 = default_alloc;
 
-/// Thunk `0x406528` (`KERNEL32.DLL::TlsSetValue`).
+/// Thunk `0x00406528` (`KERNEL32.DLL::TlsSetValue`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" TlsSetValue` once

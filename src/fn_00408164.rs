@@ -1,4 +1,4 @@
-//! Original procedure `0x00408164` (108 bytes, `0x408164–0x4081cf`).
+//! Original procedure `0x00408164` (108 bytes, `0x00408164–0x004081cf`).
 //! Evidence: `evidence/00408164_fn_00408164.md`.
 
 /// Bounded case-insensitive u16 compare: fold `a`–`z` via `^ 0x20`,

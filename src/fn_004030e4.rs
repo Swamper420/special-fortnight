@@ -1,7 +1,7 @@
-//! Original procedure `0x004030e4` (26 bytes, `0x4030e4–0x4030fd`).
+//! Original procedure `0x004030e4` (26 bytes, `0x004030e4–0x004030fd`).
 //! Evidence: `evidence/004030e4_fn_004030e4.md`.
 
-/// Seed cell observed as `dword ptr [EBX + 0x412008]` with `EBX=0`,
+/// Seed cell observed as `dword ptr [EBX + 0x00412008]` with `EBX=0`,
 /// i.e. absolute `[0x00412008]`; read by IMUL, rewritten incremented.
 ///
 /// ponytail: absolute-address cell as module static, upgrade to real

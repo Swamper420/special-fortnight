@@ -1,4 +1,4 @@
-//! Original procedure `0x00402f14` (73 bytes, `0x402f14–0x402f5c`).
+//! Original procedure `0x00402f14` (73 bytes, `0x00402f14–0x00402f5c`).
 //! Evidence: `evidence/00402f14_fn_00402f14.md`.
 
 unsafe extern "C" fn default_hook(_a: u32, _b: u32) {}
@@ -20,13 +20,13 @@ pub static mut HOOK_00413008: Option<unsafe extern "C" fn(u32, u32)> = None;
 /// extend once table extent proven.
 pub static mut TABLE_00412754: [u8; 0x1b] = [0; 0x1b];
 
-/// Target `0x406588`, result dereferenced at +4 on the `bl == 0` path.
+/// Target `0x00406588`, result dereferenced at +4 on the `bl == 0` path.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00406588` once it exists.
 pub static mut HOOK_00406588: unsafe extern "C" fn() -> *const u8 = default_resolver;
 
-/// Target `0x402f08`, called with `(ebx & 0xff, param_2)` on all paths.
+/// Target `0x00402f08`, called with `(ebx & 0xff, param_2)` on all paths.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00402f08` once it exists.

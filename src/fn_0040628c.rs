@@ -1,4 +1,4 @@
-//! Original procedure `0x0040628c` (44 bytes, `0x40628c–0x4062b7`).
+//! Original procedure `0x0040628c` (44 bytes, `0x0040628c–0x004062b7`).
 //! Evidence: `evidence/0040628c_fn_0040628c.md`.
 
 /// Slot assign with release: `param_1` in EAX, `param_2` in EDX per

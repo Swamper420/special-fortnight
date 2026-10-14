@@ -1,11 +1,11 @@
-//! Original procedure `0x00403980` (2 bytes, `0x403980–0x403981`).
+//! Original procedure `0x00403980` (2 bytes, `0x00403980–0x00403981`).
 //! Evidence: `evidence/00403980_fn_00403980.md`.
 
 unsafe extern "C" fn default_target(_a: u32, _b: u32) -> u32 {
     0
 }
 
-/// Target `0x403984` (`FUN_00403984`), reached by terminal `JMP`.
+/// Target `0x00403984` (`FUN_00403984`), reached by terminal `JMP`.
 ///
 /// ponytail: hook standing in for unreconstructed target, rewire to
 /// real `fn_00403984` once cross-module linkage proven.

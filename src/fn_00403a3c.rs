@@ -1,9 +1,9 @@
 //! Original procedure `0x00403a3c` (53 bytes, ranges
-//! `0x403a3c–0x403a6a` + `0x403a84–0x403a89`).
+//! `0x00403a3c–0x00403a6a` + `0x00403a84–0x00403a89`).
 //! Evidence: `evidence/00403a3c_fn_00403a3c.md`.
 
-/// Handler pushed at `0x403a49` for the dispatch window. Code lives in
-/// the unattributed body gap `0x403a6b–0x403a83`.
+/// Handler pushed at `0x00403a49` for the dispatch window. Code lives in
+/// the unattributed body gap `0x00403a6b–0x00403a83`.
 pub const HANDLER_00403A6B: u32 = 0x00403a6b;
 
 /// Inline SEH record: `prev/handler/ebp` at `+0/+4/+8`
@@ -15,7 +15,7 @@ pub struct SehRecord00403a3c {
     pub ebp: u32,
 }
 
-/// EBP value stored into the record (`PUSH EBP` at `0x403a48`).
+/// EBP value stored into the record (`PUSH EBP` at `0x00403a48`).
 ///
 /// ponytail: static stands in for callee-saved EBP read (host frame
 /// pointer meaningless), rewire to inline asm once Windows-target

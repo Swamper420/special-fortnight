@@ -1,4 +1,4 @@
-//! Original procedure `0x004010d8` (6 bytes, `0x004010d8–0x0040a5`).
+//! Original procedure `0x004010d8` (6 bytes, `0x004010d8–0x004010dd`).
 //! Evidence: `evidence/004010d8_fn_004010d8.md`.
 //!
 //! Import thunk `USER32.DLL::MessageBoxA`: single `JMP [IAT]` tail jump,

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040c1e4` (19 bytes, `0x40c1e4–0x40c1f6`).
+//! Original procedure `0x0040c1e4` (19 bytes, `0x0040c1e4–0x0040c1f6`).
 //! Evidence: `evidence/0040c1e4_fn_0040c1e4.md`.
 
 unsafe extern "C" fn default_get_last_error() -> u32 {
@@ -7,7 +7,7 @@ unsafe extern "C" fn default_get_last_error() -> u32 {
 
 unsafe extern "C" fn default_report(_p1: *const u8, _err: u32) {}
 
-/// Thunk `0x406700` (`KERNEL32.DLL::GetLastError`).
+/// Thunk `0x00406700` (`KERNEL32.DLL::GetLastError`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" GetLastError` once
@@ -15,7 +15,7 @@ unsafe extern "C" fn default_report(_p1: *const u8, _err: u32) {}
 pub static mut GET_LAST_ERROR_00406700: unsafe extern "C" fn() -> u32 =
     default_get_last_error;
 
-/// Target `0x40c130` (`FUN_0040c130`), called as `(param_1, GetLastError())`.
+/// Target `0x0040c130` (`FUN_0040c130`), called as `(param_1, GetLastError())`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_0040c130` once it exists.

@@ -1,9 +1,9 @@
-//! Original procedure `0x00404808` (15 bytes, `0x404808–0x404816`).
+//! Original procedure `0x00404808` (15 bytes, `0x00404808–0x00404816`).
 //! Evidence: `evidence/00404808_fn_00404808.md`.
 
 unsafe extern "C" fn default_callee(_a: *mut u32, _b: *mut u16, _c: u16) {}
 
-/// Callee `0x404e94` (`FUN_00404e94`); args `(param_1, *param_1, DAT)`
+/// Callee `0x00404e94` (`FUN_00404e94`); args `(param_1, *param_1, DAT)`
 /// carried in EAX/EDX/ECX per `__register` observation.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real

@@ -1,4 +1,4 @@
-//! Original procedure `0x00405910` (8 bytes, `0x405910–0x405917`).
+//! Original procedure `0x00405910` (8 bytes, `0x00405910–0x00405917`).
 //! Evidence: `evidence/00405910_fn_00405910.md`.
 
 /// `if p==0 {0} else {*(p-4)}`. Param arrives in EAX per `__register`

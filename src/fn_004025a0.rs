@@ -1,4 +1,4 @@
-//! Original procedure `0x004025a0` (86 bytes, `0x4025a0–0x4025f5`).
+//! Original procedure `0x004025a0` (86 bytes, `0x004025a0–0x004025f5`).
 //! Evidence: `evidence/004025a0_fn_004025a0.md`.
 
 use crate::fn_004024ec::{BYTE_00415adc, DAT_00415ad8, fn_004024ec};

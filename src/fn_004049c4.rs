@@ -1,4 +1,4 @@
-//! Original procedure `0x004049c4` (151 bytes, `0x4049c4–0x404a5a`).
+//! Original procedure `0x004049c4` (151 bytes, `0x004049c4–0x00404a5a`).
 //! Evidence: `evidence/004049c4_fn_004049c4.md`.
 
 unsafe extern "C" fn default_convert(_slot: *mut *mut u8, _src: *mut u8, _p3: i32) {}
@@ -15,7 +15,7 @@ unsafe extern "C" fn default_copy(_src: *mut u8, _dst: *mut u8, _n: u32) {}
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Normalize target `0x404e94` (`FUN_00404e94`), called with
+/// Normalize target `0x00404e94` (`FUN_00404e94`), called with
 /// `(&tmp=0 out-slot, old *slot value, p3)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
@@ -23,34 +23,34 @@ unsafe extern "C" fn default_release(_slot: *mut u8) {}
 pub static mut HOOK_00404E94: unsafe extern "C" fn(*mut *mut u8, *mut u8, i32) =
     default_convert;
 
-/// Realloc target `0x402e38` (`FUN_00402e38`), called with an in-out
+/// Realloc target `0x00402e38` (`FUN_00402e38`), called with an in-out
 /// slot initialized to `base` plus `total = len+13`.
 ///
 /// ponytail: hook standing in for done `fn_00402e38`, rewire to real
 /// call once cross-module linkage proven.
 pub static mut HOOK_00402E38: unsafe extern "C" fn(*mut *mut u8, u32) = default_realloc;
 
-/// OOM thunk `0x40380c` (`thunk_FUN_00402f60`), reached by terminal
+/// OOM thunk `0x0040380c` (`thunk_FUN_00402f60`), reached by terminal
 /// `JMP` with `EAX=base` on `len+13` unsigned overflow.
 ///
 /// ponytail: hook standing in for the thunk tail, rewire once the
 /// target's return behavior is proven.
 pub static mut HOOK_00402F60_OOM: unsafe extern "C" fn(*mut u8) = default_oom;
 
-/// Alloc target `0x404774` (`FUN_00404774`), called with `(len, p3)`.
+/// Alloc target `0x00404774` (`FUN_00404774`), called with `(len, p3)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00404774` once it exists.
 pub static mut HOOK_00404774: unsafe extern "C" fn(u32, u32) -> *mut u8 = default_alloc;
 
-/// Copy target `0x402fbc` (`FUN_00402fbc`), called with
+/// Copy target `0x00402fbc` (`FUN_00402fbc`), called with
 /// `(prev, newbuf, signed-min([prev-4], len))`.
 ///
 /// ponytail: hook standing in for done `fn_00402fbc`, rewire to real
 /// call once cross-module linkage proven.
 pub static mut HOOK_00402FBC: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_copy;
 
-/// Release target `0x4046c4` (`FUN_004046c4`), called with the slot
+/// Release target `0x004046c4` (`FUN_004046c4`), called with the slot
 /// (tail path) or a stack copy of the old object (grow path).
 ///
 /// ponytail: hook standing in for done `fn_004046c4`, rewire to real

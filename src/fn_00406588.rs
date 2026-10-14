@@ -1,4 +1,4 @@
-//! Original procedure `0x00406588` (64 bytes, `0x406588–0x4065c7`).
+//! Original procedure `0x00406588` (64 bytes, `0x00406588–0x004065c7`).
 //! Evidence: `evidence/00406588_fn_00406588.md`.
 
 unsafe extern "C" fn default_tls_get_value(_index: u32) -> *const u8 {
@@ -25,13 +25,13 @@ pub static mut TLS_INDEX_004127ac: u32 = 0;
 /// image-relative import once data layout proven.
 pub static mut FALLBACK_00415b4c: *const u8 = core::ptr::null();
 
-/// Base loaded from `FS:[0x2c]` at `0x406597`; slot is `[base + index*4]`.
+/// Base loaded from `FS:[0x2c]` at `0x00406597`; slot is `[base + index*4]`.
 ///
 /// ponytail: segment load modeled as hookable base, upgrade to real
 /// `FS:[0x2c]` segment read once Windows-target inline asm proven.
 pub static mut TEB_TLS_BASE_FS2C: *const u32 = core::ptr::null();
 
-/// Thunk `0x406520` (`KERNEL32.DLL::TlsGetValue`), called with pushed index.
+/// Thunk `0x00406520` (`KERNEL32.DLL::TlsGetValue`), called with pushed index.
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" TlsGetValue` once
@@ -39,7 +39,7 @@ pub static mut TEB_TLS_BASE_FS2C: *const u32 = core::ptr::null();
 pub static mut TLS_GET_VALUE_00406520: unsafe extern "C" fn(u32) -> *const u8 =
     default_tls_get_value;
 
-/// Target `0x406544`, called on the null-TLS path before re-query.
+/// Target `0x00406544`, called on the null-TLS path before re-query.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00406544` once it exists.

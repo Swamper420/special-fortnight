@@ -1,4 +1,4 @@
-//! Original procedure `0x00402e20` (23 bytes, `0x402e20–0x402e36`).
+//! Original procedure `0x00402e20` (23 bytes, `0x00402e20–0x00402e36`).
 //! Evidence: `evidence/00402e20_fn_00402e20.md`.
 
 unsafe extern "C" fn default_indirect() -> u32 {
@@ -7,14 +7,14 @@ unsafe extern "C" fn default_indirect() -> u32 {
 
 unsafe extern "C" fn default_tail(_arg: u32) {}
 
-/// Indirect slot observed as `dword ptr [0x412740]` (`PTR_FUN_00412740`,
-/// resolved target `0x401c7c`, unreconstructed).
+/// Indirect slot observed as `dword ptr [0x00412740]` (`PTR_FUN_00412740`,
+/// resolved target `0x00401c7c`, unreconstructed).
 ///
 /// ponytail: absolute-address cell modeled as mutable hook, upgrade to real
 /// image-relative import once data layout proven.
 pub static mut PTR_00412740: unsafe extern "C" fn() -> u32 = default_indirect;
 
-/// Tail target `0x402f60` (`FUN_00402f60`), reached by `JMP` with
+/// Tail target `0x00402f60` (`FUN_00402f60`), reached by `JMP` with
 /// `AL=2` over nonzero indirect result (upper bytes preserved).
 ///
 /// ponytail: hook standing in for done `fn_00402f60`, rewire to real
@@ -25,7 +25,7 @@ pub static mut TAIL_00402F60: unsafe extern "C" fn(u32) = default_tail;
 /// held by cross-module tests that call `fn_00402e20` directly).
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-/// `if param!=0 { if [0x412740]() != 0 { tail((r & ~0xff) | 2) } }`.
+/// `if param!=0 { if [0x00412740]() != 0 { tail((r & ~0xff) | 2) } }`.
 /// `param_1` arrives in EAX per Ghidra `__register` observation.
 pub unsafe fn fn_00402e20(param_1: u32) {
     if param_1 == 0 {

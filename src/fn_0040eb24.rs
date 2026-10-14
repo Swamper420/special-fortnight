@@ -1,4 +1,4 @@
-//! Original procedure `0x0040eb24` (43 bytes, `0x40eb24–0x40eb4e`).
+//! Original procedure `0x0040eb24` (43 bytes, `0x0040eb24–0x0040eb4e`).
 //! Evidence: `evidence/0040eb24_fn_0040eb24.md`.
 
 unsafe extern "C" fn default_peek(_m: *mut u8) -> i32 {
@@ -6,11 +6,11 @@ unsafe extern "C" fn default_peek(_m: *mut u8) -> i32 {
 }
 unsafe extern "C" fn default_msg(_m: *mut u8) {}
 
-/// Target `0x4068cc USER32.DLL::PeekMessageW` (nonzero while message pending).
+/// Target `0x004068cc USER32.DLL::PeekMessageW` (nonzero while message pending).
 pub static mut HOOK_PEEKMESSAGEW: unsafe extern "C" fn(*mut u8) -> i32 = default_peek;
-/// Target `0x4068dc USER32.DLL::TranslateMessage`.
+/// Target `0x004068dc USER32.DLL::TranslateMessage`.
 pub static mut HOOK_TRANSLATEMESSAGE: unsafe extern "C" fn(*mut u8) = default_msg;
-/// Target `0x40689c USER32.DLL::DispatchMessageW`.
+/// Target `0x0040689c USER32.DLL::DispatchMessageW`.
 pub static mut HOOK_DISPATCHMESSAGEW: unsafe extern "C" fn(*mut u8) = default_msg;
 
 /// Message drain: `PeekMessageW(0,0,0,PM_REMOVE)` until empty,

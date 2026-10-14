@@ -1,4 +1,4 @@
-//! Original procedure `0x0040da28` (14 bytes, `0x40da28–0x40da35`).
+//! Original procedure `0x0040da28` (14 bytes, `0x0040da28–0x0040da35`).
 //! Evidence: `evidence/0040da28_fn_0040da28.md`.
 
 /// Triple field store; `param_1` EAX / `param_2` EDX / `param_3` ECX.

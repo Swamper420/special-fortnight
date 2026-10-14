@@ -1,4 +1,4 @@
-//! Original procedure `0x00408500` (33 bytes, `0x408500–0x408520`).
+//! Original procedure `0x00408500` (33 bytes, `0x00408500–0x00408520`).
 //! Evidence: `evidence/00408500_fn_00408500.md`.
 
 unsafe extern "C" fn default_indirect() {}
@@ -14,7 +14,7 @@ unsafe extern "C" fn default_tail(_arg: u32) {}
 /// real image-relative import once data layout proven.
 pub static mut PTR_00412C10: *mut u32 = core::ptr::null_mut();
 
-/// Indirect target `*obj` (`[EBX]` after `EBX=[0x412c10]`); fires
+/// Indirect target `*obj` (`[EBX]` after `EBX=[0x00412c10]`); fires
 /// exactly when the observed `*obj != 0` lane is taken. A 4-byte
 /// target cell cannot hold a host code address, so the slot (data)
 /// and the target (hook) are modeled separately.
@@ -23,7 +23,7 @@ pub static mut PTR_00412C10: *mut u32 = core::ptr::null_mut();
 /// real import once the object layout is proven.
 pub static mut INDIRECT_00412C10: unsafe extern "C" fn() = default_indirect;
 
-/// Tail target `0x402f60` (`FUN_00402f60`), reached by `CALL` with
+/// Tail target `0x00402f60` (`FUN_00402f60`), reached by `CALL` with
 /// `AL=0x10` over the entry EAX.
 ///
 /// ponytail: hook standing in for done `fn_00402f60`, rewire to real

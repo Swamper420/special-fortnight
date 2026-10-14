@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e894` (260 bytes, `0x40e894–0x40e997`).
+//! Original procedure `0x0040e894` (260 bytes, `0x0040e894–0x0040e997`).
 //! Evidence: `evidence/0040e894_fn_0040e894.md`.
 
 unsafe extern "C" fn default_argc() -> i32 {
@@ -18,15 +18,15 @@ pub static mut DAT_00412ADC: u8 = 0;
 /// `DAT_00418528` `/Lang=` value slot (opaque ptr cell).
 pub static mut DAT_00418528: u32 = 0;
 
-/// Target `0x40b89c` (argc).
+/// Target `0x0040b89c` (argc).
 pub static mut HOOK_0040B89C: unsafe extern "C" fn() -> i32 = default_argc;
-/// Target `0x40b8fc (index, *out_arg)`.
+/// Target `0x0040b8fc (index, *out_arg)`.
 pub static mut HOOK_0040B8FC: unsafe extern "C" fn(i32, *mut *mut u8) = default_argv;
-/// Target `0x407bdc` (wide compare; 0 = hit).
+/// Target `0x00407bdc` (wide compare; 0 = hit).
 pub static mut HOOK_00407BDC: unsafe extern "C" fn(*mut u8, *const u16) -> u32 = default_cmp;
-/// Target `0x40525c (arg, off, len, *out)`.
+/// Target `0x0040525c (arg, off, len, *out)`.
 pub static mut HOOK_0040525C: unsafe extern "C" fn(*mut u8, u32, u32, *mut u32) = default_sub;
-/// Target `0x404c90` thunk (release, 3).
+/// Target `0x00404c90` thunk (release, 3).
 pub static mut HOOK_00404C90: unsafe extern "C" fn(*mut u8, u32) = default_rel;
 
 // Wide literals live at image rodata; hooks compare by tag pointers below.

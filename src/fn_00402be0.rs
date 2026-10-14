@@ -1,9 +1,9 @@
-//! Original procedure `0x00402be0` (293 bytes, `0x402be0–0x402d04`).
+//! Original procedure `0x00402be0` (293 bytes, `0x00402be0–0x00402d04`).
 //! Evidence: `evidence/00402be0_fn_00402be0.md`.
 
 use crate::fn_00402b9c::fn_00402b9c;
 
-/// Record window `[0x41205c, 0x4124bc)`: 55 records, stride `0x20`.
+/// Record window `[0x0041205c, 0x004124bc)`: 55 records, stride `0x20`.
 /// Per record (rel base `B`): `+0x1c` u32 slot, `+0x14`/`+0x04` base-link,
 /// `+0x0c` zero, `+0x08` one, `+0x01` mask byte, `+0x18`/`+0x1a` derived
 /// words, `+0x02` source word.
@@ -64,7 +64,7 @@ pub unsafe fn fn_00402be0() {
     let mut remaining: u32 = 0x37;
     loop {
         if read_u32(base, 0x1c) == 0 {
-            write_u32(base, 0x1c, 0x40148c);
+            write_u32(base, 0x1c, 0x0040148c);
         }
         let link = (0x0041205c as u32).wrapping_add(base as u32);
         write_u32(base, 0x14, link);
@@ -109,15 +109,15 @@ pub unsafe fn fn_00402be0() {
         }
     }
     fn_00402b9c();
-    HEAD_00413a24 = 0x413a24;
-    HEAD_00413a28 = 0x413a24;
+    HEAD_00413a24 = 0x00413a24;
+    HEAD_00413a28 = 0x00413a24;
     let mut i: usize = 0;
     while i < 0x800 {
         TABLE_00413ac4[i] = (0x00413ac4 as u32).wrapping_add((i as u32).wrapping_mul(4));
         i = i.wrapping_add(1);
     }
-    HEAD_00415ac8 = 0x415ac8;
-    HEAD_00415acc = 0x415ac8;
+    HEAD_00415ac8 = 0x00415ac8;
+    HEAD_00415acc = 0x00415ac8;
 }
 
 #[cfg(test)]
@@ -167,9 +167,9 @@ mod tests {
             fn_00402be0();
 
             // word=0x100: u=0xc30, n=0, mask=0xff, w1=0xb30, w2=0x7330.
-            assert_eq!(get_u32(0, 0x1c), 0x40148c);
-            assert_eq!(get_u32(0, 0x14), 0x41205c);
-            assert_eq!(get_u32(0, 0x04), 0x41205c);
+            assert_eq!(get_u32(0, 0x1c), 0x0040148c);
+            assert_eq!(get_u32(0, 0x14), 0x0041205c);
+            assert_eq!(get_u32(0, 0x04), 0x0041205c);
             assert_eq!(get_u32(0, 0x0c), 0);
             assert_eq!(get_u32(0, 0x08), 1);
             assert_eq!(TABLE_0041205c[0x01], 0xff);
@@ -180,19 +180,19 @@ mod tests {
             assert_eq!(TABLE_0041205c[1 * 0x20 + 0x01], 0x80);
             assert_eq!(get_word(1, 0x18), 0xeb30);
             assert_eq!(get_word(1, 0x1a), 0x30);
-            assert_eq!(get_u32(1, 0x14), 0x41207c);
+            assert_eq!(get_u32(1, 0x14), 0x0041207c);
             // Last record base linkage.
-            assert_eq!(get_u32(54, 0x14), 0x41205c + 54 * 0x20);
-            assert_eq!(get_u32(54, 0x1c), 0x40148c);
+            assert_eq!(get_u32(54, 0x14), 0x0041205c + 54 * 0x20);
+            assert_eq!(get_u32(54, 0x1c), 0x0040148c);
 
             // List heads and pair table.
-            assert_eq!(HEAD_00413a24, 0x413a24);
-            assert_eq!(HEAD_00413a28, 0x413a24);
-            assert_eq!(TABLE_00413ac4[0], 0x413ac4);
-            assert_eq!(TABLE_00413ac4[1], 0x413ac8);
-            assert_eq!(TABLE_00413ac4[0x7ff], 0x413ac4 + 0x1ffc);
-            assert_eq!(HEAD_00415ac8, 0x415ac8);
-            assert_eq!(HEAD_00415acc, 0x415ac8);
+            assert_eq!(HEAD_00413a24, 0x00413a24);
+            assert_eq!(HEAD_00413a28, 0x00413a24);
+            assert_eq!(TABLE_00413ac4[0], 0x00413ac4);
+            assert_eq!(TABLE_00413ac4[1], 0x00413ac8);
+            assert_eq!(TABLE_00413ac4[0x7ff], 0x00413ac4 + 0x1ffc);
+            assert_eq!(HEAD_00415ac8, 0x00415ac8);
+            assert_eq!(HEAD_00415acc, 0x00415ac8);
 
             crate::fn_00402b9c::DEST_004138dc = saved_dest;
         }

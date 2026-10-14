@@ -1,4 +1,4 @@
-//! Original procedure `0x00402dec` (23 bytes, `0x402dec–0x402e02`).
+//! Original procedure `0x00402dec` (23 bytes, `0x00402dec–0x00402e02`).
 //! Evidence: `evidence/00402dec_fn_00402dec.md`.
 
 unsafe extern "C" fn default_indirect() -> u32 {
@@ -7,19 +7,19 @@ unsafe extern "C" fn default_indirect() -> u32 {
 
 unsafe extern "C" fn default_tail(_arg: u32) {}
 
-/// Indirect slot observed as `dword ptr [0x412748]` (`PTR_FUN_00412748`).
+/// Indirect slot observed as `dword ptr [0x00412748]` (`PTR_FUN_00412748`).
 ///
 /// ponytail: absolute-address cell modeled as mutable hook, upgrade to real
 /// image-relative import once data layout proven.
 pub static mut PTR_00412748: unsafe extern "C" fn() -> u32 = default_indirect;
 
-/// Tail target `0x402f60` (`FUN_00402f60`), reached by `JMP` with `AL=1`.
+/// Tail target `0x00402f60` (`FUN_00402f60`), reached by `JMP` with `AL=1`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00402f60` once it exists.
 pub static mut TAIL_00402f60: unsafe extern "C" fn(u32) = default_tail;
 
-/// `if param!=0 { if [0x412748]() == 0 { tail(1) } }`.
+/// `if param!=0 { if [0x00412748]() == 0 { tail(1) } }`.
 /// `param_1` arrives in EAX per Ghidra `__register` observation.
 pub unsafe fn fn_00402dec(param_1: u32) {
     if param_1 == 0 {

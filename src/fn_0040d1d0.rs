@@ -1,11 +1,11 @@
-//! Original procedure `0x0040d1d0` (115 bytes, `0x40d1d0–0x40d242`).
+//! Original procedure `0x0040d1d0` (115 bytes, `0x0040d1d0–0x0040d242`).
 //! Evidence: `evidence/0040d1d0_fn_0040d1d0.md`.
 
 unsafe extern "C" fn default_bit(_t: *mut u16, _s: *mut u8) -> u32 {
     0
 }
 
-/// Target `0x40d094` (`FUN_0040d094`), both sites.
+/// Target `0x0040d094` (`FUN_0040d094`), both sites.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040d094`.
 pub static mut HOOK_0040D094: unsafe extern "C" fn(*mut u16, *mut u8) -> u32 = default_bit;

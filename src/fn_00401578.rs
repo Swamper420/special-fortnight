@@ -1,17 +1,17 @@
-//! Original procedure `0x00401578` (102 bytes, `0x401578–0x4015e1`).
+//! Original procedure `0x00401578` (102 bytes, `0x00401578–0x004015e1`).
 //! Evidence: `evidence/00401578_fn_00401578.md`.
 
 unsafe extern "C" fn default_callee(_cursor: *mut u8) {}
 
 unsafe extern "C" fn default_tail(_block: *mut u32, _size: u32) {}
 
-/// Callee `0x4014d8` (`FUN_004014d8`), cursor arrives in EAX.
+/// Callee `0x004014d8` (`FUN_004014d8`), cursor arrives in EAX.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004014d8` once it exists.
 pub static mut CALLEE_004014d8: unsafe extern "C" fn(*mut u8) = default_callee;
 
-/// Shared large-block tail at `0x401518` (`FUN_00401518` body).
+/// Shared large-block tail at `0x00401518` (`FUN_00401518` body).
 ///
 /// ponytail: hook standing in for shared tail code outside this body,
 /// rewire to real `fn_00401518` once it exists.

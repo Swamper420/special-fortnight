@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e11c` (59 bytes, `0x40e11c–0x40e156`).
+//! Original procedure `0x0040e11c` (59 bytes, `0x0040e11c–0x0040e156`).
 //! Evidence: `evidence/0040e11c_fn_0040e11c.md`.
 
 unsafe extern "C" fn default_last_error(_c: u32) {}
@@ -6,7 +6,7 @@ unsafe extern "C" fn default_probe(_ctx: *mut u8) -> u32 {
     0
 }
 
-/// `KERNEL32.DLL::SetLastError` (`0x406834`).
+/// `KERNEL32.DLL::SetLastError` (`0x00406834`).
 ///
 /// ponytail: hook standing in for the raw import call at the original site.
 pub static mut HOOK_SetLastError: unsafe extern "C" fn(u32) = default_last_error;

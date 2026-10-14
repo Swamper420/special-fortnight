@@ -1,11 +1,11 @@
-//! Original procedure `0x00402e88` (32 bytes, `0x402e88–0x402ea7`).
+//! Original procedure `0x00402e88` (32 bytes, `0x00402e88–0x00402ea7`).
 //! Evidence: `evidence/00402e88_fn_00402e88.md`.
 
 unsafe extern "C" fn default_resolver() -> *const u8 {
     core::ptr::null()
 }
 
-/// Target `0x406588`, queried twice (null-test, then re-query deref).
+/// Target `0x00406588`, queried twice (null-test, then re-query deref).
 ///
 /// ponytail: hook standing in for reconstructed callee, rewire to real
 /// `fn_00406588` once cross-module linkage proven.

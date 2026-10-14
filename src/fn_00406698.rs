@@ -1,7 +1,7 @@
-//! Original procedure `0x00406698` (21 bytes, `0x406698–0x4066ac`).
+//! Original procedure `0x00406698` (21 bytes, `0x00406698–0x004066ac`).
 //! Evidence: `evidence/00406698_fn_00406698.md`.
 
-/// Import `KERNEL32.DLL::InterlockedCompareExchange` (`CALL 0x406690`).
+/// Import `KERNEL32.DLL::InterlockedCompareExchange` (`CALL 0x00406690`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.

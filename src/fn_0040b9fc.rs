@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b9fc` (183 bytes, `0x40b9fc–0x40bab2`).
+//! Original procedure `0x0040b9fc` (183 bytes, `0x0040b9fc–0x0040bab2`).
 //! Evidence: `evidence/0040b9fc_fn_0040b9fc.md`.
 
 unsafe extern "C" fn default_expand(_name: *mut u8, _slot: *mut u8) {}
@@ -17,47 +17,47 @@ unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8) {}
 
 unsafe extern "C" fn default_release(_slots: *mut u8, _n: u32) {}
 
-/// Expander `0x40b710` (`FUN_0040b710`), called as `(name, slot)`
+/// Expander `0x0040b710` (`FUN_0040b710`), called as `(name, slot)`
 /// once per env-name lane.
 ///
 /// ponytail: hook mirroring done `fn_0040b710`'s shape, rewire to
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_0040B710: unsafe extern "C" fn(*mut u8, *mut u8) = default_expand;
 
-/// Probe `0x40b6ec` (`FUN_0040b6ec`); only its low byte is tested
+/// Probe `0x0040b6ec` (`FUN_0040b6ec`); only its low byte is tested
 /// (`TEST AL,AL`).
 ///
 /// ponytail: hook mirroring done `fn_0040b6ec`'s shape, rewire to
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_0040B6EC: unsafe extern "C" fn(*mut u8) -> u32 = default_probe;
 
-/// Fallback `0x40b9a4` (`FUN_0040b9a4`), called as `(slot)` on
+/// Fallback `0x0040b9a4` (`FUN_0040b9a4`), called as `(slot)` on
 /// every miss path.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040b9a4`,
 /// rewire to the real call once both modules are linked.
 pub static mut HOOK_0040B9A4: unsafe extern "C" fn(*mut u8) = default_win_dir;
 
-/// Tail `0x40b524` (`FUN_0040b524`), called as `(*slot, &local_c)`.
+/// Tail `0x0040b524` (`FUN_0040b524`), called as `(*slot, &local_c)`.
 ///
 /// ponytail: hook mirroring done `fn_0040b524`'s shape, rewire to
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_0040B524: unsafe extern "C" fn(*mut u8, *mut u8) = default_full;
 
-/// Tail `0x40b2e0` (`FUN_0040b2e0`), called as
+/// Tail `0x0040b2e0` (`FUN_0040b2e0`), called as
 /// `(local_c, &local_8)`.
 ///
 /// ponytail: hook mirroring done `fn_0040b2e0`'s shape, rewire to
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_0040B2E0: unsafe extern "C" fn(*mut u8, *mut u8) = default_take;
 
-/// Store `0x404c98` (`FUN_00404c98`), called as `(slot, local_8)`.
+/// Store `0x00404c98` (`FUN_00404c98`), called as `(slot, local_8)`.
 ///
 /// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire to
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u8, *mut u8) = default_store;
 
-/// Release `0x404c90` (`thunk_FUN_004046e8`), always run on
+/// Release `0x00404c90` (`thunk_FUN_004046e8`), always run on
 /// `(&local_c, 2)` (SEH finally on target).
 ///
 /// ponytail: hook mirroring done `fn_004046e8`'s shape, rewire to
@@ -96,7 +96,7 @@ pub static mut DAT_0040BAF8: [u16; 12] = [
 /// image-relative import once data layout proven.
 pub static mut PTR_DAT_00412C7C: *mut u32 = core::ptr::null_mut();
 
-/// Try `TMP`, `TEMP`, (`USERPROFILE` iff `**0x412c7c == 2`),
+/// Try `TMP`, `TEMP`, (`USERPROFILE` iff `**0x00412c7c == 2`),
 /// else the Windows-dir fallback; a lane wins when `*slot != 0`
 /// and the probe low byte is nonzero. Then
 /// `b524(*slot,&lc); b2e0(lc,&l8); 4c98(slot,l8)` and the

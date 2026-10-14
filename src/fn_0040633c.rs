@@ -1,4 +1,4 @@
-//! Original procedure `0x0040633c` (134 bytes, `0x40633c–0x4063c1`).
+//! Original procedure `0x0040633c` (134 bytes, `0x0040633c–0x004063c1`).
 //! Evidence: `evidence/0040633c_fn_0040633c.md`.
 
 unsafe extern "C" fn default_pin(_slot: *mut u8, _src: *mut u8) {}
@@ -20,21 +20,21 @@ unsafe extern "C" fn default_convert(
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Target `0x404c98` (`FUN_00404c98`), `(param_2, null)` on entry,
+/// Target `0x00404c98` (`FUN_00404c98`), `(param_2, null)` on entry,
 /// `(param_2, local)` after the convert lanes.
 ///
 /// ponytail: hook standing in for done `fn_00404c98`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00404c98: unsafe extern "C" fn(*mut u8, *mut u8) = default_pin;
 
-/// Target `0x404f00` (`FUN_00404f00`), `(&local_8, lead)` then
+/// Target `0x00404f00` (`FUN_00404f00`), `(&local_8, lead)` then
 /// `(&local_8, n-1)` on the positive lane.
 ///
 /// ponytail: hook standing in for done `fn_00404f00`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00404f00: unsafe extern "C" fn(*mut *mut u8, u32) = default_ensure;
 
-/// Target `0x404d24` (`FUN_00404d24`), called with `local_8`,
+/// Target `0x00404d24` (`FUN_00404d24`), called with `local_8`,
 /// result feeds convert as the wide dst.
 ///
 /// ponytail: hook standing in for done `fn_00404d24` (which returns
@@ -42,27 +42,27 @@ pub static mut HOOK_00404f00: unsafe extern "C" fn(*mut *mut u8, u32) = default_
 /// linkage proven.
 pub static mut HOOK_00404d24: unsafe extern "C" fn(*const u8) -> *const u8 = default_data;
 
-/// Target `0x4062b8` (`FUN_004062b8`),
+/// Target `0x004062b8` (`FUN_004062b8`),
 /// `(data, lead+1, param_1+1, lead)`; 4th arg spilled with `PUSH EBX`
-/// at `0x406371` across the data call.
+/// at `0x00406371` across the data call.
 ///
 /// ponytail: hook standing in for done `fn_004062b8`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_004062b8: unsafe extern "C" fn(*mut u16, u32, *const u8, i32) -> u32 =
     default_convert;
 
-/// Target `0x404cec` (`FUN_00404cec`), `(&local_8, null)` on the
+/// Target `0x00404cec` (`FUN_00404cec`), `(&local_8, null)` on the
 /// signed-`JLE` (`n<=0`) lane.
 ///
 /// ponytail: hook standing in for done `fn_00404cec`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00404cec: unsafe extern "C" fn(*mut u8, *mut u8) = default_pin;
 
-/// Target `0x404c88` (`thunk_FUN_004046c4`), always run on
+/// Target `0x00404c88` (`thunk_FUN_004046c4`), always run on
 /// `&local_8` (SEH finally on target); return ignored, as at site.
 ///
 /// ponytail: hook standing in for the thunk target, rewire once
-/// `0x4046c4` is linked.
+/// `0x004046c4` is linked.
 pub static mut HOOK_004046c4: unsafe extern "C" fn(*mut u8) = default_release;
 
 /// Lead-byte convert: `pin(param_2, null)`; if `*param_1 != 0`,

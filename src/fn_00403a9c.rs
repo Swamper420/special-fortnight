@@ -1,4 +1,4 @@
-//! Original procedure `0x00403a9c` (23 bytes, `0x403a9c–0x403ab2`).
+//! Original procedure `0x00403a9c` (23 bytes, `0x00403a9c–0x00403ab2`).
 //! Evidence: `evidence/00403a9c_fn_00403a9c.md`.
 
 use crate::fn_00403ab4::fn_00403ab4;

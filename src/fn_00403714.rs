@@ -1,4 +1,4 @@
-//! Original procedure `0x00403714` (145 bytes, `0x403714–0x403784` + `0x40378c–0x4037ab`).
+//! Original procedure `0x00403714` (145 bytes, `0x00403714–0x00403784` + `0x0040378c–0x004037ab`).
 //! Evidence: `evidence/00403714_fn_00403714.md`.
 
 unsafe extern "C" fn default_open(
@@ -26,14 +26,14 @@ unsafe extern "C" fn default_close(_hkey: u32) -> u32 {
     0
 }
 
-/// Import `ADVAPI32.DLL::RegOpenKeyExW` (`CALL 0x401160`).
+/// Import `ADVAPI32.DLL::RegOpenKeyExW` (`CALL 0x00401160`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_RegOpenKeyExW: unsafe extern "C" fn(u32, *const u16, u32, u32, *mut u32) -> u32 =
     default_open;
 
-/// Import `ADVAPI32.DLL::RegQueryValueExW` (`CALL 0x401168`).
+/// Import `ADVAPI32.DLL::RegQueryValueExW` (`CALL 0x00401168`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
@@ -46,25 +46,25 @@ pub static mut HOOK_RegQueryValueExW: unsafe extern "C" fn(
     *mut u32,
 ) -> u32 = default_query;
 
-/// Import `ADVAPI32.DLL::RegCloseKey` (`CALL 0x401158`).
+/// Import `ADVAPI32.DLL::RegCloseKey` (`CALL 0x00401158`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_RegCloseKey: unsafe extern "C" fn(u32) -> u32 = default_close;
 
-/// Word cell at `0x41201c` (`DAT_0041201c`), FPU-control-ish mask.
+/// Word cell at `0x0041201c` (`DAT_0041201c`), FPU-control-ish mask.
 ///
 /// ponytail: absolute-address cell as `u16` hook global, upgrade to
 /// real image-relative data once data layout proven.
 pub static mut DAT_0041201c: u16 = 0;
 
-/// UTF-16 `L"SOFTWARE\\Borland\\Delphi\\RTL"` at `0x4037ac`.
+/// UTF-16 `L"SOFTWARE\\Borland\\Delphi\\RTL"` at `0x004037ac`.
 pub static SUBKEY_004037AC: [u16; 28] = [
     0x53, 0x4F, 0x46, 0x54, 0x57, 0x41, 0x52, 0x45, 0x5C, 0x42, 0x6F, 0x72, 0x6C, 0x61,
     0x6E, 0x64, 0x5C, 0x44, 0x65, 0x6C, 0x70, 0x68, 0x69, 0x5C, 0x52, 0x54, 0x4C, 0x00,
 ];
 
-/// UTF-16 `L"FPUMaskValue"` at `0x4037e4`.
+/// UTF-16 `L"FPUMaskValue"` at `0x004037e4`.
 pub static VALUE_004037E4: [u16; 13] = [
     0x46, 0x50, 0x55, 0x4D, 0x61, 0x73, 0x6B, 0x56, 0x61, 0x6C, 0x75, 0x65, 0x00,
 ];

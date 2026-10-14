@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e014` (188 bytes, `0x40e014–0x40e0cf`).
+//! Original procedure `0x0040e014` (188 bytes, `0x0040e014–0x0040e0cf`).
 //! Evidence: `evidence/0040e014_fn_0040e014.md`.
 
 unsafe extern "C" fn default_cmp(_p: *mut u32, _s: *mut u32, _n: u32) -> u32 {
@@ -21,7 +21,7 @@ pub static mut HOOK_0040C738: unsafe extern "C" fn(*mut u8, u32) -> u32 = defaul
 pub static mut HOOK_004080DC: unsafe extern "C" fn(*mut u8) -> u32 = default_strlen;
 /// ponytail: hook for `fn_00404dd4` (table fill).
 pub static mut HOOK_00404DD4: unsafe extern "C" fn(*mut u32, *mut u8, u32) = default_mk;
-/// Target `0x40df60` fatal sink.
+/// Target `0x0040df60` fatal sink.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040df60`.
 pub static mut HOOK_0040DF60: unsafe extern "C" fn() = default_fatal;
@@ -84,7 +84,7 @@ unsafe fn goto_checks(param_1: *mut u8, param_2: u32) {
     }
 }
 
-/// Pointer-word for `"Inno Setup Messages (5.5.3) (u)"` (`PTR 0x412c18`).
+/// Pointer-word for `"Inno Setup Messages (5.5.3) (u)"` (`PTR 0x00412c18`).
 ///
 /// ponytail: address-named static; referent bytes unproven beyond observed string.
 pub static mut PTR_S_INNO_SETUP_MESSAGES: u32 = 0;

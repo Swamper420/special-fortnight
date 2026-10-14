@@ -1,4 +1,4 @@
-//! Original procedure `0x00407cf4` (68 bytes, `0x407cf4–0x407d37`).
+//! Original procedure `0x00407cf4` (68 bytes, `0x00407cf4–0x00407d37`).
 //! Evidence: `evidence/00407cf4_fn_00407cf4.md`.
 
 /// Unsigned base-10 writer: emits `param_1` as words (`rem+0x30`)

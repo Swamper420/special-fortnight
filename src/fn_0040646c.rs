@@ -1,4 +1,4 @@
-//! Original procedure `0x0040646c` (58 bytes, `0x40646c–0x4064a5`).
+//! Original procedure `0x0040646c` (58 bytes, `0x0040646c–0x004064a5`).
 //! Evidence: `evidence/0040646c_fn_0040646c.md`.
 
 unsafe extern "C" fn default_get_version() -> u32 {
@@ -11,7 +11,7 @@ unsafe extern "C" fn default_get_version() -> u32 {
 /// image-relative import once data layout proven.
 pub static mut DAT_004138d0: u32 = 0;
 
-/// Thunk `0x4011a0` (`KERNEL32.DLL::GetVersion`).
+/// Thunk `0x004011a0` (`KERNEL32.DLL::GetVersion`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" GetVersion` once

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040991c` (108 bytes, `0x40991c–0x409987`).
+//! Original procedure `0x0040991c` (108 bytes, `0x0040991c–0x00409987`).
 //! Evidence: `evidence/0040991c_fn_0040991c.md`.
 
 unsafe extern "C" fn default_link(_p1: *mut u8, _p2: u8, _p3: *const u8) -> *mut u8 {
@@ -13,7 +13,7 @@ unsafe extern "C" fn default_pin(_slot: *mut u8, _src: *mut u8) {}
 
 unsafe extern "C" fn default_release(_slot: *mut u8, _n: u32) {}
 
-/// Link target `0x4039e4` (`FUN_004039e4`), `(EAX, DL, ECX)` plus
+/// Link target `0x004039e4` (`FUN_004039e4`), `(EAX, DL, ECX)` plus
 /// the 16-byte SEH record at reserved slots; returns the EAX lane.
 ///
 /// ponytail: hook standing in for done `fn_004039e4`, rewire to
@@ -22,14 +22,14 @@ unsafe extern "C" fn default_release(_slot: *mut u8, _n: u32) {}
 pub static mut HOOK_004039e4: unsafe extern "C" fn(*mut u8, u8, *const u8) -> *mut u8 =
     default_link;
 
-/// Target `0x4063e4` (`FUN_004063e4`), `(p3, &local_c)`.
+/// Target `0x004063e4` (`FUN_004063e4`), `(p3, &local_c)`.
 ///
 /// ponytail: hook standing in for done `fn_004063e4` (which
 /// returns the DATA pointer through the slot), rewire to the real
 /// call once cross-module linkage proven.
 pub static mut HOOK_004063e4: unsafe extern "C" fn(*const u8, *mut u8) = default_resolve;
 
-/// Target `0x4082d4` (`FUN_004082d4`), `(local_c, p5, p4,
+/// Target `0x004082d4` (`FUN_004082d4`), `(local_c, p5, p4,
 /// &local_8)`.
 ///
 /// ponytail: hook standing in for done `fn_004082d4`, rewire to
@@ -37,13 +37,13 @@ pub static mut HOOK_004063e4: unsafe extern "C" fn(*const u8, *mut u8) = default
 pub static mut HOOK_004082d4: unsafe extern "C" fn(*mut u16, u32, u32, *mut u8) =
     default_convert;
 
-/// Target `0x404c98` (`FUN_00404c98`), `(obj+4, local_8)`.
+/// Target `0x00404c98` (`FUN_00404c98`), `(obj+4, local_8)`.
 ///
 /// ponytail: hook standing in for done `fn_00404c98`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_00404c98: unsafe extern "C" fn(*mut u8, *mut u8) = default_pin;
 
-/// Target `0x404c90` (`thunk_FUN_004046e8`), `(&local_c, 2)`,
+/// Target `0x00404c90` (`thunk_FUN_004046e8`), `(&local_c, 2)`,
 /// unconditional.
 ///
 /// ponytail: hook standing in for the thunk target, rewire to

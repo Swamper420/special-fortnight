@@ -1,4 +1,4 @@
-//! Original procedure `0x0040bb34` (312 bytes, `0x40bb34–0x40bc6b`).
+//! Original procedure `0x0040bb34` (312 bytes, `0x0040bb34–0x0040bc6b`).
 //! Evidence: `evidence/0040bb34_fn_0040bb34.md`.
 
 unsafe extern "C" fn default_query(
@@ -26,7 +26,7 @@ unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8) {}
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Import `ADVAPI32.DLL::RegQueryValueExW` (`CALL 0x406638`),
+/// Import `ADVAPI32.DLL::RegQueryValueExW` (`CALL 0x00406638`),
 /// called as `(hkey, name, 0, &type, data, &size)`; `0xEA`
 /// (`ERROR_MORE_DATA`) on the second call retries the loop.
 ///
@@ -35,41 +35,41 @@ unsafe extern "C" fn default_release(_slot: *mut u8) {}
 pub static mut HOOK_RegQueryValueExW: unsafe extern "C" fn(u32, *mut u16, u32, *mut u32, *mut u8, *mut u32) -> u32 =
     default_query;
 
-/// Sizer `0x404dd4` (`FUN_00404dd4`), called as
+/// Sizer `0x00404dd4` (`FUN_00404dd4`), called as
 /// `(&local_8, null, (size+1)>>1)`.
 ///
 /// ponytail: hook mirroring done `fn_00404dd4`'s shape, rewire to
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_00404DD4: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_size;
 
-/// Data extractor `0x4054ac` (`thunk_FUN_00405458`), called on
+/// Data extractor `0x004054ac` (`thunk_FUN_00405458`), called on
 /// `&local_8`; returns a DATA pointer.
 ///
 /// ponytail: hook mirroring done `fn_00405458`'s shape, rewire to
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_00405458: unsafe extern "C" fn(*mut u8) -> *mut u8 = default_data;
 
-/// Grow `0x404f00` (`FUN_00404f00`), called as `(&local_8, nwords)`.
+/// Grow `0x00404f00` (`FUN_00404f00`), called as `(&local_8, nwords)`.
 ///
 /// ponytail: hook mirroring done `fn_00404f00`'s shape, rewire to
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_00404F00: unsafe extern "C" fn(*mut u8, u32) = default_grow;
 
-/// Store `0x404c98` (`FUN_00404c98`), `(slot, null)` on the
+/// Store `0x00404c98` (`FUN_00404c98`), `(slot, null)` on the
 /// zero-size lane else `(slot, local_8)`.
 ///
 /// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire to
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u8, *mut u8) = default_store;
 
-/// Overflow arm `0x409818` (`FUN_00409818`), no args, called when
+/// Overflow arm `0x00409818` (`FUN_00409818`), no args, called when
 /// `size >= 0x70000000` (unsigned) with fallthrough.
 ///
 /// ponytail: hook mirroring done `fn_00409818`'s shape, rewire to
 /// the real call once cross-module test serialization exists.
 pub static mut HOOK_00409818: unsafe extern "C" fn() = default_fail;
 
-/// Release `0x404c88` (`thunk_FUN_004046c4`), always run on
+/// Release `0x00404c88` (`thunk_FUN_004046c4`), always run on
 /// `&local_8` (SEH finally on target).
 ///
 /// ponytail: hook mirroring done `fn_004046c4`'s shape, rewire to

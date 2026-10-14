@@ -1,4 +1,4 @@
-//! Original procedure `0x004065d4` (65 bytes, `0x4065d4–0x406614`).
+//! Original procedure `0x004065d4` (65 bytes, `0x004065d4–0x00406614`).
 //! Evidence: `evidence/004065d4_fn_004065d4.md`.
 
 unsafe extern "C" fn default_module_handle(_name: *const u16) -> u32 {
@@ -34,7 +34,7 @@ pub static mut DAT_004127bc: u32 = 0;
 /// ponytail: same absolute-cell modeling as `TLS_INDEX_004127ac`.
 pub static mut DAT_004127c0: u32 = 0;
 
-/// Thunk `0x406510` (`KERNEL32.DLL::GetModuleHandleW`), called with null.
+/// Thunk `0x00406510` (`KERNEL32.DLL::GetModuleHandleW`), called with null.
 ///
 /// ponytail: hook standing in for the OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" GetModuleHandleW` once
@@ -42,21 +42,21 @@ pub static mut DAT_004127c0: u32 = 0;
 pub static mut GET_MODULE_HANDLE_W_00406510: unsafe extern "C" fn(*const u16) -> u32 =
     default_module_handle;
 
-/// Target `0x4065c8` (`FUN_004065c8`), no args.
+/// Target `0x004065c8` (`FUN_004065c8`), no args.
 ///
 /// ponytail: hook standing in for same-batch `fn_004065c8`, rewire
 /// to the real call once both modules are linked.
 pub static mut CALLEE_004065c8: unsafe extern "C" fn() = default_init;
 
-/// Target `0x4042d0` (`FUN_004042d0`), `(param_1, 0x4127b4)`.
+/// Target `0x004042d0` (`FUN_004042d0`), `(param_1, 0x004127b4)`.
 ///
 /// ponytail: hook standing in for done `fn_004042d0`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_004042d0: unsafe extern "C" fn(*mut u8, *mut u8) = default_final;
 
-/// Startup init: `tls=0; h=GetModuleHandleW(null); [0x415b48]=h;
-/// [0x4127b8]=re-read; zeros; 004065c8();
-/// 004042d0(param_1, 0x4127b4)`. `param_1` arrives in EAX per Ghidra
+/// Startup init: `tls=0; h=GetModuleHandleW(null); [0x00415b48]=h;
+/// [0x004127b8]=re-read; zeros; 004065c8();
+/// 004042d0(param_1, 0x004127b4)`. `param_1` arrives in EAX per Ghidra
 /// `__register` observation; the `DAT_004127b4` cell is owned by
 /// `fn_004065c8` (no duplicate cell).
 pub unsafe fn fn_004065d4(param_1: *mut u8) {

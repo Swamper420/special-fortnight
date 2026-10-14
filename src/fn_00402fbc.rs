@@ -1,4 +1,4 @@
-//! Original procedure `0x00402fbc` (215 bytes, `0x402fbc–0x402ff1` + `0x403018–0x4030b8`).
+//! Original procedure `0x00402fbc` (215 bytes, `0x00402fbc–0x00402ff1` + `0x00403018–0x004030b8`).
 //! Evidence: `evidence/00402fbc_fn_00402fbc.md`.
 
 unsafe fn r64(p: *const u8) -> u64 {

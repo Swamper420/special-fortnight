@@ -1,9 +1,9 @@
-//! Original procedure `0x0040436c` (67 bytes, `0x40436c–0x4043ae`).
+//! Original procedure `0x0040436c` (67 bytes, `0x0040436c–0x004043ae`).
 //! Evidence: `evidence/0040436c_fn_0040436c.md`.
 
 unsafe extern "C" fn default_resolve(_a: u32, _b: *mut *mut u8) {}
 
-/// First callee `0x4063e4` (`FUN_004063e4`): `(EAX=param_1, EDX=&local)`.
+/// First callee `0x004063e4` (`FUN_004063e4`): `(EAX=param_1, EDX=&local)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_004063e4` once it exists.
@@ -11,15 +11,15 @@ pub static mut HOOK_004063E4: unsafe extern "C" fn(u32, *mut *mut u8) = default_
 
 unsafe extern "C" fn default_convert(_a: *mut u8, _b: *mut u8) {}
 
-/// Second callee `0x404ecc` (`FUN_00404ecc`): `(EAX=param_2, EDX=local)`
-/// — two args, no trailing zero (unlike sibling `0x404318`).
+/// Second callee `0x00404ecc` (`FUN_00404ecc`): `(EAX=param_2, EDX=local)`
+/// — two args, no trailing zero (unlike sibling `0x00404318`).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_00404ecc` once it exists.
 pub static mut HOOK_00404ECC: unsafe extern "C" fn(*mut u8, *mut u8) = default_convert;
 
-/// Handler pushed at `0x40437a` for the unwind window.
-pub const HANDLER_004043AF: u32 = 0x4043af;
+/// Handler pushed at `0x0040437a` for the unwind window.
+pub const HANDLER_004043AF: u32 = 0x004043af;
 
 /// Inline SEH record: `prev/handler/ebp` at `+0/+4/+8`
 /// (`PUSH EBP; PUSH handler; PUSH FS:[0]; FS:[0]=ESP`).
@@ -30,7 +30,7 @@ pub struct SehRecord0040436c {
     pub ebp: u32,
 }
 
-/// EBP value stored into the record (`PUSH EBP` at `0x404379`).
+/// EBP value stored into the record (`PUSH EBP` at `0x00404379`).
 ///
 /// ponytail: static stands in for callee-saved EBP read (host frame
 /// pointer meaningless), rewire to inline asm once Windows-target
@@ -39,12 +39,12 @@ pub static mut EBP_0040436C: u32 = 0;
 
 /// Resolve-convert-release: `local=0; resolve(param_1,&local);
 /// convert(param_2,local); release(&local)`. Same shape as sibling
-/// `0x404318` but the middle call takes two args. Head links through
+/// `0x00404318` but the middle call takes two args. Head links through
 /// owner `crate::fn_004039e4::SEH_HEAD_FS0` (no duplicate cell);
-/// release is the reconstructed `fn_004046c4` (via thunk `0x404c88`),
+/// release is the reconstructed `fn_004046c4` (via thunk `0x00404c88`),
 /// called after the SEH unlink per assembly.
 ///
-/// ponytail: the `PUSH 0x4043b6` before the release call has no
+/// ponytail: the `PUSH 0x004043b6` before the release call has no
 /// decompiler counterpart and no stack-arg reader in the callee;
 /// left unmodeled.
 pub unsafe fn fn_0040436c(param_1: u32, param_2: *mut u8) {

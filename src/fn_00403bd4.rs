@@ -1,4 +1,4 @@
-//! Original procedure `0x00403bd4` (30 bytes, `0x403bd4–0x403bf1`).
+//! Original procedure `0x00403bd4` (30 bytes, `0x00403bd4–0x00403bf1`).
 //! Evidence: `evidence/00403bd4_fn_00403bd4.md`.
 
 /// Flag-gated raise: return `param_1` when owner

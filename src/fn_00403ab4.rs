@@ -1,9 +1,9 @@
-//! Original procedure `0x00403ab4` (43 bytes, `0x403ab4–0x403ade`).
+//! Original procedure `0x00403ab4` (43 bytes, `0x00403ab4–0x00403ade`).
 //! Evidence: `evidence/00403ab4_fn_00403ab4.md`.
 
 use crate::fn_00402e20::fn_00402e20;
 
-/// Global dword at `0x4138c4` (`DAT_004138c4`): indirect table base.
+/// Global dword at `0x004138c4` (`DAT_004138c4`): indirect table base.
 /// Null (0) skips the indirect lane; else target is read at `+4`.
 ///
 /// ponytail: absolute-address cell as pointer-sized hook global, upgrade

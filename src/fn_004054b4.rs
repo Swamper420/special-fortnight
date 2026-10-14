@@ -1,4 +1,4 @@
-//! Original procedure `0x004054b4` (65 bytes, `0x4054b4–0x4054f4`).
+//! Original procedure `0x004054b4` (65 bytes, `0x004054b4–0x004054f4`).
 //! Evidence: `evidence/004054b4_fn_004054b4.md`.
 
 use core::ptr::{null_mut, read_unaligned, write_unaligned};
@@ -11,14 +11,14 @@ unsafe extern "C" fn default_fail(_wrapped: u32) -> *mut u8 {
     null_mut()
 }
 
-/// Target `0x402e04` (`FUN_00402e04`), called with `2n+14`; result is
+/// Target `0x00402e04` (`FUN_00402e04`), called with `2n+14`; result is
 /// the object base (`+12` is the data pointer).
 ///
 /// ponytail: hook standing in for done `fn_00402e04`, rewire to real
 /// call once cross-module pointer-sized linkage exists.
 pub static mut HOOK_00402e04: unsafe extern "C" fn(u32) -> *mut u8 = default_heap;
 
-/// Fail target `0x40380c` (`thunk_FUN_00402f60`), reached by terminal
+/// Fail target `0x0040380c` (`thunk_FUN_00402f60`), reached by terminal
 /// `JMP` with the wrapped size in EAX.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire once

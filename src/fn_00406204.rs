@@ -1,9 +1,9 @@
-//! Original procedure `0x00406204` (100 bytes, `0x406204–0x406267`).
+//! Original procedure `0x00406204` (100 bytes, `0x00406204–0x00406267`).
 //! Evidence: `evidence/00406204_fn_00406204.md`.
 
 unsafe extern "C" fn default_callee(_a: u32, _b: u32, _c: *mut u8) {}
 
-/// Direct callee `0x406198` (`FUN_00406198`), called as
+/// Direct callee `0x00406198` (`FUN_00406198`), called as
 /// `(param_1[1], 0, param_3)` per observed pseudocode.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040a358` (110 bytes, `0x40a358–0x40a3c5`).
+//! Original procedure `0x0040a358` (110 bytes, `0x0040a358–0x0040a3c5`).
 //! Evidence: `evidence/0040a358_fn_0040a358.md`.
 
 use crate::fn_00404e50::fn_00404e50;
@@ -7,7 +7,7 @@ unsafe extern "C" fn default_version(_info: *mut u8) -> u32 {
     0
 }
 
-/// Import `KERNEL32.DLL::GetVersionExW` (`CALL 0x4067cc`), BOOL-shaped:
+/// Import `KERNEL32.DLL::GetVersionExW` (`CALL 0x004067cc`), BOOL-shaped:
 /// nonzero fills the `OSVERSIONINFOW` at the arg.
 ///
 /// ponytail: hook standing in for the import, rewire to a real

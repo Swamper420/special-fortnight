@@ -1,4 +1,4 @@
-//! Original procedure `0x00408eb4` (74 bytes, `0x408eb4–0x408efd`).
+//! Original procedure `0x00408eb4` (74 bytes, `0x00408eb4–0x00408efd`).
 //! Evidence: `evidence/00408eb4_fn_00408eb4.md`.
 
 use crate::fn_00404c98::fn_00404c98;
@@ -13,7 +13,7 @@ unsafe extern "C" fn default_locale_info(
     0
 }
 
-/// Import `KERNEL32.DLL::GetLocaleInfoW` (`CALL 0x406708`).
+/// Import `KERNEL32.DLL::GetLocaleInfoW` (`CALL 0x00406708`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.

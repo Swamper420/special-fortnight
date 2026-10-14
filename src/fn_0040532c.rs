@@ -1,4 +1,4 @@
-//! Original procedure `0x0040532c` (286 bytes, `0x40532c–0x405449`).
+//! Original procedure `0x0040532c` (286 bytes, `0x0040532c–0x00405449`).
 //! Evidence: `evidence/0040532c_fn_0040532c.md`.
 
 unsafe extern "C" fn default_pin(_v: *mut u8) {}
@@ -15,14 +15,14 @@ unsafe extern "C" fn default_warn(_n: u32) {}
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Pin `0x404c80` (`thunk_FUN_0040493c`), called with the source
+/// Pin `0x00404c80` (`thunk_FUN_0040493c`), called with the source
 /// on entry.
 ///
 /// ponytail: hook standing in for thunk target, rewire once
-/// `0x40493c` is reconstructed.
+/// `0x0040493c` is reconstructed.
 pub static mut HOOK_00404c80: unsafe extern "C" fn(*mut u8) = default_pin;
 
-/// Normalizer `0x404820` (`FUN_00404820`), `(slot, value)`.
+/// Normalizer `0x00404820` (`FUN_00404820`), `(slot, value)`.
 /// Source site passes `(&local_8, local_8)`; dest site passes
 /// `(param_2, *param_2)`.
 ///
@@ -31,31 +31,31 @@ pub static mut HOOK_00404c80: unsafe extern "C" fn(*mut u8) = default_pin;
 /// proven.
 pub static mut HOOK_00404820: unsafe extern "C" fn(*mut u8, *mut u8) -> *mut u8 = default_norm;
 
-/// Copier `0x402fbc` (`FUN_00402fbc`), `(src, dst, bytes)`.
+/// Copier `0x00402fbc` (`FUN_00402fbc`), `(src, dst, bytes)`.
 ///
 /// ponytail: hook mirroring done `fn_00402fbc`'s shape, rewire
 /// to the real call once cross-module linkage proven.
 pub static mut HOOK_00402fbc: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_fill;
 
-/// Grow `0x404f00` (`FUN_00404f00`), `(slot, total)`.
+/// Grow `0x00404f00` (`FUN_00404f00`), `(slot, total)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee,
 /// rewire to real `fn_00404f00` once it exists.
 pub static mut HOOK_00404f00: unsafe extern "C" fn(*mut u8, u32) = default_grow;
 
-/// Overflow report `0x40380c` (`thunk_FUN_00402f60`). Unlike the
+/// Overflow report `0x0040380c` (`thunk_FUN_00402f60`). Unlike the
 /// sibling procedures this call site returns; the hook is
 /// called and work continues.
 ///
 /// ponytail: hook standing in for thunk target, rewire once
-/// `0x40380c` is linked.
+/// `0x0040380c` is linked.
 pub static mut HOOK_00402f60: unsafe extern "C" fn(u32) = default_warn;
 
-/// Release `0x404c88` (`thunk_FUN_004046c4`), always run on
+/// Release `0x00404c88` (`thunk_FUN_004046c4`), always run on
 /// `&local_8` (SEH finally on target).
 ///
 /// ponytail: hook standing in for thunk target, rewire once
-/// `0x4046c4` is linked.
+/// `0x004046c4` is linked.
 pub static mut HOOK_004046c4: unsafe extern "C" fn(*mut u8) = default_release;
 
 /// Insert the source string into `*param_2` at 1-based

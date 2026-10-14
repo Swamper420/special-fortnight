@@ -1,11 +1,11 @@
-//! Original procedure `0x00405b20` (39 bytes, `0x405b20–0x405b46`).
+//! Original procedure `0x00405b20` (39 bytes, `0x00405b20–0x00405b46`).
 //! Evidence: `evidence/00405b20_fn_00405b20.md`.
 
 use core::ptr::{read_unaligned, write_unaligned};
 
 unsafe extern "C" fn default_release(_holder: *mut *mut u8, _desc: *mut u8) {}
 
-/// Target `0x405ae4` (`FUN_00405ae4`), called as `(holder, param_3)`
+/// Target `0x00405ae4` (`FUN_00405ae4`), called as `(holder, param_3)`
 /// only when the old object's `LOCK DEC [old-8]` reaches zero (after a
 /// plain `INC` restore).
 ///

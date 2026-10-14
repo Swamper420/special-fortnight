@@ -1,4 +1,4 @@
-//! Original procedure `0x004030bc` (37 bytes, `0x4030bc–0x4030e0`).
+//! Original procedure `0x004030bc` (37 bytes, `0x004030bc–0x004030e0`).
 //! Evidence: `evidence/004030bc_fn_004030bc.md`.
 
 unsafe extern "C" fn default_qpc(_li: *mut u64) -> i32 {
@@ -9,14 +9,14 @@ unsafe extern "C" fn default_gtc() -> u32 {
     0
 }
 
-/// Thunk `0x4011a8` (`KERNEL32.DLL::QueryPerformanceCounter`).
+/// Thunk `0x004011a8` (`KERNEL32.DLL::QueryPerformanceCounter`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system"` import once
 /// Windows-target linkage proven.
 pub static mut HOOK_004011a8: unsafe extern "C" fn(*mut u64) -> i32 = default_qpc;
 
-/// Thunk `0x4011b0` (`KERNEL32.DLL::GetTickCount`).
+/// Thunk `0x004011b0` (`KERNEL32.DLL::GetTickCount`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system"` import once

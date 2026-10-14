@@ -1,4 +1,4 @@
-//! Original procedure `0x0040eac4` (94 bytes, `0x40eac4–0x40eb21`).
+//! Original procedure `0x0040eac4` (94 bytes, `0x0040eac4–0x0040eb21`).
 //! Evidence: `evidence/0040eac4_fn_0040eac4.md`.
 
 unsafe extern "C" fn default_fwd(_p: u32, _h: u32, _m: u32, _w: u32, _l: u32) -> u32 {
@@ -12,7 +12,7 @@ pub static mut DAT_00412AE8: u32 = 0;
 /// `DAT_00418654` previous WNDPROC (forward target).
 pub static mut DAT_00418654: u32 = 0;
 
-/// Target `0x406884 USER32.DLL::CallWindowProcW`.
+/// Target `0x00406884 USER32.DLL::CallWindowProcW`.
 pub static mut HOOK_CALLWINDOWPROCW: unsafe extern "C" fn(u32, u32, u32, u32, u32) -> u32 =
     default_fwd;
 

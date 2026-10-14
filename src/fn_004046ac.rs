@@ -1,4 +1,4 @@
-//! Original procedure `0x004046ac` (11 bytes, `0x4046ac–0x4046b6`).
+//! Original procedure `0x004046ac` (11 bytes, `0x004046ac–0x004046b6`).
 //! Evidence: `evidence/004046ac_fn_004046ac.md`.
 
 unsafe extern "C" fn default_target() {}
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_target() {}
 /// image-relative import once data layout proven.
 pub static mut CELL_00412000: u32 = 0;
 
-/// Target `0x404580` (`FUN_00404580`), called with no register lane.
+/// Target `0x00404580` (`FUN_00404580`), called with no register lane.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00404580` once it exists.

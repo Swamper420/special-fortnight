@@ -1,9 +1,9 @@
-//! Original procedure `0x0040699c` (41 bytes, `0x40699c–0x4069c4`).
+//! Original procedure `0x0040699c` (41 bytes, `0x0040699c–0x004069c4`).
 //! Evidence: `evidence/0040699c_fn_0040699c.md`.
 
 use crate::fn_00406988::fn_00406988;
 
-/// Import `KERNEL32.DLL::GetSystemDirectoryW` (`CALL 0x4067a4`).
+/// Import `KERNEL32.DLL::GetSystemDirectoryW` (`CALL 0x004067a4`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.

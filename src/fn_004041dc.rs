@@ -1,4 +1,4 @@
-//! Original procedure `0x004041dc` (38 bytes, `0x4041dc–0x404201`).
+//! Original procedure `0x004041dc` (38 bytes, `0x004041dc–0x00404201`).
 //! Evidence: `evidence/004041dc_fn_004041dc.md`.
 
 /// FS-chain unlink over `param_1` (arrives in EAX): `node=[param_1+4]`;

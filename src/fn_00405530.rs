@@ -1,18 +1,18 @@
-//! Original procedure `0x00405530` (24 bytes, `0x405530–0x405547`).
+//! Original procedure `0x00405530` (24 bytes, `0x00405530–0x00405547`).
 //! Evidence: `evidence/00405530_fn_00405530.md`.
 
 unsafe extern "C" fn default_slot() {}
 
 unsafe extern "C" fn default_tail(_arg: u32) {}
 
-/// Indirect cell observed as `dword ptr [0x412010]` (`DAT_00412010`);
+/// Indirect cell observed as `dword ptr [0x00412010]` (`DAT_00412010`);
 /// the branch tests cell *content* against 0.
 ///
 /// ponytail: absolute-address cell modeled as optional hook, upgrade
 /// to real image-relative import once data layout proven.
 pub static mut PTR_00412010: Option<unsafe extern "C" fn()> = None;
 
-/// Tail target `0x402f60` (`FUN_00402f60`), called on the null lane
+/// Tail target `0x00402f60` (`FUN_00402f60`), called on the null lane
 /// with `(param & ~0xff) | 0x10` (`MOV AL,0x10` over live EAX).
 ///
 /// ponytail: hook standing in for done `fn_00402f60`, rewire to real

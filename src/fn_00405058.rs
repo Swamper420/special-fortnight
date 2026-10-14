@@ -1,18 +1,18 @@
-//! Original procedure `0x00405058` (42 bytes, `0x405058–0x405081`).
+//! Original procedure `0x00405058` (42 bytes, `0x00405058–0x00405081`).
 //! Evidence: `evidence/00405058_fn_00405058.md`.
 
 unsafe extern "C" fn default_tail3(_a: *mut u8, _b: *mut u8, _c: *mut u8) {}
 
 unsafe extern "C" fn default_tail2(_a: *mut u8, _b: *mut u8) {}
 
-/// Tail `0x405127` (`LAB_00405127`), taken when `param_2==0`.
+/// Tail `0x00405127` (`LAB_00405127`), taken when `param_2==0`.
 ///
 /// ponytail: hook standing in for out-of-body code, rewire once
-/// `0x405127` is reconstructed.
+/// `0x00405127` is reconstructed.
 pub static mut TAIL_00405127: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) =
     default_tail3;
 
-/// Target `0x404c98` (`FUN_00404c98`), taken when `param_3==0`
+/// Target `0x00404c98` (`FUN_00404c98`), taken when `param_3==0`
 /// and on the fallthrough lane as `(p1, p2)`.
 ///
 /// ponytail: hook standing in for done `fn_00404c98` (same
@@ -20,14 +20,14 @@ pub static mut TAIL_00405127: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) =
 /// cross-module linkage proven.
 pub static mut HOOK_00404c98: unsafe extern "C" fn(*mut u8, *mut u8) = default_tail2;
 
-/// Tail `0x40512e` (`LAB_0040512e`), taken when `param_2==*p1`.
+/// Tail `0x0040512e` (`LAB_0040512e`), taken when `param_2==*p1`.
 ///
 /// ponytail: hook standing in for out-of-body code, rewire once
-/// `0x40512e` is reconstructed.
+/// `0x0040512e` is reconstructed.
 pub static mut TAIL_0040512e: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) =
     default_tail3;
 
-/// Sibling lane `0x405082` (`FUN_00405082`), taken when
+/// Sibling lane `0x00405082` (`FUN_00405082`), taken when
 /// `param_3==*p1`.
 ///
 /// ponytail: hook standing in for sibling `fn_00405082`, rewire
@@ -35,7 +35,7 @@ pub static mut TAIL_0040512e: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) =
 pub static mut HOOK_00405082: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) =
     default_tail3;
 
-/// Tail `0x404f98` (`FUN_00404f98`), reached by terminal `JMP`
+/// Tail `0x00404f98` (`FUN_00404f98`), reached by terminal `JMP`
 /// with `(p1, old_p3)` after `POP EDX` restores `p3`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire

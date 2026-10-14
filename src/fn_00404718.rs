@@ -1,4 +1,4 @@
-//! Original procedure `0x00404718` (89 bytes, `0x404718–0x404770`).
+//! Original procedure `0x00404718` (89 bytes, `0x00404718–0x00404770`).
 //! Evidence: `evidence/00404718_fn_00404718.md`.
 
 unsafe extern "C" fn default_convert(_d: *mut usize, _s: *mut u8, _c: u32) {}
@@ -11,7 +11,7 @@ unsafe extern "C" fn default_copy(_old: *mut u8, _new: *mut u8, _len: u32) {}
 
 unsafe extern "C" fn default_free(_base: *mut u8) {}
 
-/// Convert tail `0x404e94` (`FUN_00404e94`), reached by `JMP` when the tag
+/// Convert tail `0x00404e94` (`FUN_00404e94`), reached by `JMP` when the tag
 /// word at `src−10` is not 1 (args: dest slot, src, `DAT_004138c8`).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
@@ -19,19 +19,19 @@ unsafe extern "C" fn default_free(_base: *mut u8) {}
 pub static mut CONVERT_00404E94: unsafe extern "C" fn(*mut usize, *mut u8, u32) =
     default_convert;
 
-/// Alloc `0x404774` (`FUN_00404774`), copy-on-write arm.
+/// Alloc `0x00404774` (`FUN_00404774`), copy-on-write arm.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00404774` (same work package) once cross-module wiring exists.
 pub static mut ALLOC_00404774: unsafe extern "C" fn(u32, u32) -> *mut u8 = default_alloc;
 
-/// Copy `0x402fbc` (`FUN_00402fbc`), args `(old, new, old_len)`.
+/// Copy `0x00402fbc` (`FUN_00402fbc`), args `(old, new, old_len)`.
 ///
 /// ponytail: hook standing in for done `fn_00402fbc`, rewire to real call
 /// once cross-module test serialization exists.
 pub static mut COPY_00402FBC: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_copy;
 
-/// Free `0x402e20` (`FUN_00402e20`), arg is header base (`old−12`).
+/// Free `0x00402e20` (`FUN_00402e20`), arg is header base (`old−12`).
 ///
 /// ponytail: hook standing in for done `fn_00402e20` (which takes the base
 /// as `u32`); rewire once address-width unification is decided.

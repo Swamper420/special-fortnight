@@ -1,11 +1,11 @@
-//! Original procedure `0x004054ac` (5 bytes, `0x4054ac–0x4054b0`).
+//! Original procedure `0x004054ac` (5 bytes, `0x004054ac–0x004054b0`).
 //! Evidence: `evidence/004054ac_fn_004054ac.md`.
 
 unsafe extern "C" fn default_target(_slot: *mut u32) -> i32 {
     0
 }
 
-/// Target `0x405458` (`FUN_00405458`), reached by terminal `JMP`.
+/// Target `0x00405458` (`FUN_00405458`), reached by terminal `JMP`.
 ///
 /// ponytail: hook standing in for unreconstructed target, rewire to
 /// real `fn_00405458` once cross-module linkage proven.

@@ -1,4 +1,4 @@
-//! Original procedure `0x00407cd8` (28 bytes, `0x407cd8–0x407cf3`).
+//! Original procedure `0x00407cd8` (28 bytes, `0x00407cd8–0x00407cf3`).
 //! Evidence: `evidence/00407cd8_fn_00407cd8.md`.
 
 /// Signed dispatcher over `fn_00407cf4`: iff the low byte of `param_3`

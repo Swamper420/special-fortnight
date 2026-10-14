@@ -1,12 +1,12 @@
-//! Original procedure `0x0040abf8` (54 bytes, `0x40abf8–0x40ac2d`).
+//! Original procedure `0x0040abf8` (54 bytes, `0x0040abf8–0x0040ac2d`).
 //! Evidence: `evidence/0040abf8_fn_0040abf8.md`.
 
-/// UTF-16 `L"kernel32.dll"` at `0x40ac30` (wide: taken by `GetModuleHandleW`).
+/// UTF-16 `L"kernel32.dll"` at `0x0040ac30` (wide: taken by `GetModuleHandleW`).
 pub static STR_KERNEL32_W: [u16; 13] = [
     0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x33, 0x32, 0x2e, 0x64, 0x6c, 0x6c, 0x00,
 ];
 
-/// UTF-16 `L"GetDiskFreeSpaceExW"` at `0x40ac4c` (wide: taken by `FUN_00406728`).
+/// UTF-16 `L"GetDiskFreeSpaceExW"` at `0x0040ac4c` (wide: taken by `FUN_00406728`).
 pub static STR_GETDISKFREESPACEEXW_W: [u16; 20] = [
     0x47, 0x65, 0x74, 0x44, 0x69, 0x73, 0x6b, 0x46, 0x72, 0x65, 0x65, 0x53, 0x70,
     0x61, 0x63, 0x65, 0x45, 0x78, 0x57, 0x00,
@@ -20,14 +20,14 @@ unsafe extern "C" fn default_resolve(_hmod: u32, _name: *const u16) -> usize {
     0
 }
 
-/// Import thunk `0x406718` (`KERNEL32.DLL::GetModuleHandleW`).
+/// Import thunk `0x00406718` (`KERNEL32.DLL::GetModuleHandleW`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to the real
 /// `windows-sys` import once imports are modeled.
 pub static mut GETMODULEHANDLEW_00406718: unsafe extern "C" fn(*const u16) -> u32 =
     default_module_handle;
 
-/// Resolver `0x406728` (`FUN_00406728`), called with `(hmod, name)`;
+/// Resolver `0x00406728` (`FUN_00406728`), called with `(hmod, name)`;
 /// its EAX residue is stored to `DAT_00412810` per this caller's
 /// observation (the callee's own dossier reports `void`; see evidence).
 ///
@@ -37,7 +37,7 @@ pub static mut HOOK_00406728: unsafe extern "C" fn(u32, *const u16) -> usize =
     default_resolve;
 
 /// Cell observed as `DAT_00412810`; holds the resolve residue, or the
-/// `0x408068` fallback when null.
+/// `0x00408068` fallback when null.
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to real
 /// image-relative import once data layout proven. Pointer-sized: both

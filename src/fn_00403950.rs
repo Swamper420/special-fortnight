@@ -1,4 +1,4 @@
-//! Original procedure `0x00403950` (46 bytes, `0x403950–0x40397d`).
+//! Original procedure `0x00403950` (46 bytes, `0x00403950–0x0040397d`).
 //! Evidence: `evidence/00403950_fn_00403950.md`.
 
 /// Walk object chain matching `key` (incoming SI) against each

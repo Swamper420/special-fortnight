@@ -1,4 +1,4 @@
-//! Original procedure `0x00405664` (24 bytes, `0x405664–0x40567b`).
+//! Original procedure `0x00405664` (24 bytes, `0x00405664–0x0040567b`).
 //! Evidence: `evidence/00405664_fn_00405664.md`.
 
 unsafe extern "C" fn default_tail(_arg: u32) {}
@@ -11,7 +11,7 @@ unsafe extern "C" fn default_tail(_arg: u32) {}
 /// proven.
 pub static mut HOOK_00412014: Option<unsafe extern "C" fn()> = None;
 
-/// Tail target `0x402f60` (`FUN_00402f60`), reached by `CALL` with
+/// Tail target `0x00402f60` (`FUN_00402f60`), reached by `CALL` with
 /// `AL=0x10` over the entry EAX.
 ///
 /// ponytail: hook standing in for done `fn_00402f60`, rewire to real
@@ -20,7 +20,7 @@ pub static mut TAIL_00402F60: unsafe extern "C" fn(u32) = default_tail;
 
 /// `if [slot]!=0 { [slot]() } else { tail((param & ~0xff) | 0x10) }`.
 /// `param_1` arrives in EAX per Ghidra `__register` observation; unlike
-/// its `0x402e20` sibling there is no `param==0` early exit.
+/// its `0x00402e20` sibling there is no `param==0` early exit.
 pub unsafe fn fn_00405664(param_1: u32) {
     match HOOK_00412014 {
         Some(f) => f(),

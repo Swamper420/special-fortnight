@@ -1,4 +1,4 @@
-//! Original procedure `0x0040a4f0` (151 bytes, `0x40a4f0–0x40a586`).
+//! Original procedure `0x0040a4f0` (151 bytes, `0x0040a4f0–0x0040a586`).
 //! Evidence: `evidence/0040a4f0_fn_0040a4f0.md`.
 
 use crate::fn_004091f4::DAT_00415c34;
@@ -13,20 +13,20 @@ unsafe extern "C" fn default_system_metrics(_index: u32) -> u32 {
     0
 }
 
-/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x4067b4`).
+/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x004067b4`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetThreadLocale: unsafe extern "C" fn() -> u32 = default_thread_locale;
 
-/// Import `USER32.DLL::GetSystemMetrics` (`CALL 0x4068ac` with `0x4a`).
+/// Import `USER32.DLL::GetSystemMetrics` (`CALL 0x004068ac` with `0x4a`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetSystemMetrics: unsafe extern "C" fn(u32) -> u32 = default_system_metrics;
 
-/// Locale cells at `0x415c30` (LCID, `>>10` word, flag bytes).
-/// `0x415c34` lives in `crate::fn_004091f4` (shared image cell).
+/// Locale cells at `0x00415c30` (LCID, `>>10` word, flag bytes).
+/// `0x00415c34` lives in `crate::fn_004091f4` (shared image cell).
 ///
 /// ponytail: absolute-address cells as mutable hooks, upgrade to real
 /// image-relative data once data layout proven.
@@ -35,7 +35,7 @@ pub static mut DAT_00415C38: u32 = 0;
 pub static mut DAT_00415C3C: u8 = 0;
 pub static mut DAT_00415C3D: u8 = 0;
 
-/// 8-dword table at `0x40a588`, `REP MOVSD` source.
+/// 8-dword table at `0x0040a588`, `REP MOVSD` source.
 ///
 /// ponytail: absolute-address table as mutable hook, upgrade to real
 /// image-relative import once data layout proven.

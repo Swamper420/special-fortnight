@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b9d0` (41 bytes, `0x40b9d0–0x40b9f8`).
+//! Original procedure `0x0040b9d0` (41 bytes, `0x0040b9d0–0x0040b9f8`).
 //! Evidence: `evidence/0040b9d0_fn_0040b9d0.md`.
 
 use crate::fn_00408218::fn_00408218;
@@ -7,7 +7,7 @@ unsafe extern "C" fn default_sys_dir(_buf: *mut u16, _len: u32) -> u32 {
     0
 }
 
-/// Import `KERNEL32.DLL::GetSystemDirectoryW` (`CALL 0x4067a4`),
+/// Import `KERNEL32.DLL::GetSystemDirectoryW` (`CALL 0x004067a4`),
 /// called as `(buf, 0x104)`; the count result is ignored.
 ///
 /// ponytail: hook standing in for the import, rewire to a real

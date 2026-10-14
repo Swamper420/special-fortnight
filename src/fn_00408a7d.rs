@@ -1,4 +1,4 @@
-//! Original procedure `0x00408a7d` (11 bytes, `0x408a7d–0x408a87`).
+//! Original procedure `0x00408a7d` (11 bytes, `0x00408a7d–0x00408a87`).
 //! Evidence: `evidence/00408a7d_fn_00408a7d.md`.
 
 /// `LODSB` byte fetch: `b=[src]`; nonzero returns `(b, src+1)`,

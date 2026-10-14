@@ -1,18 +1,18 @@
-//! Original procedure `0x00409d24` (22 bytes, `0x409d24–0x409d39`).
+//! Original procedure `0x00409d24` (22 bytes, `0x00409d24–0x00409d39`).
 //! Evidence: `evidence/00409d24_fn_00409d24.md`.
 
 unsafe extern "C" fn default_status(_p: *const u32) -> u32 {
     0
 }
 
-/// Callee `0x409ca4` (`FUN_00409ca4`), `(param_1)`; low byte of
+/// Callee `0x00409ca4` (`FUN_00409ca4`), `(param_1)`; low byte of
 /// its return selects the table entry.
 ///
 /// ponytail: hook standing in for done `fn_00409ca4`, rewire to
 /// the direct call once cross-module linkage proven.
 pub static mut HOOK_00409CA4: unsafe extern "C" fn(*const u32) -> u32 = default_status;
 
-/// Table observed as `dword ptr [EAX*0x8 + 0x4128ec]`
+/// Table observed as `dword ptr [EAX*0x8 + 0x004128ec]`
 /// (`DAT_004128ec`): 256 entries × 8 bytes, first dword read.
 ///
 /// ponytail: absolute-address table as mutable static, upgrade to

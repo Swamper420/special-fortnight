@@ -1,10 +1,10 @@
-//! Original procedure `0x004081dd` (20 bytes, body `0x4081d2–0x4081e5`).
+//! Original procedure `0x004081dd` (20 bytes, body `0x004081d2–0x004081e5`).
 //! Evidence: `evidence/004081dd_fn_004081dd.md`.
 
 /// First-occurrence u16 search: return first lane equal to `param_2`,
 /// else null (NUL lane stops the scan without matching).
 /// `param_1` arrives in EAX, `param_2` in DX per Ghidra `__register`
-/// observation. Named entry `0x4081dd` is the load; loop head `0x4081d2`
+/// observation. Named entry `0x004081dd` is the load; loop head `0x004081d2`
 /// is the NUL check on the just-loaded lane.
 pub unsafe fn fn_004081dd(mut param_1: *mut u16, param_2: u16) -> *mut u16 {
     loop {

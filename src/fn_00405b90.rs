@@ -1,4 +1,4 @@
-//! Original procedure `0x00405b90` (55 bytes, `0x405b90–0x405bc6`).
+//! Original procedure `0x00405b90` (55 bytes, `0x00405b90–0x00405bc6`).
 //! Evidence: `evidence/00405b90_fn_00405b90.md`.
 
 use core::ptr::{null_mut, read_unaligned};
@@ -14,7 +14,7 @@ unsafe extern "C" fn default_resolve(_node: *mut u8) -> usize {
 /// real image-relative data once data layout proven.
 pub static mut DAT_0041202c: *mut u8 = null_mut();
 
-/// Target `0x405b48` (`FUN_00405b48`), called with the first node whose
+/// Target `0x00405b48` (`FUN_00405b48`), called with the first node whose
 /// key slot matches; its result is the return.
 ///
 /// ponytail: hook standing in for same-batch `fn_00405b48`, rewire to

@@ -1,12 +1,12 @@
-//! Original procedure `0x00402444` (126 bytes, `0x402444–0x4024c1`).
+//! Original procedure `0x00402444` (126 bytes, `0x00402444–0x004024c1`).
 //! Evidence: `evidence/00402444_fn_00402444.md`.
 
 unsafe extern "C" fn default_check(_addr: *mut u32, _info: *mut u8) -> u32 {
     0
 }
 
-/// Check target `0x4023c8` (`FUN_004023c8`), called at `0x40245f` with
-/// `param_1-0x58`, at `0x402472` with `param_1-0x30`, at `0x402496`
+/// Check target `0x004023c8` (`FUN_004023c8`), called at `0x0040245f` with
+/// `param_1-0x58`, at `0x00402472` with `param_1-0x30`, at `0x00402496`
 /// with the child pointer. EDX/ECX garbage passthrough dropped: the
 /// callee observably ignores them (see `004023c8` evidence).
 ///

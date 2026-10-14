@@ -1,11 +1,11 @@
-//! Original procedure `0x00406518` (6 bytes, `0x406518–0x40651d`).
+//! Original procedure `0x00406518` (6 bytes, `0x00406518–0x0040651d`).
 //! Evidence: `evidence/00406518_fn_00406518.md`.
 
 unsafe extern "C" fn default_alloc(_flags: u32, _bytes: usize) -> usize {
     0
 }
 
-/// Thunk `0x406518` (`KERNEL32.DLL::LocalAlloc`), `JMP [0x004193c4]`.
+/// Thunk `0x00406518` (`KERNEL32.DLL::LocalAlloc`), `JMP [0x004193c4]`.
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.

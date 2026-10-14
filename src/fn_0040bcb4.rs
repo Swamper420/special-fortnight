@@ -1,8 +1,8 @@
-//! Original procedure `0x0040bcb4` (250 bytes, `0x40bcb4–0x40bdad`).
+//! Original procedure `0x0040bcb4` (250 bytes, `0x0040bcb4–0x0040bdad`).
 //! Evidence: `evidence/0040bcb4_fn_0040bcb4.md`.
 //!
 //! SEH scaffolding (`PUSH handler; PUSH FS:[0]` / restore, the
-//! `PUSH 0x40bdb5` state push) omitted: no host equivalent. The
+//! `PUSH 0x0040bdb5` state push) omitted: no host equivalent. The
 //! `CMP [EBP-0xc],0 / XOR EBX` tail only sets discarded EBX.
 
 /// `const`-compatible widening without generic const arithmetic
@@ -15,36 +15,36 @@ macro_rules! wide {
     };
 }
 
-/// Wide `L"kernel32.dll"` at `0x40bdf0` (taken by `GetModuleHandleW`).
+/// Wide `L"kernel32.dll"` at `0x0040bdf0` (taken by `GetModuleHandleW`).
 pub static STR_KERNEL32_0040BDF0: [u16; 13] = wide!(
     0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x33, 0x32, 0x2e, 0x64, 0x6c, 0x6c
 );
 
-/// Proc-name bytes at `0x40bdbc` (left over the import slot, taken
-/// as the second arg of the `0x406728` call).
+/// Proc-name bytes at `0x0040bdbc` (left over the import slot, taken
+/// as the second arg of the `0x00406728` call).
 ///
 /// ponytail: ANSI vs wide encoding unobserved; narrow modeled on
 /// `GetProcAddress`-shaped use, revisit if data layout is mapped.
 pub static STR_NAME_0040BDBC: [u8; 25] = *b"GetUserDefaultUILanguage\0";
 
-/// Wide lane-1 subkey at `0x40be0c`.
+/// Wide lane-1 subkey at `0x0040be0c`.
 pub static STR_INTL_0040BE0C: [u16; 37] = wide!(
     0x2e, 0x44, 0x45, 0x46, 0x41, 0x55, 0x4c, 0x54, 0x5c, 0x43, 0x6f, 0x6e, 0x74, 0x72,
     0x6f, 0x6c, 0x20, 0x50, 0x61, 0x6e, 0x65, 0x6c, 0x5c, 0x49, 0x6e, 0x74, 0x65, 0x72,
     0x6e, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x61, 0x6c
 );
 
-/// Wide lane-1 value at `0x40be58`.
+/// Wide lane-1 value at `0x0040be58`.
 pub static STR_LOCALE_0040BE58: [u16; 7] = wide!(0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x65);
 
-/// Wide lane-2 subkey at `0x40be68`.
+/// Wide lane-2 subkey at `0x0040be68`.
 pub static STR_RESLOCALE_0040BE68: [u16; 37] = wide!(
     0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x20, 0x50, 0x61, 0x6e, 0x65, 0x6c, 0x5c,
     0x44, 0x65, 0x73, 0x6b, 0x74, 0x6f, 0x70, 0x5c, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72,
     0x63, 0x65, 0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x65
 );
 
-/// Lane-2 value at `0x40beb4`, read as `L""` by the decompiler.
+/// Lane-2 value at `0x0040beb4`, read as `L""` by the decompiler.
 ///
 /// ponytail: bytes unobserved; one NUL word stands in for the
 /// empty string, revisit if data layout is mapped.
@@ -83,14 +83,14 @@ unsafe extern "C" fn default_32ec(_s: *const u16, _o: *mut u32) -> u32 {
 
 unsafe extern "C" fn default_46c4(_slot: *mut u8) {}
 
-/// Import `KERNEL32.DLL::GetModuleHandleW` (`CALL 0x406718`).
+/// Import `KERNEL32.DLL::GetModuleHandleW` (`CALL 0x00406718`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetModuleHandleW: unsafe extern "C" fn(*const u16) -> u32 =
     default_module_handle;
 
-/// Callee `0x406728` (`FUN_00406728`), called with `(hmod, name)`
+/// Callee `0x00406728` (`FUN_00406728`), called with `(hmod, name)`
 /// per the observed stack leftovers; EAX after the call selects
 /// the indirect vs null lane.
 ///
@@ -99,40 +99,40 @@ pub static mut HOOK_GetModuleHandleW: unsafe extern "C" fn(*const u16) -> u32 =
 /// `fn_00406728` once the EAX-out contract is proven.
 pub static mut HOOK_00406728: unsafe extern "C" fn(u32, *const u8) -> usize = default_resolve;
 
-/// Sibling `0x40bc8c` (`FUN_0040bc8c`).
+/// Sibling `0x0040bc8c` (`FUN_0040bc8c`).
 ///
 /// ponytail: hook mirrors done `fn_0040bc8c`'s shape, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_0040BC8C: unsafe extern "C" fn(u8, u32, *const u16, *mut u32, u32, u32) -> u32 =
     default_bc8c;
 
-/// Sibling `0x40bc80` (`FUN_0040bc80`).
+/// Sibling `0x0040bc80` (`FUN_0040bc80`).
 ///
 /// ponytail: hook mirrors done `fn_0040bc80`'s shape, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_0040BC80: unsafe extern "C" fn(u32, *const u16, *mut u32) = default_bc80;
 
-/// Import `ADVAPI32.DLL::RegCloseKey` (`CALL 0x406628` ×2).
+/// Import `ADVAPI32.DLL::RegCloseKey` (`CALL 0x00406628` ×2).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_RegCloseKey: unsafe extern "C" fn(u32) -> u32 = default_close;
 
-/// Target `0x405058` (`FUN_00405058`), called with
-/// `(&slot10, 0x40bec4, local_8)`.
+/// Target `0x00405058` (`FUN_00405058`), called with
+/// `(&slot10, 0x0040bec4, local_8)`.
 ///
 /// ponytail: hook standing in for done `fn_00405058`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00405058: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) = default_5058;
 
-/// Target `0x4032ec` (`FUN_004032ec`), called with
+/// Target `0x004032ec` (`FUN_004032ec`), called with
 /// `(slot10_value, &local_10)`.
 ///
 /// ponytail: hook standing in for done `fn_004032ec`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_004032EC: unsafe extern "C" fn(*const u16, *mut u32) -> u32 = default_32ec;
 
-/// Thunk `0x404c88` (`thunk_FUN_004046c4`), epilogue releases of
+/// Thunk `0x00404c88` (`thunk_FUN_004046c4`), epilogue releases of
 /// both slots.
 ///
 /// ponytail: hook standing in for done `fn_004046c4`, rewire to the
@@ -142,7 +142,7 @@ pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u8) = default_46c4;
 /// Default flag cell for the null slot (double-deref target).
 static DEFAULT_FLAG_00412C7C: u32 = 0;
 
-/// Pointer slot at `0x412c7c` (`PTR_DAT_00412c7c`); the u32 it
+/// Pointer slot at `0x00412c7c` (`PTR_DAT_00412c7c`); the u32 it
 /// points at is compared to `2` (`MOV EAX,[slot]; CMP [EAX],2`).
 ///
 /// ponytail: absolute-address cell modeled as mutable hook, upgrade

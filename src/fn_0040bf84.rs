@@ -1,4 +1,4 @@
-//! Original procedure `0x0040bf84` (78 bytes, `0x40bf84–0x40bfd1`).
+//! Original procedure `0x0040bf84` (78 bytes, `0x0040bf84–0x0040bfd1`).
 //! Evidence: `evidence/0040bf84_fn_0040bf84.md`.
 
 unsafe extern "C" fn default_format(
@@ -15,7 +15,7 @@ unsafe extern "C" fn default_format(
 
 unsafe extern "C" fn default_4dd4(_slot: *mut u8, _src: *mut u8, _n: u32) {}
 
-/// Import `KERNEL32.DLL::FormatMessageW` (`CALL 0x406680`).
+/// Import `KERNEL32.DLL::FormatMessageW` (`CALL 0x00406680`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
@@ -29,7 +29,7 @@ pub static mut HOOK_FormatMessageW: unsafe extern "C" fn(
     *const u8,
 ) -> u32 = default_format;
 
-/// Target `0x404dd4` (`FUN_00404dd4`), called with
+/// Target `0x00404dd4` (`FUN_00404dd4`), called with
 /// `(param_2, buffer, count)`.
 ///
 /// ponytail: hook mirrors done `fn_00404dd4`'s shape, rewire to the

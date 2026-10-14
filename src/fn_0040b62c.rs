@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b62c` (107 bytes, `0x40b62c–0x40b696`).
+//! Original procedure `0x0040b62c` (107 bytes, `0x0040b62c–0x0040b696`).
 //! Evidence: `evidence/0040b62c_fn_0040b62c.md`.
 
 unsafe extern "C" fn default_scan(_obj: *mut u8, _one: u8) -> i32 {
@@ -17,34 +17,34 @@ unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8) {}
 
 unsafe extern "C" fn default_slice(_obj: *mut u8, _one: i32, _n: i32, _dest: *mut u8) {}
 
-/// Scanner `0x40b3cc` (`FUN_0040b3cc`), `(obj, 1)`.
+/// Scanner `0x0040b3cc` (`FUN_0040b3cc`), `(obj, 1)`.
 /// Only the low byte of EDX is forced to 1 (`MOV DL,1`).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire
 /// to real `fn_0040b3cc` once it exists.
 pub static mut HOOK_0040b3cc: unsafe extern "C" fn(*mut u8, u8) -> i32 = default_scan;
 
-/// Indexer `0x40b620` (`FUN_0040b620`), `(obj, obj+n*2)`.
+/// Indexer `0x0040b620` (`FUN_0040b620`), `(obj, obj+n*2)`.
 /// Returns a DATA pointer (deref'd by the caller).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire
 /// to real `fn_0040b620` once it exists.
 pub static mut HOOK_0040b620: unsafe extern "C" fn(*mut u8, *mut u8) -> *mut u16 = default_at;
 
-/// Class test `0x40b334` (`FUN_0040b334`), `(MOVZX ch)`.
+/// Class test `0x0040b334` (`FUN_0040b334`), `(MOVZX ch)`.
 /// Only `AL` is observed (`TEST AL,AL`).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire
 /// to real `fn_0040b334` once it exists.
 pub static mut HOOK_0040b334: unsafe extern "C" fn(u16) -> u32 = default_class;
 
-/// Store `0x404c98` (`FUN_00404c98`), `(dest_slot, src)`.
+/// Store `0x00404c98` (`FUN_00404c98`), `(dest_slot, src)`.
 ///
 /// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire
 /// to the real call once cross-module linkage proven.
 pub static mut HOOK_00404c98: unsafe extern "C" fn(*mut u8, *mut u8) = default_store;
 
-/// Slicer `0x40525c` (`FUN_0040525c`), `(obj, 1, n, dest)`.
+/// Slicer `0x0040525c` (`FUN_0040525c`), `(obj, 1, n, dest)`.
 ///
 /// ponytail: hook mirroring done `fn_0040525c`'s shape, rewire
 /// to the real call once cross-module linkage proven.

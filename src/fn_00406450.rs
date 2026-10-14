@@ -1,11 +1,11 @@
-//! Original procedure `0x00406450` (6 bytes, `0x406450–0x406455`).
+//! Original procedure `0x00406450` (6 bytes, `0x00406450–0x00406455`).
 //! Evidence: `evidence/00406450_fn_00406450.md`.
 
 unsafe extern "C" fn default_get_acp() -> u32 {
     0
 }
 
-/// Thunk `0x406450` (`KERNEL32.DLL::GetACP`), `JMP [0x00419338]`.
+/// Thunk `0x00406450` (`KERNEL32.DLL::GetACP`), `JMP [0x00419338]`.
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.

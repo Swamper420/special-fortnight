@@ -1,10 +1,10 @@
-//! Original procedure `0x00403b30` (21 bytes, `0x403b30–0x403b44`).
+//! Original procedure `0x00403b30` (21 bytes, `0x00403b30–0x00403b44`).
 //! Evidence: `evidence/00403b30_fn_00403b30.md`.
 
 /// Shared raise tail: snapshots entry ESP, pushes `(1, 0,
 /// 0x0eedfae0)`, raises via owner `crate::fn_00403b0c::HOOK_00413014`
 /// as `(code, flags, nargs, args)`. Entered by tail `JMP` from
-/// `0x403b48`/`0x403b5c` (no observed `CALL` caller). Post-call
+/// `0x00403b48`/`0x00403b5c` (no observed `CALL` caller). Post-call
 /// `ADD ESP,4; POP EAX` is dead under the diverging raise; host
 /// model returns the decompiler's `0` (labeled guess, see evidence).
 /// Indirect cell reused from owner, never duplicated.

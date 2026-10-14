@@ -1,4 +1,4 @@
-//! Original procedure `0x00404d24` (11 bytes, `0x404d24–0x404d2e`).
+//! Original procedure `0x00404d24` (11 bytes, `0x00404d24–0x00404d2e`).
 //! Evidence: `evidence/00404d24_fn_00404d24.md`.
 
 /// Cell observed as `DAT_004127a8`, address-taken on null lane.

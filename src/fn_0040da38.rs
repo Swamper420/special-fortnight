@@ -1,4 +1,4 @@
-//! Original procedure `0x0040da38` (255 bytes, `0x40da38–0x40db36`).
+//! Original procedure `0x0040da38` (255 bytes, `0x0040da38–0x0040db36`).
 //! Evidence: `evidence/0040da38_fn_0040da38.md`.
 
 unsafe extern "C" fn default_read(_s: *mut u8, _d: *mut u8, _n: u32) {}
@@ -11,7 +11,7 @@ unsafe extern "C" fn default_thunk(_s: *mut u32) -> *mut u8 {
 }
 unsafe extern "C" fn default_free(_s: *mut u32) {}
 
-/// Reader `0x40cb34(EAX,EDX,ECX)`; all five sites.
+/// Reader `0x0040cb34(EAX,EDX,ECX)`; all five sites.
 ///
 /// ponytail: hook for out-of-batch `fn_0040cb34`.
 pub static mut HOOK_0040CB34: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_read;
@@ -23,13 +23,13 @@ pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u32, u32) = default_stor
 pub static mut HOOK_004049C4: unsafe extern "C" fn(*mut u32, u32, u32) = default_alloc0;
 /// ponytail: hook for `fn_00404718`.
 pub static mut HOOK_00404718: unsafe extern "C" fn(*mut u32, u32) = default_store2;
-/// ponytail: hook for `thunk 0x4054ac`.
+/// ponytail: hook for `thunk 0x004054ac`.
 pub static mut HOOK_004054AC: unsafe extern "C" fn(*mut u32) -> *mut u8 = default_thunk;
-/// ponytail: hook for `thunk 0x4049bc`.
+/// ponytail: hook for `thunk 0x004049bc`.
 pub static mut HOOK_004049BC: unsafe extern "C" fn(*mut u32) -> *mut u8 = default_thunk;
 /// ponytail: hook for `fn_004046c4`.
 pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u32) = default_free;
-/// ponytail: hook for `thunk 0x404c88`.
+/// ponytail: hook for `thunk 0x00404c88`.
 pub static mut HOOK_00404C88: unsafe extern "C" fn(*mut u32) = default_free;
 
 /// Two-group counted-blob loader + remainder read + cleanup.

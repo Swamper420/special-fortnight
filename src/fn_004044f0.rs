@@ -1,4 +1,4 @@
-//! Original procedure `0x004044f0` (127 bytes, `0x4044f0–0x40456e`).
+//! Original procedure `0x004044f0` (127 bytes, `0x004044f0–0x0040456e`).
 //! Evidence: `evidence/004044f0_fn_004044f0.md`.
 
 unsafe extern "C" fn default_cleanup(_arg: *mut u8) {}
@@ -59,36 +59,36 @@ pub static mut DAT_00413324: u32 = 0;
 /// image-relative import once data layout proven.
 pub static mut PTR_00413340: unsafe extern "C" fn(*mut u8) = default_cleanup;
 
-/// Message bytes at `0x412778` (`"Runtime error     at 00000000"`, 29 B)
+/// Message bytes at `0x00412778` (`"Runtime error     at 00000000"`, 29 B)
 /// plus trailing NUL for the MessageBoxA lane (WriteFile uses length 29).
 ///
 /// ponytail: NUL unobserved (WriteFile needs none); overridable cell until
 /// rodata layout proven.
 pub static mut MSG_00412778: [u8; 30] = *b"Runtime error     at 00000000\x00";
 
-/// Caption bytes at `0x412770` (`"Error"` + NUL for MessageBoxA).
+/// Caption bytes at `0x00412770` (`"Error"` + NUL for MessageBoxA).
 ///
 /// ponytail: same rodata debt as `MSG_00412778`.
 pub static mut CAP_00412770: [u8; 6] = *b"Error\x00";
 
-/// Second WriteFile buffer at `0x40457c` (2 bytes, content unobserved).
+/// Second WriteFile buffer at `0x0040457c` (2 bytes, content unobserved).
 ///
 /// ponytail: defaults to CRLF (inference); override once bytes proven.
 pub static mut BUF_0040457C: [u8; 2] = [0x0D, 0x0A];
 
-/// Thunk `0x4010a0` (`KERNEL32.DLL::GetStdHandle`).
+/// Thunk `0x004010a0` (`KERNEL32.DLL::GetStdHandle`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.
 pub static mut HOOK_004010A0: unsafe extern "C" fn(u32) -> u32 = default_get_std_handle;
 
-/// Thunk `0x4010c0` (`KERNEL32.DLL::WriteFile`).
+/// Thunk `0x004010c0` (`KERNEL32.DLL::WriteFile`).
 ///
 /// ponytail: same import-thunk debt as `HOOK_004010A0`.
 pub static mut HOOK_004010C0: unsafe extern "C" fn(u32, *const u8, u32, *mut u32, u32) -> u32 =
     default_write_file;
 
-/// Thunk `0x4010d8` (`USER32.DLL::MessageBoxA`).
+/// Thunk `0x004010d8` (`USER32.DLL::MessageBoxA`).
 ///
 /// ponytail: same import-thunk debt as `HOOK_004010A0`.
 pub static mut HOOK_004010D8: unsafe extern "C" fn(u32, *const u8, *const u8, u32) -> u32 =

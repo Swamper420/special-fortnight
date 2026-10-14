@@ -1,8 +1,8 @@
 //! Original procedure `0x004014d8` (61 bytes, ranges
-//! `0x4014d8–0x4014e6` + `0x4014e8–0x401515`).
+//! `0x004014d8–0x004014e6` + `0x004014e8–0x00401515`).
 //! Evidence: `evidence/004014d8_fn_004014d8.md`.
 
-/// Word table observed as `dword ptr [EDX*4 + 0x413a44]`, indexed by
+/// Word table observed as `dword ptr [EDX*4 + 0x00413a44]`, indexed by
 /// `(bucket_off>>8)&0xff`.
 ///
 /// ponytail: absolute-address cells modeled as mutable statics, merge
@@ -12,11 +12,11 @@ pub static mut DAT_00413a40: u32 = 0;
 /// See [`DAT_00413a40`].
 pub static mut DAT_00413a44: [u32; 256] = [0; 256];
 
-/// Bucket-base constant from `SUB ECX, 0x413ac4`.
+/// Bucket-base constant from `SUB ECX, 0x00413ac4`.
 ///
 /// ponytail: absolute address folded to `usize` index math, restore
 /// absolute form once data layout proven.
-const BUCKET_BASE: usize = 0x413ac4;
+const BUCKET_BASE: usize = 0x00413ac4;
 
 /// Two-pointer unlink; clears bitmap bits only when the bucket drains.
 /// `param_1` holds two pointer-sized links in EAX per Ghidra

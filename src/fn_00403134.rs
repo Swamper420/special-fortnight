@@ -1,9 +1,9 @@
-//! Original procedure `0x00403134` (69 bytes, `0x403134–0x403178`).
+//! Original procedure `0x00403134` (69 bytes, `0x00403134–0x00403178`).
 //! Evidence: `evidence/00403134_fn_00403134.md`.
 
 unsafe extern "C" fn default_report(_code: u32) {}
 
-/// Indirect method type in `EDX` (`CALL EBX` at `0x403149`):
+/// Indirect method type in `EDX` (`CALL EBX` at `0x00403149`):
 /// `(obj, self, sel) -> code`. `EDX` still holds `param_2` at the
 /// call, so the target receives itself as the middle arg; `ECX`
 /// carries the selector.
@@ -11,13 +11,13 @@ unsafe extern "C" fn default_report(_code: u32) {}
 /// ponytail: `extern "C"` placeholder for `__register`; middle arg
 /// pointer-sized (`*const u8`) so host tests stay addressable.
 
-/// Object identities compared at `0x403153`/`0x40315a` (`CMP EAX, imm32`).
+/// Object identities compared at `0x00403153`/`0x0040315a` (`CMP EAX, imm32`).
 ///
 /// ponytail: raw address constants, upgrade to real symbols once data layout proven.
 pub const OBJ_00413324: u32 = 0x00413324;
 pub const OBJ_004135f4: u32 = 0x004135f4;
 
-/// Target `0x402f8c`, called with the nonzero result (`MOV EAX,EBX; CALL`).
+/// Target `0x00402f8c`, called with the nonzero result (`MOV EAX,EBX; CALL`).
 ///
 /// ponytail: hook standing in for reconstructed `fn_00402f8c`, rewire to
 /// real call once cross-module linkage proven.

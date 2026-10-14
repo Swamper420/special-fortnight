@@ -1,4 +1,4 @@
-//! Original procedure `0x0040cee8` (129 bytes, `0x40cee8–0x40cf68`).
+//! Original procedure `0x0040cee8` (129 bytes, `0x0040cee8–0x0040cf68`).
 //! Evidence: `evidence/0040cee8_fn_0040cee8.md`.
 
 unsafe extern "C" fn default_setup(_p: *mut u8) {}
@@ -14,28 +14,28 @@ unsafe extern "C" fn default_decode(
 unsafe extern "C" fn default_fail(_c: u32) {}
 unsafe extern "C" fn default_report(_s: *mut u16, _a: u32, _b: u32) {}
 
-/// `0x40ce24` setup.
+/// `0x0040ce24` setup.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040ce24`.
 pub static mut HOOK_0040CE24: unsafe extern "C" fn(*mut u8) = default_setup;
 
-/// `0x40d33c` decode `(state,&block,p2,&out,p3)->i32`.
+/// `0x0040d33c` decode `(state,&block,p2,&out,p3)->i32`.
 ///
 /// ponytail: hook standing in for unreconstructed callee.
 pub static mut HOOK_0040D33C: unsafe extern "C" fn(*mut u8, *mut usize, usize, *mut u32, u32) -> i32 =
     default_decode;
 
-/// `0x40cc3c` reporter (codes 5/6).
+/// `0x0040cc3c` reporter (codes 5/6).
 ///
 /// ponytail: hook standing in for same-batch `fn_0040cc3c`.
 pub static mut HOOK_0040CC3C: unsafe extern "C" fn(u32) = default_fail;
 
-/// `0x40cd3c` reporter `(str,&code,0)`.
+/// `0x0040cd3c` reporter `(str,&code,0)`.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040cd3c`.
 pub static mut HOOK_0040CD3C: unsafe extern "C" fn(*mut u16, u32, u32) = default_report;
 
-/// Format string Grave accent`0x40cf78` (`LzmaDecode failed (%d)`).
+/// Format string Grave accent`0x0040cf78` (`LzmaDecode failed (%d)`).
 ///
 /// ponytail: absolute-address cell as own-module static, unify in
 /// `data.rs` once data layout proven.
@@ -46,7 +46,7 @@ pub unsafe fn fn_0040cee8(param_1: *mut u8, param_2: usize, param_3: u32) {
     if core::ptr::read_unaligned(param_1.wrapping_byte_add(0x11) as *const u8) == 0 {
         HOOK_0040CE24(param_1);
     }
-    // ponytail: 2-word block `[0x40cd94, base]`; label address is a code
+    // ponytail: 2-word block `[0x0040cd94, base]`; label address is a code
     // constant, kept verbatim (target 32-bit wrap = host value here).
     let mut blk = [0x40cd94usize, param_1 as usize];
     let mut out: u32 = 0;

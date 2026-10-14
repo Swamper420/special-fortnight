@@ -1,4 +1,4 @@
-//! Original procedure `0x004010e8` (6 bytes, `0x004010e8–0x0040a5`).
+//! Original procedure `0x004010e8` (6 bytes, `0x004010e8–0x004010ed`).
 //! Evidence: `evidence/004010e8_fn_004010e8.md`.
 //!
 //! Import thunk `KERNEL32.DLL::FindFirstFileW`: single `JMP [IAT]` tail jump,

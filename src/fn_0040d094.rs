@@ -1,11 +1,11 @@
-//! Original procedure `0x0040d094` (136 bytes, `0x40d094–0x40d11b`).
+//! Original procedure `0x0040d094` (136 bytes, `0x0040d094–0x0040d11b`).
 //! Evidence: `evidence/0040d094_fn_0040d094.md`.
 
 unsafe extern "C" fn default_next(_b: *mut u8, _p2: u32, _p3: i32) -> u8 {
     0
 }
 
-/// Target `0x40cfb4` (`FUN_0040cfb4`), both renormalize sites.
+/// Target `0x0040cfb4` (`FUN_0040cfb4`), both renormalize sites.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040cfb4`.
 pub static mut HOOK_0040CFB4: unsafe extern "C" fn(*mut u8, u32, i32) -> u8 = default_next;

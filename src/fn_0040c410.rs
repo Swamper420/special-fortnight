@@ -1,4 +1,4 @@
-//! Original procedure `0x0040c410` (25 bytes, `0x40c410–0x40c428`).
+//! Original procedure `0x0040c410` (25 bytes, `0x0040c410–0x0040c428`).
 //! Evidence: `evidence/0040c410_fn_0040c410.md`.
 
 unsafe extern "C" fn default_set_eof(_handle: u32) -> u32 {
@@ -7,14 +7,14 @@ unsafe extern "C" fn default_set_eof(_handle: u32) -> u32 {
 
 unsafe extern "C" fn default_report(_first: *const u8) {}
 
-/// Import `KERNEL32.DLL::SetEndOfFile` (`CALL 0x406814`).
+/// Import `KERNEL32.DLL::SetEndOfFile` (`CALL 0x00406814`).
 ///
 /// ponytail: hook standing in for the import (also keeps host tests
 /// linkable), rewire to raw `extern "system" SetEndOfFile` once
 /// Windows-target linkage proven.
 pub static mut HOOK_SetEndOfFile: unsafe extern "C" fn(u32) -> u32 = default_set_eof;
 
-/// Target `0x40c1e4` (`FUN_0040c1e4`), `(*param_1)` on the zero lane.
+/// Target `0x0040c1e4` (`FUN_0040c1e4`), `(*param_1)` on the zero lane.
 ///
 /// ponytail: hook standing in for done `fn_0040c1e4`, rewire to the real
 /// call once cross-module linkage proven.

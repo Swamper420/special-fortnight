@@ -1,4 +1,4 @@
-//! Original procedure `0x00405930` (5 bytes, `0x405930–0x405934`).
+//! Original procedure `0x00405930` (5 bytes, `0x00405930–0x00405934`).
 //! Evidence: `evidence/00405930_fn_00405930.md`.
 
 unsafe extern "C" fn default_target(
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_target(
     core::ptr::null_mut()
 }
 
-/// Target `0x405548` (`FUN_00405548`), reached by terminal `JMP`.
+/// Target `0x00405548` (`FUN_00405548`), reached by terminal `JMP`.
 ///
 /// ponytail: hook standing in for unreconstructed target, rewire to
 /// real `fn_00405548` once cross-module linkage proven.

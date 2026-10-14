@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b89c` (81 bytes, `0x40b89c–0x40b8ec`).
+//! Original procedure `0x0040b89c` (81 bytes, `0x0040b89c–0x0040b8ec`).
 //! Evidence: `evidence/0040b89c_fn_0040b89c.md`.
 
 use crate::fn_004046c4::fn_004046c4;
@@ -8,7 +8,7 @@ unsafe extern "C" fn default_cmdline() -> *mut u16 {
     core::ptr::null_mut()
 }
 
-/// Import `KERNEL32.DLL::GetCommandLineW` (`CALL 0x4066c0`), no
+/// Import `KERNEL32.DLL::GetCommandLineW` (`CALL 0x004066c0`), no
 /// args, wide-string data-pointer result.
 ///
 /// ponytail: hook standing in for the import, rewire to a real
@@ -21,7 +21,7 @@ pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 /// Count extra command-line parses: `p=parse(cmd); n=0; while
 /// *p { n++; p=parse(p) }`. The initial parse is uncounted
 /// (`INC ESI` only runs in the loop body). Returns the count:
-/// the true-exit epilogue at `0x40b8f4` is `MOV EAX,ESI`, and
+/// the true-exit epilogue at `0x0040b8f4` is `MOV EAX,ESI`, and
 /// the sole caller moves EAX to EBX. No params per Ghidra
 /// `__register` observation.
 pub unsafe fn fn_0040b89c() -> u32 {

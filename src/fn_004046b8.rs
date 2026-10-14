@@ -1,4 +1,4 @@
-//! Original procedure `0x004046b8` (11 bytes, `0x4046b8–0x4046c2`).
+//! Original procedure `0x004046b8` (11 bytes, `0x004046b8–0x004046c2`).
 //! Evidence: `evidence/004046b8_fn_004046b8.md`.
 
 unsafe extern "C" fn default_target(_arg: u32) {}
@@ -10,14 +10,14 @@ unsafe extern "C" fn default_target(_arg: u32) {}
 /// unify with `fn_00402f08::CELL_00412004` in `data.rs` once layout proven.
 pub static mut CELL_00412004: u32 = 0;
 
-/// Target `0x4046ac` (`FUN_004046ac`), tail-jumped with EAX lane (`param_1`).
+/// Target `0x004046ac` (`FUN_004046ac`), tail-jumped with EAX lane (`param_1`).
 ///
 /// ponytail: hook standing in for reconstructed `fn_004046ac` (keeps test
 /// hermetic, matches `fn_00402f08` pattern); rewire to real call once
 /// cross-module locking proven.
 pub static mut HOOK_004046ac: unsafe extern "C" fn(u32) = default_target;
 
-/// `POP [0x412004]; JMP 0x4046ac(param_1)`.
+/// `POP [0x00412004]; JMP 0x004046ac(param_1)`.
 /// `param_1` arrives in EAX per Ghidra `__register` observation; `stack_top`
 /// is the explicit model of the `POP` source dword (host stack untouched).
 ///

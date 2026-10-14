@@ -1,4 +1,4 @@
-//! Original procedure `0x00404414` (36 bytes, `0x404414–0x404438`).
+//! Original procedure `0x00404414` (36 bytes, `0x00404414–0x00404438`).
 //! Evidence: `evidence/00404414_fn_00404414.md`.
 
 /// Add-reduce loop: `count = param_1[0]`; per 3-word entry

@@ -1,4 +1,4 @@
-//! Original procedure `0x00403a8c` (15 bytes, `0x403a8c–0x403a9a`).
+//! Original procedure `0x00403a8c` (15 bytes, `0x00403a8c–0x00403a9a`).
 //! Evidence: `evidence/00403a8c_fn_00403a8c.md`.
 
 /// Signed-`DL > 0` guard gates vtable dispatch: `call [vtbl-0x18](obj)`,

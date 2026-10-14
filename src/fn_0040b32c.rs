@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b32c` (6 bytes, `0x40b32c–0x40b331`).
+//! Original procedure `0x0040b32c` (6 bytes, `0x0040b32c–0x0040b331`).
 //! Evidence: `evidence/0040b32c_fn_0040b32c.md`.
 
 /// `return 1` (`MOV EAX,1; RET`). No params, no callees.

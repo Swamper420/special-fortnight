@@ -1,11 +1,11 @@
-//! Original procedure `0x0040218c` (50 bytes, `0x40218c–0x4021bd`).
+//! Original procedure `0x0040218c` (50 bytes, `0x0040218c–0x004021bd`).
 //! Evidence: `evidence/0040218c_fn_0040218c.md`.
 
 unsafe extern "C" fn default_base(_param: u32) -> *mut u8 {
     core::ptr::null_mut()
 }
 
-/// Target `0x4018f8` (`FUN_004018f8`), called with `param_1` in EAX.
+/// Target `0x004018f8` (`FUN_004018f8`), called with `param_1` in EAX.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004018f8` once it exists.

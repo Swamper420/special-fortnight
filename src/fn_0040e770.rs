@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e770` (167 bytes, `0x40e770–0x40e816`).
+//! Original procedure `0x0040e770` (167 bytes, `0x0040e770–0x0040e816`).
 //! Evidence: `evidence/0040e770_fn_0040e770.md`.
 
 unsafe extern "C" fn default_u32() -> u32 {
@@ -16,21 +16,21 @@ unsafe extern "C" fn default_rel(_p: *mut u8, _n: u32) {}
 
 /// Message-pointer table base `DAT_00412c08` (indexed `(param_1 & 0xff)`).
 pub static mut DAT_00412C08: *const *const u8 = core::ptr::null();
-/// Target `0x406700 GetLastError`.
+/// Target `0x00406700 GetLastError`.
 pub static mut HOOK_GETLASTERROR: unsafe extern "C" fn() -> u32 = default_u32;
-/// Target `0x407ee8 (lasterr, 0)`.
+/// Target `0x00407ee8 (lasterr, 0)`.
 pub static mut HOOK_00407EE8: unsafe extern "C" fn(u32, u32) = default_e88;
-/// Target `0x40bf84 (lasterr, &local)`.
+/// Target `0x0040bf84 (lasterr, &local)`.
 pub static mut HOOK_0040BF84: unsafe extern "C" fn(u32, *mut u32) = default_b84;
-/// Target `0x40def0 (packed, &entry, 2, &obj)`.
+/// Target `0x0040def0 (packed, &entry, 2, &obj)`.
 pub static mut HOOK_0040DEF0: unsafe extern "C" fn(u32, *const u8, u32, *mut u8) = default_d;
-/// Target `0x409824 (table, 1, obj)`.
+/// Target `0x00409824 (table, 1, obj)`.
 pub static mut HOOK_00409824: unsafe extern "C" fn(*const u8, u8, *mut u8) -> u32 = default_n824;
-/// Target `0x403f88 (show/fail)`.
+/// Target `0x00403f88 (show/fail)`.
 pub static mut HOOK_00403F88: unsafe extern "C" fn(u32) = default_u32_arg;
-/// Target `0x404c90` thunk (release local, 2).
+/// Target `0x00404c90` thunk (release local, 2).
 pub static mut HOOK_00404C90: unsafe extern "C" fn(*mut u8, u32) = default_rel;
-/// Target `0x404c88` thunk (release obj).
+/// Target `0x00404c88` thunk (release obj).
 pub static mut HOOK_00404C88: unsafe extern "C" fn(*mut u8) = default_void;
 
 /// Fatal-error reporter (`param_1` EAX lane; caller passes `0x6a`).

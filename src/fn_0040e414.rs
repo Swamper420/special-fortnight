@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e414` (245 bytes, `0x40e414–0x40e508`).
+//! Original procedure `0x0040e414` (245 bytes, `0x0040e414–0x0040e508`).
 //! Evidence: `evidence/0040e414_fn_0040e414.md`.
 
 unsafe extern "C" fn default_mkwork(_d: *mut u32) {}
@@ -25,7 +25,7 @@ unsafe extern "C" fn default_free(_s: *mut u32, _n: u32) {}
 
 /// ponytail: hook for `fn_0040b9fc`.
 pub static mut HOOK_0040B9FC: unsafe extern "C" fn(*mut u32) = default_mkwork;
-/// Target `0x40e2f8` name hunt.
+/// Target `0x0040e2f8` name hunt.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040e2f8`.
 pub static mut HOOK_0040E2F8: unsafe extern "C" fn(u8, *mut u8, *mut u8, *mut u32) = default_hunt;
@@ -39,7 +39,7 @@ pub static mut HOOK_CreateDirectoryW: unsafe extern "C" fn(*mut u16) -> i32 = de
 ///
 /// ponytail: hook standing in for the raw import call at the original site.
 pub static mut HOOK_GetLastError: unsafe extern "C" fn() -> u32 = default_lasterror;
-/// Target `0x40df20` message.
+/// Target `0x0040df20` message.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040df20`.
 pub static mut HOOK_0040DF20: unsafe extern "C" fn(u32, u32, *mut u8) = default_msg;
@@ -47,7 +47,7 @@ pub static mut HOOK_0040DF20: unsafe extern "C" fn(u32, u32, *mut u8) = default_
 pub static mut HOOK_00407EE8: unsafe extern "C" fn(u32) = default_fmt;
 /// ponytail: hook for `fn_0040bf84`.
 pub static mut HOOK_0040BF84: unsafe extern "C" fn(u32, *mut u32) = default_fmt2;
-/// Target `0x40def0` message.
+/// Target `0x0040def0` message.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040def0`.
 pub static mut HOOK_0040DEF0: unsafe extern "C" fn(u32, u32, i32, *mut u8) = default_def0;
@@ -57,7 +57,7 @@ pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u32, u8, u32) -> *mut u3
 pub static mut HOOK_00403F88: unsafe extern "C" fn(*mut u32) = default_fatal;
 /// ponytail: hook for `fn_00404c98`.
 pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u32, u32) = default_store;
-/// ponytail: hook for `thunk 0x404c90`.
+/// ponytail: hook for `thunk 0x00404c90`.
 pub static mut HOOK_004046E8: unsafe extern "C" fn(*mut u32, u32) = default_free;
 
 /// Temp-dir creation loop; stores dir token to `*param_1`.
@@ -94,7 +94,7 @@ pub unsafe fn fn_0040e414(param_1: *mut u32) {
     HOOK_004046E8(&mut b, 3);
 }
 
-/// `".tmp"` suffix at `0x40e524` (observed UTF-16 bytes `.`, `t`, `m`, `p`, NUL).
+/// `".tmp"` suffix at `0x0040e524` (observed UTF-16 bytes `.`, `t`, `m`, `p`, NUL).
 pub static DOT_TMP: &[u8] = b".\0t\0m\0p\0\0\0";
 
 #[cfg(test)]

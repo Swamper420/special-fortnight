@@ -1,4 +1,4 @@
-//! Original procedure `0x004091f4` (563 bytes, `0x4091f4–0x409426`).
+//! Original procedure `0x004091f4` (563 bytes, `0x004091f4–0x00409426`).
 //! Evidence: `evidence/004091f4_fn_004091f4.md`.
 
 use crate::fn_00404820::fn_00404820;
@@ -26,38 +26,38 @@ unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
 unsafe extern "C" fn default_release_n(_slots: *mut u8, _n: u32) {}
 
-/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x4067b4`).
+/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x004067b4`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetThreadLocale: unsafe extern "C" fn() -> u32 = default_thread_locale;
 
-/// `thunk_FUN_0040493c` (`CALL 0x404c80`), entry pin of `param_1`.
+/// `thunk_FUN_0040493c` (`CALL 0x00404c80`), entry pin of `param_1`.
 ///
 /// ponytail: hook standing in for the thunk target, rewire to real
 /// `fn_0040493c` once cross-module linkage proven.
 pub static mut HOOK_00404c80: unsafe extern "C" fn(*mut u8) = default_pin;
 
-/// `FUN_0040a3f8` (`CALL 0x40a3f8`), surrogate-run length at 1-based
+/// `FUN_0040a3f8` (`CALL 0x0040a3f8`), surrogate-run length at 1-based
 /// `param_2` of the string `param_1`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_0040a3f8` once it exists.
 pub static mut HOOK_0040a3f8: unsafe extern "C" fn(*mut u8, i32) -> u32 = default_measure;
 
-/// `thunk_FUN_004046e8` (`CALL 0x404c90`), batch release of 4 slots.
+/// `thunk_FUN_004046e8` (`CALL 0x00404c90`), batch release of 4 slots.
 ///
 /// ponytail: hook standing in for the thunk target, rewire to real
 /// `fn_004046e8` once cross-module linkage proven.
 pub static mut HOOK_00404c90: unsafe extern "C" fn(*mut u8, u32) = default_release_n;
 
-/// `thunk_FUN_004046c4` (`CALL 0x404c88`), single-slot release.
+/// `thunk_FUN_004046c4` (`CALL 0x00404c88`), single-slot release.
 ///
 /// ponytail: hook standing in for the thunk target, rewire to real
 /// `fn_004046c4` once cross-module linkage proven.
 pub static mut HOOK_00404c88: unsafe extern "C" fn(*mut u8) = default_release;
 
-/// Calendar word observed at `0x415c34`; selects the `G`-filter lane
+/// Calendar word observed at `0x00415c34`; selects the `G`-filter lane
 /// (`4`) or the near-`0x11` (`0x11`/`0x12`) branch.
 ///
 /// ponytail: absolute-address cell modeled as a mutable hook global,
@@ -67,28 +67,28 @@ pub static mut DAT_00415c34: u32 = 0;
 /// Test-only serialization for tests sharing `DAT_00415c34`.
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-/// Wide `L"1"` observed at `0x409444` (file bytes `31 00 00 00`).
+/// Wide `L"1"` observed at `0x00409444` (file bytes `31 00 00 00`).
 pub static S_00409444: [u16; 2] = [0x31, 0];
 
-/// Wide `"gg"` observed at `0x409448`.
+/// Wide `"gg"` observed at `0x00409448`.
 pub static S_00409448: [u16; 3] = [0x67, 0x67, 0];
 
-/// Wide `"ggg"` observed at `0x40945c`.
+/// Wide `"ggg"` observed at `0x0040945c`.
 pub static S_0040945C: [u16; 4] = [0x67, 0x67, 0x67, 0];
 
-/// Wide `"yyyy"` observed at `0x409464`.
+/// Wide `"yyyy"` observed at `0x00409464`.
 pub static S_00409464: [u16; 5] = [0x79, 0x79, 0x79, 0x79, 0];
 
-/// Wide `"eeee"` observed at `0x40947c`.
+/// Wide `"eeee"` observed at `0x0040947c`.
 pub static S_0040947C: [u16; 5] = [0x65, 0x65, 0x65, 0x65, 0];
 
-/// Wide `"yy"` observed at `0x409488`.
+/// Wide `"yy"` observed at `0x00409488`.
 pub static S_00409488: [u16; 3] = [0x79, 0x79, 0];
 
-/// Wide `"ee"` observed at `0x40949c`.
+/// Wide `"ee"` observed at `0x0040949c`.
 pub static S_0040949C: [u16; 3] = [0x65, 0x65, 0];
 
-/// Bytes at code label `0x4094b0` reused as data: wide `"e"`.
+/// Bytes at code label `0x004094b0` reused as data: wide `"e"`.
 pub static S_004094B0: [u16; 2] = [0x65, 0];
 
 /// Date-pattern expander: `local_8=p1; pin(p1); i=1; 4c98(p2,0);

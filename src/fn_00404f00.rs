@@ -1,4 +1,4 @@
-//! Original procedure `0x00404f00` (151 bytes, `0x404f00–0x404f96`).
+//! Original procedure `0x00404f00` (151 bytes, `0x00404f00–0x00404f96`).
 //! Evidence: `evidence/00404f00_fn_00404f00.md`.
 
 use crate::fn_004046c4::fn_004046c4;
@@ -15,14 +15,14 @@ unsafe extern "C" fn default_copy(_src: *mut u8, _dst: *mut u8, _n: u32) {}
 
 unsafe extern "C" fn default_fail(_base: *mut u8) {}
 
-/// Normalize target `0x404e6c` (`FUN_00404e6c`), called with
+/// Normalize target `0x00404e6c` (`FUN_00404e6c`), called with
 /// `(&tmp=0 out-slot, old *slot value)` on the foreign-tag lane.
 ///
 /// ponytail: hook standing in for same-batch `fn_00404e6c`,
 /// rewire to the real call once cross-module linkage proven.
 pub static mut HOOK_00404e6c: unsafe extern "C" fn(*mut u8, *mut u8) = default_normalize;
 
-/// Realloc target `0x402e38` (`FUN_00402e38`), called with an
+/// Realloc target `0x00402e38` (`FUN_00402e38`), called with an
 /// in-out slot initialized to `base` plus `total = count*2+14`.
 ///
 /// ponytail: hook standing in for done `fn_00402e38` (which owns
@@ -30,7 +30,7 @@ pub static mut HOOK_00404e6c: unsafe extern "C" fn(*mut u8, *mut u8) = default_n
 /// cross-module test serialization exists.
 pub static mut HOOK_00402e38: unsafe extern "C" fn(*mut *mut u8, u32) = default_realloc;
 
-/// Alloc target `0x4054b4` (`FUN_004054b4`), called with `count`,
+/// Alloc target `0x004054b4` (`FUN_004054b4`), called with `count`,
 /// result stored to the slot by the tail.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire
@@ -38,14 +38,14 @@ pub static mut HOOK_00402e38: unsafe extern "C" fn(*mut *mut u8, u32) = default_
 /// pointer (base+12), never the header base.
 pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> *mut u8 = default_alloc;
 
-/// Copy target `0x402fbc` (`FUN_00402fbc`), called with
+/// Copy target `0x00402fbc` (`FUN_00402fbc`), called with
 /// `(prev, newbuf, signed-min([prev-4], count)<<1)`.
 ///
 /// ponytail: hook standing in for done `fn_00402fbc`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_00402fbc: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_copy;
 
-/// Overflow arm `0x40380c` (`thunk_FUN_00402f60`), terminal `JMP`
+/// Overflow arm `0x0040380c` (`thunk_FUN_00402f60`), terminal `JMP`
 /// with `EAX=base` when `count*2` or `+14` signed-overflows.
 ///
 /// ponytail: hook standing in for the thunk tail; call+return

@@ -1,11 +1,11 @@
-//! Original procedure `0x00406530` (9 bytes, `0x406530–0x406538`).
+//! Original procedure `0x00406530` (9 bytes, `0x00406530–0x00406538`).
 //! Evidence: `evidence/00406530_fn_00406530.md`.
 
 unsafe extern "C" fn default_local_alloc(_flags: u32, _size: u32) -> *mut u8 {
     core::ptr::null_mut()
 }
 
-/// Thunk `0x406518` (`KERNEL32.DLL::LocalAlloc`).
+/// Thunk `0x00406518` (`KERNEL32.DLL::LocalAlloc`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" LocalAlloc` once

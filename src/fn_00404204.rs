@@ -1,5 +1,5 @@
 //! Original procedure `0x00404204` (78 bytes, ranges
-//! `0x404204–0x40424c` + `0x404261–0x404265`).
+//! `0x00404204–0x0040424c` + `0x00404261–0x00404265`).
 //! Evidence: `evidence/00404204_fn_00404204.md`.
 
 /// Table anchor `DAT_00415aec`: `+0` count-ish u32, `+4` entry-base slot.
@@ -15,7 +15,7 @@ pub static mut DAT_00415aec: *mut u8 = core::ptr::null_mut();
 /// ponytail: same absolute-cell modeling as `DAT_00415aec`.
 pub static mut DAT_00415af0: u32 = 0;
 
-/// Handler pushed at `0x40421f` for the unwind window.
+/// Handler pushed at `0x0040421f` for the unwind window.
 pub const HANDLER_0040424D: u32 = 0x0040424d;
 
 /// Inline SEH record: `prev/handler/ebp` at `+0/+4/+8`
@@ -27,7 +27,7 @@ pub struct SehRecord00404204 {
     pub ebp: u32,
 }
 
-/// EBP value stored into the record (`PUSH EBP` at `0x404204`).
+/// EBP value stored into the record (`PUSH EBP` at `0x00404204`).
 ///
 /// ponytail: static stands in for callee-saved EBP read (host frame
 /// pointer meaningless), rewire to inline asm once Windows-target

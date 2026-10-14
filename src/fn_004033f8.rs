@@ -1,4 +1,4 @@
-//! Original procedure `0x004033f8` (169 bytes, `0x4033f8–0x4034a0`).
+//! Original procedure `0x004033f8` (169 bytes, `0x004033f8–0x004034a0`).
 //! Evidence: `evidence/004033f8_fn_004033f8.md`.
 
 /// Scale x87 `ST(0)` by `10^exp` (`exp` in EAX, signed).
@@ -12,7 +12,7 @@
 /// `10^k` powers — a labeled guess, not an observation.
 pub fn fn_004033f8(exp: i32, st0: f64) -> f64 {
     if exp < 0 {
-        // 0x40344c: NEG EAX; JGE saturation (unsigned compare
+        // 0x0040344c: NEG EAX; JGE saturation (unsigned compare
         // after NEG is exact as wrapping_neg + unsigned >=).
         let mag = (exp as u32).wrapping_neg();
         if mag >= 0x1400 {

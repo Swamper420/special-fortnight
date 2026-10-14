@@ -1,4 +1,4 @@
-//! Original procedure `0x004010f0` (6 bytes, `0x004010f0–0x0040a5`).
+//! Original procedure `0x004010f0` (6 bytes, `0x004010f0–0x004010f5`).
 //! Evidence: `evidence/004010f0_fn_004010f0.md`.
 //!
 //! Import thunk `KERNEL32.DLL::FreeLibrary`: single `JMP [IAT]` tail jump,

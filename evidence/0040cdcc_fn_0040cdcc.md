@@ -1,6 +1,6 @@
 # 0040cdcc — FUN_0040cdcc
 
-Original address: `0x0040cdcc` (body `0x40cdcc–0x40cdee`, 35 bytes, contiguous, contains_entry).
+Original address: `0x0040cdcc` (body `0x0040cdcc–0x0040cdee`, 35 bytes, contiguous, contains_entry).
 Name status: unproven Ghidra name `FUN_0040cdcc`; Rust symbol stays `fn_0040cdcc`.
 
 ## Evidence IDs
@@ -24,21 +24,21 @@ void FUN_0040cdcc(int param_1)
 ## Assembly (observed)
 
 ```text
-0x40cdcc: PUSH EBX
-0x40cdcd: MOV EBX, EAX
-0x40cdcf: XOR EAX, EAX
-0x40cdd1: MOV dword ptr [EBX + 0x68], EAX
-0x40cdd4: MOV EAX, dword ptr [EBX + 0x64]
-0x40cdd7: TEST EAX, EAX
-0x40cdd9: JZ 0x0040cded
-0x40cddb: PUSH 0x8000
-0x40cde0: PUSH 0x0
-0x40cde2: PUSH EAX
-0x40cde3: CALL 0x00406854
-0x40cde8: XOR EAX, EAX
-0x40cdea: MOV dword ptr [EBX + 0x64], EAX
-0x40cded: POP EBX
-0x40cdee: RET
+0x0040cdcc: PUSH EBX
+0x0040cdcd: MOV EBX, EAX
+0x0040cdcf: XOR EAX, EAX
+0x0040cdd1: MOV dword ptr [EBX + 0x68], EAX
+0x0040cdd4: MOV EAX, dword ptr [EBX + 0x64]
+0x0040cdd7: TEST EAX, EAX
+0x0040cdd9: JZ 0x0040cded
+0x0040cddb: PUSH 0x8000
+0x0040cde0: PUSH 0x0
+0x0040cde2: PUSH EAX
+0x0040cde3: CALL 0x00406854
+0x0040cde8: XOR EAX, EAX
+0x0040cdea: MOV dword ptr [EBX + 0x64], EAX
+0x0040cded: POP EBX
+0x0040cdee: RET
 ```
 
 Value flow (observed): `[EBX+0x68]=0` unconditional; `[EBX+0x64]` tested; nonzero →
@@ -48,12 +48,12 @@ Value flow (observed): `[EBX+0x68]=0` unconditional; `[EBX+0x64]` tested; nonzer
 
 Callees (1):
 
-- `0x406854 KERNEL32.DLL::VirtualFree`
+- `0x00406854 KERNEL32.DLL::VirtualFree`
 
 Callers (1 procedure, 2 sites):
 
-- `0x40ce24 FUN_0040ce24` (site `0x40cea5`)
-- inbound site `0x40cdad` (same-batch region, procedure-level caller `0x40ce24` per manager; raw `0x40cdad` inside `FUN_0040c...` range — recorded as observed)
+- `0x0040ce24 FUN_0040ce24` (site `0x0040cea5`)
+- inbound site `0x0040cdad` (same-batch region, procedure-level caller `0x0040ce24` per manager; raw `0x0040cdad` inside `FUN_0040c...` range — recorded as observed)
 
 ## Referenced strings
 
@@ -61,7 +61,7 @@ None.
 
 ## Referenced names
 
-- `0x406854: KERNEL32.DLL::VirtualFree`, `0x40cded: LAB_0040cded`
+- `0x00406854: KERNEL32.DLL::VirtualFree`, `0x0040cded: LAB_0040cded`
 
 ## Native API (observed)
 
@@ -74,6 +74,6 @@ None.
 
 ## Unknowns:
 
-- Observation: `+0x68` is size cell, `+0x64` is base cell (matches `0x40ce24` alloc pair).
+- Observation: `+0x68` is size cell, `+0x64` is base cell (matches `0x0040ce24` alloc pair).
 - Inference: `VirtualFree` return ignored; hook returns `u32` unchecked.
 - Unknown: semantic name unproven; kept as `fn_0040cdcc`.

@@ -1,8 +1,8 @@
-//! Original procedure `0x00404c1c` (11 bytes, `0x404c1c–0x404c20` + `0x404c24–0x404c29`).
+//! Original procedure `0x00404c1c` (11 bytes, `0x00404c1c–0x00404c20` + `0x00404c24–0x00404c29`).
 //! Evidence: `evidence/00404c1c_fn_00404c1c.md`.
 
 /// Cell observed as `DAT_00404c22`, address-taken on null lane. First 2
-/// image bytes are `00 00`; caller `0x404af0` uses the result as a
+/// image bytes are `00 00`; caller `0x00404af0` uses the result as a
 /// wide-string pointer.
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to real

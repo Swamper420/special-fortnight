@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e5dc` (98 bytes, `0x40e5dc–0x40e63d`).
+//! Original procedure `0x0040e5dc` (98 bytes, `0x0040e5dc–0x0040e63d`).
 //! Evidence: `evidence/0040e5dc_fn_0040e5dc.md`.
 
 unsafe extern "C" fn default_sleep(_ms: u32) {}
@@ -9,11 +9,11 @@ unsafe extern "C" fn default_lasterror() -> u32 {
     0
 }
 
-/// `KERNEL32.DLL::Sleep` (`0x40abcc`).
+/// `KERNEL32.DLL::Sleep` (`0x0040abcc`).
 ///
 /// ponytail: hook standing in for the raw import call at the original site.
 pub static mut HOOK_Sleep: unsafe extern "C" fn(u32) = default_sleep;
-/// Target `0x40e168` gated delete.
+/// Target `0x0040e168` gated delete.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040e168`.
 pub static mut HOOK_0040E168: unsafe extern "C" fn(u8, *mut u8) -> i32 = default_delete;

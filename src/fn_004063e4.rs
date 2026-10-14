@@ -1,4 +1,4 @@
-//! Original procedure `0x004063e4` (106 bytes, `0x4063e4–0x40644d`).
+//! Original procedure `0x004063e4` (106 bytes, `0x004063e4–0x0040644d`).
 //! Evidence: `evidence/004063e4_fn_004063e4.md`.
 
 unsafe extern "C" fn default_resolve(_key: *mut u8) -> usize {
@@ -18,7 +18,7 @@ unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8, _n: u32) {}
 
 unsafe extern "C" fn default_store_wide(_slot: *mut u8, _s: *mut u16) {}
 
-/// Target `0x405b90` (`FUN_00405b90`), called with `**param_1`;
+/// Target `0x00405b90` (`FUN_00405b90`), called with `**param_1`;
 /// result is the `LoadStringW` instance.
 ///
 /// ponytail: hook standing in for done `fn_00405b90` (which returns
@@ -26,7 +26,7 @@ unsafe extern "C" fn default_store_wide(_slot: *mut u8, _s: *mut u16) {}
 /// once cross-module linkage proven.
 pub static mut HOOK_00405b90: unsafe extern "C" fn(*mut u8) -> usize = default_resolve;
 
-/// Import thunk `0x401138` (`USER32.DLL::LoadStringW`),
+/// Import thunk `0x00401138` (`USER32.DLL::LoadStringW`),
 /// `(hInstance, uID, lpBuffer, 0x1000)`.
 ///
 /// ponytail: hook standing in for the import (also keeps host tests
@@ -35,14 +35,14 @@ pub static mut HOOK_00405b90: unsafe extern "C" fn(*mut u8) -> usize = default_r
 pub static mut LOAD_STRING_W_00401138: unsafe extern "C" fn(usize, u32, *mut u16, i32) -> i32 =
     default_load_string;
 
-/// Target `0x404dd4` (`FUN_00404dd4`), `(param_2, buf, n)` on the
+/// Target `0x00404dd4` (`FUN_00404dd4`), `(param_2, buf, n)` on the
 /// resource lane.
 ///
 /// ponytail: hook standing in for done `fn_00404dd4`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00404dd4: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_store;
 
-/// Target `0x404e14` (`FUN_00404e14`), `(param_2, [param_1+4])` on
+/// Target `0x00404e14` (`FUN_00404e14`), `(param_2, [param_1+4])` on
 /// the direct lane (`[param_1+4]` passes as a pointer).
 ///
 /// ponytail: hook standing in for done `fn_00404e14`, rewire to the

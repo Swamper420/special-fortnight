@@ -1,9 +1,9 @@
-//! Original procedure `0x00404c80` (5 bytes, `0x404c80–0x404c84`).
+//! Original procedure `0x00404c80` (5 bytes, `0x00404c80–0x00404c84`).
 //! Evidence: `evidence/00404c80_fn_00404c80.md`.
 
 unsafe extern "C" fn default_target(_v: i32) {}
 
-/// Target `0x40493c` (`FUN_0040493c`), reached by terminal `JMP`.
+/// Target `0x0040493c` (`FUN_0040493c`), reached by terminal `JMP`.
 ///
 /// ponytail: hook standing in for unreconstructed target, rewire to
 /// real `fn_0040493c` once cross-module linkage proven.

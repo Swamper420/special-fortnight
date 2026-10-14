@@ -1,4 +1,4 @@
-//! Original procedure `0x00404ef4` (10 bytes, `0x404ef4–0x404efd`).
+//! Original procedure `0x00404ef4` (10 bytes, `0x00404ef4–0x00404efd`).
 //! Evidence: `evidence/00404ef4_fn_00404ef4.md`.
 
 /// Null-checked dword-at-`p-4`: `if p==0 {0} else {*(p-4)}`. Param arrives

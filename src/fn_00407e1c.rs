@@ -1,4 +1,4 @@
-//! Original procedure `0x00407e1c` (52 bytes, `0x407e1c–0x407e4f`).
+//! Original procedure `0x00407e1c` (52 bytes, `0x00407e1c–0x00407e4f`).
 //! Evidence: `evidence/00407e1c_fn_00407e1c.md`.
 
 /// Signed dispatcher over `fn_00407e50`: iff the low byte of

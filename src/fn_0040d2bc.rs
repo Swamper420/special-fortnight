@@ -1,4 +1,4 @@
-//! Original procedure `0x0040d2bc` (126 bytes, `0x40d2bc–0x40d339`).
+//! Original procedure `0x0040d2bc` (126 bytes, `0x0040d2bc–0x0040d339`).
 //! Evidence: `evidence/0040d2bc_fn_0040d2bc.md`.
 
 /// Header/tag parse; 1 on reject (`len<5` or `tag>=0xe1`), else 0.

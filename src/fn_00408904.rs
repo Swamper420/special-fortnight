@@ -1,9 +1,9 @@
-//! Original procedure `0x00408904` (16 bytes, `0x408904–0x408913`).
+//! Original procedure `0x00408904` (16 bytes, `0x00408904–0x00408913`).
 //! Evidence: `evidence/00408904_fn_00408904.md`.
 
 unsafe extern "C" fn default_clear(_slot: *mut u32) {}
 
-/// Callee `0x404a8c` (`FUN_00404a8c`), called with caller-frame
+/// Callee `0x00404a8c` (`FUN_00404a8c`), called with caller-frame
 /// scratch `EBP-0x10`.
 ///
 /// ponytail: hook standing in for reconstructed `fn_00404a8c`, rewire

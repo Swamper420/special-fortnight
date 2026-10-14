@@ -1,4 +1,4 @@
-//! Original procedure `0x0040ed38` (6 bytes, `0x40ed38–0x40ed3d`).
+//! Original procedure `0x0040ed38` (6 bytes, `0x0040ed38–0x0040ed3d`).
 //! Evidence: `evidence/0040ed38_fn_0040ed38.md`.
 
 /// Locked no-op OR: `*p |= 0` under bus lock. Value unchanged;

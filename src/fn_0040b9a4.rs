@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b9a4` (41 bytes, `0x40b9a4–0x40b9cc`).
+//! Original procedure `0x0040b9a4` (41 bytes, `0x0040b9a4–0x0040b9cc`).
 //! Evidence: `evidence/0040b9a4_fn_0040b9a4.md`.
 
 use crate::fn_00408218::fn_00408218;
@@ -7,7 +7,7 @@ unsafe extern "C" fn default_win_dir(_buf: *mut u16, _len: u32) -> u32 {
     0
 }
 
-/// Import `KERNEL32.DLL::GetWindowsDirectoryW` (`CALL 0x4067d4`),
+/// Import `KERNEL32.DLL::GetWindowsDirectoryW` (`CALL 0x004067d4`),
 /// called as `(buf, 0x104)`; the count result is ignored.
 ///
 /// ponytail: hook standing in for the import, rewire to a real

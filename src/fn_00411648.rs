@@ -1,4 +1,4 @@
-//! Original procedure `0x00411648` (202 bytes, `0x411648–0x411711`).
+//! Original procedure `0x00411648` (202 bytes, `0x00411648–0x00411711`).
 //! Entry-region one-shot runtime-init guard.
 //! Evidence: `evidence/00411648_fn_00411648.md`.
 
@@ -22,9 +22,9 @@ pub static mut DAT_00418520: u32 = 0;
 /// `DAT_00418524` ok-flag (both handles nonzero).
 pub static mut DAT_00418524: u8 = 0;
 
-/// Target `0x406718 GetModuleHandleW`.
+/// Target `0x00406718 GetModuleHandleW`.
 pub static mut HOOK_GETMODULEHANDLEW: unsafe extern "C" fn(u32) -> u32 = default_mod;
-/// Target `0x406728` import resolver.
+/// Target `0x00406728` import resolver.
 pub static mut HOOK_00406728: unsafe extern "C" fn(u32) -> u32 = default_resolve;
 /// Remaining gated targets.
 pub static mut HOOK_0040B9D0: unsafe extern "C" fn(*mut u8) = default_ptr;
@@ -32,7 +32,7 @@ pub static mut HOOK_0040B2E0: unsafe extern "C" fn(*mut u8, *mut u8) = default_p
 pub static mut HOOK_00404F98: unsafe extern "C" fn(*mut u8, u32) = default_pu32;
 pub static mut HOOK_0040AC84: unsafe extern "C" fn(*mut u8, u32) = default_pu32;
 pub static mut HOOK_0040BF84: unsafe extern "C" fn(u32, *mut u32) = default_bf84;
-/// Ungated release thunk `0x404c90` (always runs, arg 3).
+/// Ungated release thunk `0x00404c90` (always runs, arg 3).
 pub static mut HOOK_00404C90: unsafe extern "C" fn(*mut u8, u32) = default_rel;
 
 /// One-shot runtime init; release thunk runs unconditionally.
@@ -41,10 +41,10 @@ pub unsafe fn fn_00411648() {
     DAT_00418518 = was.wrapping_sub(1);
     let mut local = [0u8; 12];
     if was == 0 {
-        // ponytail: two GetModuleHandleW(0x411760)+resolve rounds observed.
-        let h1 = HOOK_GETMODULEHANDLEW(0x411760);
+        // ponytail: two GetModuleHandleW(0x00411760)+resolve rounds observed.
+        let h1 = HOOK_GETMODULEHANDLEW(0x00411760);
         DAT_0041851C = HOOK_00406728(h1);
-        let h2 = HOOK_GETMODULEHANDLEW(0x411760);
+        let h2 = HOOK_GETMODULEHANDLEW(0x00411760);
         DAT_00418520 = HOOK_00406728(h2);
         DAT_00418524 = if DAT_0041851C == 0 || DAT_00418520 == 0 {
             0
@@ -53,7 +53,7 @@ pub unsafe fn fn_00411648() {
         };
         HOOK_0040B9D0(local.as_mut_ptr());
         HOOK_0040B2E0(local.as_mut_ptr(), local.as_mut_ptr().wrapping_byte_add(4));
-        HOOK_00404F98(local.as_mut_ptr().wrapping_byte_add(4), 0x4117c4);
+        HOOK_00404F98(local.as_mut_ptr().wrapping_byte_add(4), 0x004117c4);
         HOOK_0040AC84(local.as_mut_ptr().wrapping_byte_add(4), 0x8000);
         HOOK_0040BF84(0x4c783afb, local.as_mut_ptr() as *mut u32);
     }

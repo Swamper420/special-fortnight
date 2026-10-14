@@ -1,4 +1,4 @@
-//! Original procedure `0x004062b8` (129 bytes, `0x4062b8–0x406338`).
+//! Original procedure `0x004062b8` (129 bytes, `0x004062b8–0x00406338`).
 //! Evidence: `evidence/004062b8_fn_004062b8.md`.
 
 unsafe extern "C" fn default_mbtowc(
@@ -12,7 +12,7 @@ unsafe extern "C" fn default_mbtowc(
     0
 }
 
-/// Import thunk `0x401150` (`KERNEL32.DLL::MultiByteToWideChar`).
+/// Import thunk `0x00401150` (`KERNEL32.DLL::MultiByteToWideChar`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to the real
 /// `windows-sys` import once imports are modeled.

@@ -1,4 +1,4 @@
-//! Original procedure `0x004058ec` (35 bytes, `0x4058ec–0x40590e`).
+//! Original procedure `0x004058ec` (35 bytes, `0x004058ec–0x0040590e`).
 //! Evidence: `evidence/004058ec_fn_004058ec.md`.
 
 /// Wrapping 64-bit multiply of `(hi_a:lo_a)` (EDX:EAX) by the two

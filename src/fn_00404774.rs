@@ -1,4 +1,4 @@
-//! Original procedure `0x00404774` (74 bytes, `0x404774–0x4047bd`).
+//! Original procedure `0x00404774` (74 bytes, `0x00404774–0x004047bd`).
 //! Evidence: `evidence/00404774_fn_00404774.md`.
 
 unsafe extern "C" fn default_alloc(_size: u32) -> *mut u8 {
@@ -9,13 +9,13 @@ unsafe extern "C" fn default_fail(_arg: u32) -> *mut u8 {
     core::ptr::null_mut()
 }
 
-/// Allocator `0x402e04` (`FUN_00402e04`), arg is evened `len+14`.
+/// Allocator `0x00402e04` (`FUN_00402e04`), arg is evened `len+14`.
 ///
 /// ponytail: hook standing in for done `fn_00402e04` (which takes/returns
 /// `i32`), rewire to real call once cross-module test serialization exists.
 pub static mut ALLOC_00402E04: unsafe extern "C" fn(u32) -> *mut u8 = default_alloc;
 
-/// Overflow arm `0x40380c` (`thunk_FUN_00402f60`), terminal `JMP` with the
+/// Overflow arm `0x0040380c` (`thunk_FUN_00402f60`), terminal `JMP` with the
 /// wrapped `len+14`.
 ///
 /// ponytail: hook standing in for unreconstructed target; call+return

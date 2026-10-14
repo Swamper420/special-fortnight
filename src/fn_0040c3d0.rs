@@ -1,4 +1,4 @@
-//! Original procedure `0x0040c3d0` (63 bytes, `0x40c3d0–0x40c40e`).
+//! Original procedure `0x0040c3d0` (63 bytes, `0x0040c3d0–0x0040c40e`).
 //! Evidence: `evidence/0040c3d0_fn_0040c3d0.md`.
 
 unsafe extern "C" fn default_set_ptr(
@@ -16,7 +16,7 @@ unsafe extern "C" fn default_get_err() -> u32 {
 
 unsafe extern "C" fn default_report(_first: *const u8) {}
 
-/// Import `KERNEL32.DLL::SetFilePointer` (`CALL 0x40682c`).
+/// Import `KERNEL32.DLL::SetFilePointer` (`CALL 0x0040682c`).
 ///
 /// ponytail: hook standing in for the import (also keeps host tests
 /// linkable), rewire to raw `extern "system" SetFilePointer` once
@@ -24,14 +24,14 @@ unsafe extern "C" fn default_report(_first: *const u8) {}
 pub static mut HOOK_SetFilePointer: unsafe extern "C" fn(u32, i32, *mut i32, u32) -> u32 =
     default_set_ptr;
 
-/// Import `KERNEL32.DLL::GetLastError` (`CALL 0x406700`).
+/// Import `KERNEL32.DLL::GetLastError` (`CALL 0x00406700`).
 ///
 /// ponytail: hook standing in for the import (also keeps host tests
 /// linkable), rewire to raw `extern "system" GetLastError` once
 /// Windows-target linkage proven.
 pub static mut HOOK_GetLastError: unsafe extern "C" fn() -> u32 = default_get_err;
 
-/// Target `0x40c1e4` (`FUN_0040c1e4`), `(*param_1)` on the
+/// Target `0x0040c1e4` (`FUN_0040c1e4`), `(*param_1)` on the
 /// failed-with-code lane.
 ///
 /// ponytail: hook standing in for done `fn_0040c1e4`, rewire to the real

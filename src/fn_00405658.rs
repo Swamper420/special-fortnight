@@ -1,9 +1,9 @@
-//! Original procedure `0x00405658` (10 bytes, `0x405658–0x405661`).
+//! Original procedure `0x00405658` (10 bytes, `0x00405658–0x00405661`).
 //! Evidence: `evidence/00405658_fn_00405658.md`.
 
 unsafe extern "C" fn default_target(_a: *mut u8, _b: *mut u8, _c: u32) {}
 
-/// Target `0x405548` (`FUN_00405548`), reached by `JMP` with `ECX=1`.
+/// Target `0x00405548` (`FUN_00405548`), reached by `JMP` with `ECX=1`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00405548` once it exists.

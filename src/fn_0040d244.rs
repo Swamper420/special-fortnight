@@ -1,4 +1,4 @@
-//! Original procedure `0x0040d244` (118 bytes, `0x40d244–0x40d2b9`).
+//! Original procedure `0x0040d244` (118 bytes, `0x0040d244–0x0040d2b9`).
 //! Evidence: `evidence/0040d244_fn_0040d244.md`.
 
 unsafe extern "C" fn default_bit(_t: *mut u16, _s: *mut u8) -> u32 {
@@ -9,12 +9,12 @@ unsafe extern "C" fn default_tree(_base: usize, _n: u32, _s: *mut u8) -> i32 {
     0
 }
 
-/// Target `0x40d094` (`FUN_0040d094`) bit decode, both `d094` sites.
+/// Target `0x0040d094` (`FUN_0040d094`) bit decode, both `d094` sites.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040d094`.
 pub static mut HOOK_0040D094: unsafe extern "C" fn(*mut u16, *mut u8) -> u32 = default_bit;
 
-/// Target `0x40d11c` (`FUN_0040d11c`) tree decode, all three `d11c` sites.
+/// Target `0x0040d11c` (`FUN_0040d11c`) tree decode, all three `d11c` sites.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040d11c`.
 pub static mut HOOK_0040D11C: unsafe extern "C" fn(usize, u32, *mut u8) -> i32 = default_tree;

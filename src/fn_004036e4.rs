@@ -1,11 +1,11 @@
-//! Original procedure `0x004036e4` (47 bytes, `0x4036e4–0x403712`).
+//! Original procedure `0x004036e4` (47 bytes, `0x004036e4–0x00403712`).
 //! Evidence: `evidence/004036e4_fn_004036e4.md`.
 
 unsafe extern "C" fn default_get_keyboard_type(_flag: u32) -> u32 {
     0
 }
 
-/// Thunk `0x4036dc` (`USER32.DLL::GetKeyboardType`).
+/// Thunk `0x004036dc` (`USER32.DLL::GetKeyboardType`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" GetKeyboardType` once

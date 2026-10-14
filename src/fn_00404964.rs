@@ -1,4 +1,4 @@
-//! Original procedure `0x00404964` (85 bytes, `0x404964–0x4049b8`).
+//! Original procedure `0x00404964` (85 bytes, `0x00404964–0x004049b8`).
 //! Evidence: `evidence/00404964_fn_00404964.md`.
 
 unsafe extern "C" fn default_normalize(_slot: *mut u8) {}
@@ -11,28 +11,28 @@ unsafe extern "C" fn default_copy(_src: *mut u8, _dst: *mut u8, _len: u32) {}
 
 unsafe extern "C" fn default_free(_arg: u32) {}
 
-/// Normalize target `0x404808` (`FUN_00404808`), called with the slot;
+/// Normalize target `0x00404808` (`FUN_00404808`), called with the slot;
 /// EAX preserved across it (`PUSH/POP`).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00404808` once it exists.
 pub static mut HOOK_00404808: unsafe extern "C" fn(*mut u8) = default_normalize;
 
-/// Alloc target `0x404774` (`FUN_00404774`), called with
+/// Alloc target `0x00404774` (`FUN_00404774`), called with
 /// `(u32 data @obj-4, zero-extended u16 @obj-12)`, returns new object.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00404774` once it exists.
 pub static mut HOOK_00404774: unsafe extern "C" fn(u32, u32) -> *mut u8 = default_alloc;
 
-/// Copy target `0x402fbc` (`FUN_00402fbc`), called with
+/// Copy target `0x00402fbc` (`FUN_00402fbc`), called with
 /// `(old, new, u32 len @old-4)`.
 ///
 /// ponytail: hook standing in for done `fn_00402fbc`, rewire to real
 /// call once cross-module linkage proven.
 pub static mut HOOK_00402FBC: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_copy;
 
-/// Release target `0x402e20` (`FUN_00402e20`), called with `old-12`
+/// Release target `0x00402e20` (`FUN_00402e20`), called with `old-12`
 /// when the locked count hits zero.
 ///
 /// ponytail: hook standing in for done `fn_00402e20`, rewire to real

@@ -1,11 +1,11 @@
-//! Original procedure `0x00403b70` (30 bytes, `0x403b70–0x403b8d`).
+//! Original procedure `0x00403b70` (30 bytes, `0x00403b70–0x00403b8d`).
 //! Evidence: `evidence/00403b70_fn_00403b70.md`.
 
 /// Jump-target resolver: `EAX` in/out, `ECX` cursor in/out, `EDX` dead.
 /// Null cursor returns entry `EAX`. Else `EAX = dword [cursor+1]`; byte
 /// `[cursor] == 0xE9` advances `5 + EAX` (JMP rel32 target), `== 0xEB`
 /// sign-extends `AL` and advances `2 + EAX` (JMP rel8 target); other
-/// opcodes leave the cursor. Sole caller `0x403b90` consumes the updated
+/// opcodes leave the cursor. Sole caller `0x00403b90` consumes the updated
 /// cursor as its raise `args[0]`.
 ///
 /// ponytail: tuple stands in for `(EAX, ECX)` register pair, no

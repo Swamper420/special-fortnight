@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b698` (70 bytes, `0x40b698–0x40b6dd`).
+//! Original procedure `0x0040b698` (70 bytes, `0x0040b698–0x0040b6dd`).
 //! Evidence: `evidence/0040b698_fn_0040b698.md`.
 
 unsafe extern "C" fn default_convert(_obj: *mut u8, _slot: *mut u8) {}
@@ -13,32 +13,32 @@ unsafe extern "C" fn default_attrs(_path: *mut u8) -> u32 {
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Converter `0x40b62c` (`FUN_0040b62c`), `(param_1, &local)`.
+/// Converter `0x0040b62c` (`FUN_0040b62c`), `(param_1, &local)`.
 /// Fills the stack slot with the converted string object.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire
 /// to real `fn_0040b62c` once it exists.
 pub static mut HOOK_0040b62c: unsafe extern "C" fn(*mut u8, *mut u8) = default_convert;
 
-/// Path extractor `0x404d24` (`FUN_00404d24`), `(obj)`.
+/// Path extractor `0x00404d24` (`FUN_00404d24`), `(obj)`.
 /// Returns a DATA pointer (pushed as the import arg).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire
 /// to real `fn_00404d24` once it exists.
 pub static mut HOOK_00404d24: unsafe extern "C" fn(*mut u8) -> *mut u8 = default_path;
 
-/// Import `KERNEL32.DLL::GetFileAttributesW` (`CALL 0x4066e8`),
+/// Import `KERNEL32.DLL::GetFileAttributesW` (`CALL 0x004066e8`),
 /// `(path) -> attrs`. Result is discarded on the target.
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetFileAttributesW: unsafe extern "C" fn(*mut u8) -> u32 = default_attrs;
 
-/// Release `0x404c88` (`thunk_FUN_004046c4`), always run on
+/// Release `0x00404c88` (`thunk_FUN_004046c4`), always run on
 /// `&local` (SEH finally on target).
 ///
 /// ponytail: hook standing in for thunk target, rewire once
-/// `0x4046c4` is linked.
+/// `0x004046c4` is linked.
 pub static mut HOOK_004046c4: unsafe extern "C" fn(*mut u8) = default_release;
 
 /// Convert `param_1` into a stack slot, resolve its path, probe

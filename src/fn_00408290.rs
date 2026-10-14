@@ -1,4 +1,4 @@
-//! Original procedure `0x00408290` (66 bytes, `0x408290–0x4082d1`).
+//! Original procedure `0x00408290` (66 bytes, `0x00408290–0x004082d1`).
 //! Evidence: `evidence/00408290_fn_00408290.md`.
 
 /// Observed `FUN_004080dc` behavior (31-byte scanner): NUL word
@@ -32,7 +32,7 @@ unsafe extern "C" fn default_format(
     0
 }
 
-/// Callee `0x408540` (`FUN_00408540`); result used as the `u16`
+/// Callee `0x00408540` (`FUN_00408540`); result used as the `u16`
 /// index of the NUL store.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to

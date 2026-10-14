@@ -1,8 +1,8 @@
 //! Original procedure `0x00401518` (94 bytes, ranges
-//! `0x401518–0x401549` + `0x40154c–0x401577`).
+//! `0x00401518–0x00401549` + `0x0040154c–0x00401577`).
 //! Evidence: `evidence/00401518_fn_00401518.md`.
 
-/// Bucket table: 1024 buckets × 2 pointers at `0x413ac4`+`u*8`
+/// Bucket table: 1024 buckets × 2 pointers at `0x00413ac4`+`u*8`
 /// (`DAT_00413ac8` is the second-word lane at `base+4`).
 ///
 /// ponytail: absolute-address cells modeled as mutable statics, merge

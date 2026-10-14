@@ -1,4 +1,4 @@
-//! Original procedure `0x00404458` (105 bytes, `0x404458–0x4044c1`).
+//! Original procedure `0x00404458` (105 bytes, `0x00404458–0x004044c1`).
 //! Evidence: `evidence/00404458_fn_00404458.md`.
 
 /// Cell observed as `dword ptr [0x00412000]` (signed decimal input).
@@ -13,19 +13,19 @@ pub static mut CELL_00412000: i32 = 0;
 /// with writer modules in `data.rs` once data layout proven.
 pub static mut CELL_00412004: u32 = 0;
 
-/// Buffer observed at `0x412778` (`Runtime error     at 00000000`).
+/// Buffer observed at `0x00412778` (`Runtime error     at 00000000`).
 ///
 /// ponytail: absolute-address bytes as hermetic own-module static, unify
 /// in `data.rs` once data layout proven.
 pub static mut BUF_00412778: [u8; 29] = *b"Runtime error     at 00000000";
 
-/// Nibble table bytes observed at `0x404443` (`0123456789ABCDEF`).
+/// Nibble table bytes observed at `0x00404443` (`0123456789ABCDEF`).
 ///
 /// ponytail: code-range bytes as hermetic own-module static, unify in
 /// `data.rs` once data layout proven.
 pub static mut TABLE_00404443: [u8; 16] = *b"0123456789ABCDEF";
 
-/// Pointer cell observed as `dword ptr [0x412798]`, points at the nibble
+/// Pointer cell observed as `dword ptr [0x00412798]`, points at the nibble
 /// table. Provision before calling (tests set it to `TABLE_00404443`).
 ///
 /// ponytail: absolute-address cell as hermetic own-module static (null
@@ -50,7 +50,7 @@ pub unsafe fn fn_00404458() {
             break;
         }
     }
-    // Loop 2: AND-nibble table fetch through [0x412798] (double deref),
+    // Loop 2: AND-nibble table fetch through [0x00412798] (double deref),
     // XOR EDX,EDX+DIV (unsigned). INC/[-1] cancel: table[(v>>s)&0xf].
     let mut idx: u8 = 0x1c;
     let mut v: u32 = CELL_00412004;

@@ -1,11 +1,11 @@
-//! Original procedure `0x004081e8` (46 bytes, `0x4081e8–0x408215`).
+//! Original procedure `0x004081e8` (46 bytes, `0x004081e8–0x00408215`).
 //! Evidence: `evidence/004081e8_fn_004081e8.md`.
 
 unsafe extern "C" fn default_end(s: *mut u16) -> *mut u16 {
     s
 }
 
-/// End callee `0x4080fc` (`FUN_004080fc`), observed `(short *) -> short *`.
+/// End callee `0x004080fc` (`FUN_004080fc`), observed `(short *) -> short *`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004080fc` once it exists.

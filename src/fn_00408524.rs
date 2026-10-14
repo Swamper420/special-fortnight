@@ -1,4 +1,4 @@
-//! Original procedure `0x00408524` (27 bytes, `0x408524–0x40853e`).
+//! Original procedure `0x00408524` (27 bytes, `0x00408524–0x0040853e`).
 //! Evidence: `evidence/00408524_fn_00408524.md`.
 
 unsafe extern "C" fn default_00408988(
@@ -11,7 +11,7 @@ unsafe extern "C" fn default_00408988(
 ) {
 }
 
-/// Callee `0x408988` (`FUN_00408988`): `EAX`/`EDX`/`ECX` pass through
+/// Callee `0x00408988` (`FUN_00408988`): `EAX`/`EDX`/`ECX` pass through
 /// untouched while three stack args are pushed right-to-left, so the
 /// hook takes all six lanes in order. `RET 0xc` pops exactly the
 /// three pushed dwords.

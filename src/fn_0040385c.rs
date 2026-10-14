@@ -1,4 +1,4 @@
-//! Original procedure `0x0040385c` (6 bytes, `0x40385c–0x403861`).
+//! Original procedure `0x0040385c` (6 bytes, `0x0040385c–0x00403861`).
 //! Evidence: `evidence/0040385c_fn_0040385c.md`.
 
 /// `*(obj-0x34)`. Param arrives in EAX per `__register` observation;

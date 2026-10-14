@@ -1,9 +1,9 @@
-//! Original procedure `0x004048d4` (60 bytes, `0x4048d4–0x40490f`).
+//! Original procedure `0x004048d4` (60 bytes, `0x004048d4–0x0040490f`).
 //! Evidence: `evidence/004048d4_fn_004048d4.md`.
 
 unsafe extern "C" fn default_tail(_slot: *mut u32, _ptr: *const u16, _len: u32, _flag: u16) {}
 
-/// Tail target `0x404850` (`FUN_00404850`), reached by terminal `JMP`
+/// Tail target `0x00404850` (`FUN_00404850`), reached by terminal `JMP`
 /// with `(param_1, orig param_2, wide len, param_3)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040bc80` (10 bytes, `0x40bc80–0x40bc89`).
+//! Original procedure `0x0040bc80` (10 bytes, `0x0040bc80–0x0040bc89`).
 //! Evidence: `evidence/0040bc80_fn_0040bc80.md`.
 
 unsafe extern "C" fn default_bb34(
@@ -10,7 +10,7 @@ unsafe extern "C" fn default_bb34(
 ) {
 }
 
-/// Target `0x40bb34` (`FUN_0040bb34`), called with
+/// Target `0x0040bb34` (`FUN_0040bb34`), called with
 /// `(param_1, param_2, param_3, 2, 1)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to

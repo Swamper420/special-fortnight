@@ -1,4 +1,4 @@
-//! Original procedure `0x0040c6e4` (84 bytes, `0x40c6e4–0x40c737`).
+//! Original procedure `0x0040c6e4` (84 bytes, `0x0040c6e4–0x0040c737`).
 //! Evidence: `evidence/0040c6e4_fn_0040c6e4.md`.
 
 unsafe extern "C" fn default_builder() {}
@@ -9,13 +9,13 @@ unsafe extern "C" fn default_builder() {}
 /// image-relative import once data layout proven.
 pub static mut CELL_00417d98: u32 = 0;
 
-/// Table observed as `dword ptr [EDX*4+0x417d9c]`, 256 `u32` entries.
+/// Table observed as `dword ptr [EDX*4+0x00417d9c]`, 256 `u32` entries.
 ///
 /// ponytail: absolute-address table modeled as mutable static, upgrade to real
 /// image-relative import once data layout proven.
 pub static mut TABLE_00417d9c: [u32; 256] = [0; 256];
 
-/// Target `0x40c6b0` (`FUN_0040c6b0`), table builder, no args.
+/// Target `0x0040c6b0` (`FUN_0040c6b0`), table builder, no args.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_0040c6b0` once it exists.

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b5d4` (38 bytes, `0x40b5d4–0x40b5f9`).
+//! Original procedure `0x0040b5d4` (38 bytes, `0x0040b5d4–0x0040b5f9`).
 //! Evidence: `evidence/0040b5d4_fn_0040b5d4.md`.
 
 unsafe extern "C" fn default_scan(_s: usize, _unit: u8) -> i32 {
@@ -7,14 +7,14 @@ unsafe extern "C" fn default_scan(_s: usize, _unit: u8) -> i32 {
 
 unsafe extern "C" fn default_emit(_a: *mut u8, _b: i32, _c: i32, _d: *mut u8) {}
 
-/// Callee `0x40b4b4` (`FUN_0040b4b4`), called with `(p1, 1)`;
+/// Callee `0x0040b4b4` (`FUN_0040b4b4`), called with `(p1, 1)`;
 /// returns the base index.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_0040b4b4` once it exists.
 pub static mut HOOK_0040B4B4: unsafe extern "C" fn(usize, u8) -> i32 = default_scan;
 
-/// Callee `0x40525c` (`FUN_0040525c`), called with
+/// Callee `0x0040525c` (`FUN_0040525c`), called with
 /// `(p1, r+1, 0x7fffffff, p2)`; shape mirrors done `fn_0040525c`.
 ///
 /// ponytail: hook mirroring done `fn_0040525c`'s shape, rewire to

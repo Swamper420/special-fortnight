@@ -1,4 +1,4 @@
-//! Original procedure `0x0040ce24` (195 bytes, `0x40ce24–0x40cee6`).
+//! Original procedure `0x0040ce24` (195 bytes, `0x0040ce24–0x0040cee6`).
 //! Evidence: `evidence/0040ce24_fn_0040ce24.md`.
 
 unsafe extern "C" fn default_fail(_c: u32) {}
@@ -20,40 +20,40 @@ unsafe extern "C" fn default_alloc(_a: u32, _s: u32, _t: u32, _p: u32) -> u32 {
 unsafe extern "C" fn default_emit(_s: *mut u8, _d: usize, _o: usize) {}
 unsafe extern "C" fn default_oom() {}
 
-/// `0x40cc3c` reporter (codes 1/3/7).
+/// `0x0040cc3c` reporter (codes 1/3/7).
 ///
 /// ponytail: hook standing in for same-batch `fn_0040cc3c`, rewire once
 /// cross-module linkage proven.
 pub static mut HOOK_0040CC3C: unsafe extern "C" fn(u32) = default_fail;
 
-/// `0x403250` fill `(state,0x50,0)`.
+/// `0x00403250` fill `(state,0x50,0)`.
 ///
 /// ponytail: hook standing in for done `fn_00403250`, rewire once linkage proven.
 pub static mut HOOK_00403250: unsafe extern "C" fn(*mut u8, u32, u8) = default_fill;
 
-/// `0x40d9d8` header parse `(state,0x50,hdr,&sz,&off,5)`.
+/// `0x0040d9d8` header parse `(state,0x50,hdr,&sz,&off,5)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee.
 pub static mut HOOK_0040D9D8: unsafe extern "C" fn(*mut u8, u32, *const u8, *mut u32, *mut i32, u32) -> i32 =
     default_parse;
 
-/// `0x40cdcc` free lane.
+/// `0x0040cdcc` free lane.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040cdcc`.
 pub static mut HOOK_0040CDCC: unsafe extern "C" fn(*mut u8) = default_free_one;
 
-/// Thunk `0x40684c` (`KERNEL32.DLL::VirtualAlloc`).
+/// Thunk `0x0040684c` (`KERNEL32.DLL::VirtualAlloc`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.
 pub static mut HOOK_VirtualAlloc: unsafe extern "C" fn(u32, u32, u32, u32) -> u32 = default_alloc;
 
-/// `0x40da28` emit `(state,dst,dst+off)`.
+/// `0x0040da28` emit `(state,dst,dst+off)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee.
 pub static mut HOOK_0040DA28: unsafe extern "C" fn(*mut u8, usize, usize) = default_emit;
 
-/// `0x409818` OOM lane.
+/// `0x00409818` OOM lane.
 ///
 /// ponytail: hook standing in for done `fn_00409818`.
 pub static mut HOOK_00409818: unsafe extern "C" fn() = default_oom;

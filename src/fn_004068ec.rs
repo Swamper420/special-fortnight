@@ -1,10 +1,10 @@
-//! Original procedure `0x004068ec` (87 bytes, `0x4068ec–0x406942`).
+//! Original procedure `0x004068ec` (87 bytes, `0x004068ec–0x00406942`).
 //! Evidence: `evidence/004068ec_fn_004068ec.md`.
 
 use crate::fn_00403100::fn_00403100;
 use crate::fn_00403110::fn_00403110;
 
-/// Import `USER32.DLL::CreateWindowExW` (`CALL 0x4068e4`).
+/// Import `USER32.DLL::CreateWindowExW` (`CALL 0x004068e4`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040a148` (30 bytes, `0x40a148–0x40a165`).
+//! Original procedure `0x0040a148` (30 bytes, `0x0040a148–0x0040a165`).
 //! Evidence: `evidence/0040a148_fn_0040a148.md`.
 
 unsafe extern "C" fn default_exchange(
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_exchange(
     0
 }
 
-/// Exchange target `0x406698` (`FUN_00406698`),
+/// Exchange target `0x00406698` (`FUN_00406698`),
 /// `(dest, slotaddr, comparand)`; EAX result observed by the
 /// loop's `CMP EAX, [EBX]`.
 ///

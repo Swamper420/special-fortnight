@@ -1,4 +1,4 @@
-//! Process entry point `0x004117dc` (522 bytes, `0x4117dc–0x4119e5`).
+//! Process entry point `0x004117dc` (522 bytes, `0x004117dc–0x004119e5`).
 //! Entry-region note: OS-invoked; no callers. Semantics kept, but this
 //! function is NOT called from `fn main()` yet (main stays as-is).
 //! Evidence: `evidence/004117dc_fn_004117dc.md`.
@@ -70,7 +70,7 @@ pub static mut FAKE_SETUP: [u32; 12] = [0; 12];
 /// Entry spine. `ok` mirrors `uVar4` (version/stream gate).
 /// Skips nothing: both `ec58` conditional sites kept in order.
 pub unsafe fn fn_004117dc() {
-    HOOK_004065D4(0x410144);
+    HOOK_004065D4(0x00410144);
     HOOK_0040ED40(0);
     HOOK_0040E894();
     if DAT_00412ADC_ENTRY != 0 {
@@ -79,8 +79,8 @@ pub unsafe fn fn_004117dc() {
     }
     let mut arg0: u32 = 0;
     HOOK_0040B8FC(0, &mut arg0);
-    HOOK_00404C98(0x418658, arg0);
-    DAT_0041865C = HOOK_0040C238(0x40c04c, 1, DAT_00418658, 1, 0, 2);
+    HOOK_00404C98(0x00418658, arg0);
+    DAT_0041865C = HOOK_0040C238(0x0040c04c, 1, DAT_00418658, 1, 0, 2);
     DAT_00418664 = HOOK_0040EE14();
     let mut ok = false;
     let mut skip_first_ec58 = false;
@@ -111,14 +111,14 @@ pub unsafe fn fn_004117dc() {
         HOOK_0040EC58();
     }
     HOOK_0040C220(DAT_0041865C, FAKE_SETUP[8]);
-    HOOK_0040C1F8(DAT_0041865C, 0x418674, 0x40);
+    HOOK_0040C1F8(DAT_0041865C, 0x00418674, 0x40);
     // ponytail: decompiler lifts trailing `JZ` as `if (!uVar4)`; return value unused.
-    let _ = HOOK_004031E0(0x418674, 0x412b2c, 0x40);
+    let _ = HOOK_004031E0(0x00418674, 0x00412b2c, 0x40);
     if !ok {
         HOOK_0040EC58();
     }
-    DAT_004186B8 = HOOK_0040C854(0x40c698, 1, DAT_0041865C, 0x40cc18);
-    HOOK_0040DA38(DAT_004186B8, 0x41852c, 0x11d, 4, 0x1c);
+    DAT_004186B8 = HOOK_0040C854(0x0040c698, 1, DAT_0041865C, 0x0040cc18);
+    HOOK_0040DA38(DAT_004186B8, 0x0041852c, 0x11d, 4, 0x1c);
     let count = FAKE_SETUP[11];
     DAT_00418650 = count;
     // ponytail: `IMUL count,0x3d` alloc size exact.

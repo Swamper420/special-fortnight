@@ -1,4 +1,4 @@
-//! Original procedure `0x00404f98` (191 bytes, `0x404f98–0x405056`).
+//! Original procedure `0x00404f98` (191 bytes, `0x00404f98–0x00405056`).
 //! Evidence: `evidence/00404f98_fn_00404f98.md`.
 
 use crate::fn_004046c4::fn_004046c4;
@@ -14,21 +14,21 @@ unsafe extern "C" fn default_fail(_arg: *mut u8) -> *mut u8 {
     core::ptr::null_mut()
 }
 
-/// Size target `0x404f00` (`FUN_00404f00`), called with
+/// Size target `0x00404f00` (`FUN_00404f00`), called with
 /// `(slot, oldlen+srclen)` (concat) or `(slot, oldlen*2)` (self).
 ///
 /// ponytail: hook standing in for same-batch `fn_00404f00`,
 /// rewire to the real call once cross-module linkage proven.
 pub static mut HOOK_00404f00: unsafe extern "C" fn(*mut u8, u32) = default_size;
 
-/// Copy target `0x402fbc` (`FUN_00402fbc`), called with
+/// Copy target `0x00402fbc` (`FUN_00402fbc`), called with
 /// `(src, newdata+oldlen*2, srclen*2)`.
 ///
 /// ponytail: hook standing in for done `fn_00402fbc`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_00402fbc: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_copy;
 
-/// Overflow arm `0x40380c` (`thunk_FUN_00402f60`), terminal `JMP`
+/// Overflow arm `0x0040380c` (`thunk_FUN_00402f60`), terminal `JMP`
 /// when the length sum has either of the top two bits set;
 /// returns the pointer the decompiler threads through.
 ///

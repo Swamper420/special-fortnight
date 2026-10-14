@@ -1,4 +1,4 @@
-//! Original procedure `0x0040392c` (33 bytes, `0x40392c–0x40394c`).
+//! Original procedure `0x0040392c` (33 bytes, `0x0040392c–0x0040394c`).
 //! Evidence: `evidence/0040392c_fn_0040392c.md`.
 
 use crate::fn_00403984::fn_00403984;

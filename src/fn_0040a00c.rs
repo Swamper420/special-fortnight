@@ -1,4 +1,4 @@
-//! Original procedure `0x0040a00c` (141 bytes, `0x40a00c–0x40a098`).
+//! Original procedure `0x0040a00c` (141 bytes, `0x0040a00c–0x0040a098`).
 //! Evidence: `evidence/0040a00c_fn_0040a00c.md`.
 
 unsafe extern "C" fn default_make(
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_make(
     0
 }
 
-/// Maker target `0x4098e0` (`FUN_004098e0`), `(EAX, 1, ECX)`;
+/// Maker target `0x004098e0` (`FUN_004098e0`), `(EAX, 1, ECX)`;
 /// result is a DATA pointer.
 ///
 /// ponytail: hook standing in for done `fn_004098e0`, rewire to
@@ -30,79 +30,79 @@ pub static mut DAT_00415C9C: usize = 0;
 /// real image-relative import once data layout proven.
 pub static mut DAT_00415CA0: usize = 0;
 
-/// Call-arg source `0x406eb0` (first-call `EAX`).
+/// Call-arg source `0x00406eb0` (first-call `EAX`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SRC_00406EB0: usize = 0;
 
-/// Call-arg source `0x412b4c` (first-call `ECX`).
+/// Call-arg source `0x00412b4c` (first-call `ECX`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SRC_00412B4C: usize = 0;
 
-/// Call-arg source `0x40743c` (second-call `EAX`).
+/// Call-arg source `0x0040743c` (second-call `EAX`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SRC_0040743C: usize = 0;
 
-/// Call-arg source `0x412bec` (second-call `ECX`).
+/// Call-arg source `0x00412bec` (second-call `ECX`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SRC_00412BEC: usize = 0;
 
-/// Value source `0x406d5c` (stored through the `0x412b40` slot).
+/// Value source `0x00406d5c` (stored through the `0x00412b40` slot).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SRC_00406D5C: usize = 0;
 
-/// Pointer slot `0x412b20` (cell takes `0x409b64`).
+/// Pointer slot `0x00412b20` (cell takes `0x00409b64`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412B20: usize = 0;
 
-/// Pointer slot `0x412b7c` (cell takes `0x409ffc`).
+/// Pointer slot `0x00412b7c` (cell takes `0x00409ffc`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412B7C: usize = 0;
 
-/// Pointer slot `0x412b40` (cell takes `[0x406d5c]`).
+/// Pointer slot `0x00412b40` (cell takes `[0x00406d5c]`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412B40: usize = 0;
 
-/// Pointer slot `0x412b70` (cell takes `0x409d24`).
+/// Pointer slot `0x00412b70` (cell takes `0x00409d24`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412B70: usize = 0;
 
-/// Pointer slot `0x412b80` (cell takes `0x409f08`).
+/// Pointer slot `0x00412b80` (cell takes `0x00409f08`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412B80: usize = 0;
 
-/// Pointer slot `0x412b84` (cell takes `0x409fd8`).
+/// Pointer slot `0x00412b84` (cell takes `0x00409fd8`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412B84: usize = 0;
 
-/// Pointer slot `0x412bfc` (cell takes `0x409c70`).
+/// Pointer slot `0x00412bfc` (cell takes `0x00409c70`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412BFC: usize = 0;
 
-/// Pointer slot `0x412b14` (cell takes `0x409c8c`).
+/// Pointer slot `0x00412b14` (cell takes `0x00409c8c`).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
@@ -123,14 +123,14 @@ pub unsafe fn fn_0040a00c() {
         1,
         SRC_00412BEC as *const u8,
     );
-    core::ptr::write(SLOT_00412B20 as *mut usize, 0x409b64);
-    core::ptr::write(SLOT_00412B7C as *mut usize, 0x409ffc);
+    core::ptr::write(SLOT_00412B20 as *mut usize, 0x00409b64);
+    core::ptr::write(SLOT_00412B7C as *mut usize, 0x00409ffc);
     core::ptr::write(SLOT_00412B40 as *mut usize, SRC_00406D5C);
-    core::ptr::write(SLOT_00412B70 as *mut usize, 0x409d24);
-    core::ptr::write(SLOT_00412B80 as *mut usize, 0x409f08);
-    core::ptr::write(SLOT_00412B84 as *mut usize, 0x409fd8);
-    core::ptr::write(SLOT_00412BFC as *mut usize, 0x409c70);
-    core::ptr::write(SLOT_00412B14 as *mut usize, 0x409c8c);
+    core::ptr::write(SLOT_00412B70 as *mut usize, 0x00409d24);
+    core::ptr::write(SLOT_00412B80 as *mut usize, 0x00409f08);
+    core::ptr::write(SLOT_00412B84 as *mut usize, 0x00409fd8);
+    core::ptr::write(SLOT_00412BFC as *mut usize, 0x00409c70);
+    core::ptr::write(SLOT_00412B14 as *mut usize, 0x00409c8c);
 }
 
 #[cfg(test)]
@@ -209,7 +209,7 @@ mod tests {
             assert_eq!(DAT_00415CA0, 0xbbbb);
             assert_eq!(
                 c,
-                [0x409b64, 0x409ffc, 0x51, 0x409d24, 0x409f08, 0x409fd8, 0x409c70, 0x409c8c]
+                [0x00409b64, 0x00409ffc, 0x51, 0x00409d24, 0x00409f08, 0x00409fd8, 0x00409c70, 0x00409c8c]
             );
         }
     }

@@ -1,9 +1,9 @@
-//! Original procedure `0x00402f60` (11 bytes, `0x402f60–0x402f6a`).
+//! Original procedure `0x00402f60` (11 bytes, `0x00402f60–0x00402f6a`).
 //! Evidence: `evidence/00402f60_fn_00402f60.md`.
 
 unsafe extern "C" fn default_target(_masked: u32, _stack_top: u32) {}
 
-/// Tail target `0x402f14` (`FUN_00402f14`), reached by `JMP` with
+/// Tail target `0x00402f14` (`FUN_00402f14`), reached by `JMP` with
 /// `EAX = param & 0x7f`, `EDX = dword ptr [ESP]`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real

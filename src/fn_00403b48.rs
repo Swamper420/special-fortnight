@@ -1,4 +1,4 @@
-//! Original procedure `0x00403b48` (19 bytes, `0x403b48–0x403b5a`).
+//! Original procedure `0x00403b48` (19 bytes, `0x00403b48–0x00403b5a`).
 //! Evidence: `evidence/00403b48_fn_00403b48.md`.
 
 /// Flag-gated tail to `fn_00403b30`: return when owner

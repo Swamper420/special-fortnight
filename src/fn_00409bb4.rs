@@ -1,4 +1,4 @@
-//! Original procedure `0x00409bb4` (156 bytes, `0x409bb4–0x409c4f`).
+//! Original procedure `0x00409bb4` (156 bytes, `0x00409bb4–0x00409c4f`).
 //! Evidence: `evidence/00409bb4_fn_00409bb4.md`.
 
 unsafe extern "C" fn default_pin(_slot: *mut u8, _src: *mut u8) {}
@@ -16,22 +16,22 @@ unsafe extern "C" fn default_call(
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Target `0x404cec` (`FUN_00404cec`), `(&local_8, param_1)` on the
+/// Target `0x00404cec` (`FUN_00404cec`), `(&local_8, param_1)` on the
 /// non-null lane.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00404CEC: unsafe extern "C" fn(*mut u8, *mut u8) = default_pin;
 
-/// Target `0x4063e4` (`FUN_004063e4`), `(cell, &slot)` at both sites:
-/// `([0x412c20], &local_8)` on the null lane,
-/// `([0x412c40], &local_24)` for the fill.
+/// Target `0x004063e4` (`FUN_004063e4`), `(cell, &slot)` at both sites:
+/// `([0x00412c20], &local_8)` on the null lane,
+/// `([0x00412c40], &local_24)` for the fill.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real call once cross-module linkage proven.
 pub static mut HOOK_004063E4: unsafe extern "C" fn(*mut u8, *mut u8) = default_fill;
 
-/// Target `0x409860` (`FUN_00409860`),
+/// Target `0x00409860` (`FUN_00409860`),
 /// `(obj, 1, extra, 2, &struct)`; stack args `(2, &struct)` are set
 /// up hoisted above the fill call per assembly order.
 ///
@@ -40,26 +40,26 @@ pub static mut HOOK_004063E4: unsafe extern "C" fn(*mut u8, *mut u8) = default_f
 pub static mut HOOK_00409860: unsafe extern "C" fn(*mut u8, u8, *mut u8, u32, *mut u8) =
     default_call;
 
-/// Target `0x404c88` (`thunk_FUN_004046c4`), always run on
+/// Target `0x00404c88` (`thunk_FUN_004046c4`), always run on
 /// `&local_24` then `&local_8` (SEH finally on target).
 ///
 /// ponytail: hook standing in for the thunk target, rewire once
-/// `0x4046c4` is linked.
+/// `0x004046c4` is linked.
 pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u8) = default_release;
 
-/// Cell `0x412c20` (`PTR_PTR_00412c20`), first arg on the null lane.
+/// Cell `0x00412c20` (`PTR_PTR_00412c20`), first arg on the null lane.
 ///
 /// ponytail: absolute-address cell modeled as mutable hook, upgrade
 /// to real image-relative import once data layout proven.
 pub static mut PTR_00412C20: *mut u8 = core::ptr::null_mut();
 
-/// Cell `0x412c40` (`PTR_PTR_00412c40`), first arg of the fill call.
+/// Cell `0x00412c40` (`PTR_PTR_00412c40`), first arg of the fill call.
 ///
 /// ponytail: absolute-address cell modeled as mutable hook, upgrade
 /// to real image-relative import once data layout proven.
 pub static mut PTR_00412C40: *mut u8 = core::ptr::null_mut();
 
-/// Cell `0x4077b8` (`PTR_PTR_004077b8`), first arg of the main call.
+/// Cell `0x004077b8` (`PTR_PTR_004077b8`), first arg of the main call.
 ///
 /// ponytail: absolute-address cell modeled as mutable hook, upgrade
 /// to real image-relative import once data layout proven.

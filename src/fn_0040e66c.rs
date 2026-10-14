@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e66c` (260 bytes, `0x40e66c–0x40e76f`).
+//! Original procedure `0x0040e66c` (260 bytes, `0x0040e66c–0x0040e76f`).
 //! Evidence: `evidence/0040e66c_fn_0040e66c.md`.
 
 unsafe extern "C" fn default_cmp(_want: *mut u8, _have: *mut u8) -> u32 {
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_lang(_a: u32, _b: u32, _c: u32) -> u32 {
     0xffffffff
 }
 
-/// Target `0x407bdc` (entry-name compare; 0 = hit). Both enum + prefix sites.
+/// Target `0x00407bdc` (entry-name compare; 0 = hit). Both enum + prefix sites.
 pub static mut HOOK_00407BDC: unsafe extern "C" fn(*mut u8, *mut u8) -> u32 = default_cmp;
 unsafe extern "C" fn default_bcb4() -> u32 {
     0
@@ -19,11 +19,11 @@ unsafe extern "C" fn default_langid() -> u16 {
     0
 }
 
-/// Target `0x40bcb4` (default locale when pref==0).
+/// Target `0x0040bcb4` (default locale when pref==0).
 pub static mut HOOK_0040BCB4: unsafe extern "C" fn() -> u32 = default_bcb4;
-/// Target `0x4067bc` (`GetUserDefaultLangID`, pref==1).
+/// Target `0x004067bc` (`GetUserDefaultLangID`, pref==1).
 pub static mut HOOK_GETUSERDEFAULTLANGID: unsafe extern "C" fn() -> u16 = default_langid;
-/// Target `0x40e640` (sort-id tiebreak, ×2).
+/// Target `0x0040e640` (sort-id tiebreak, ×2).
 pub static mut HOOK_0040E640: unsafe extern "C" fn(u32, u32, u32) -> u32 = default_lang;
 
 /// Locale matcher; returns 2 (name hit), 1 (lang hit), 0.

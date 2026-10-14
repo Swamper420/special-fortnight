@@ -1,4 +1,4 @@
-//! Original procedure `0x00408540` (238 bytes, `0x408540–0x40862d`).
+//! Original procedure `0x00408540` (238 bytes, `0x00408540–0x0040862d`).
 //! Evidence: `evidence/00408540_fn_00408540.md`.
 
 use crate::fn_0040862e::fn_0040862e;
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_00408914(_n: u32) -> u32 {
     0
 }
 
-/// Callee `0x40867d` (`FUN_0040867d`), called with the current char in
+/// Callee `0x0040867d` (`FUN_0040867d`), called with the current char in
 /// `EAX`, remaining capacity in `EDX`, end bound in `ECX`. The
 /// `PUSH ECX/PUSH EDX … POP EDX/POP ECX` pair is a save area (both
 /// restored values are consumed afterwards), not stack args, so the
@@ -20,7 +20,7 @@ unsafe extern "C" fn default_00408914(_n: u32) -> u32 {
 /// real `fn_0040867d` once it exists.
 pub static mut HOOK_0040867D: unsafe extern "C" fn(u32, usize, *mut u16) = default_0040867d;
 
-/// Terminal tail target `0x408914` (`FUN_00408914`), reached by `JMP`
+/// Terminal tail target `0x00408914` (`FUN_00408914`), reached by `JMP`
 /// with `EAX=(dst-base)>>1`; the leftover `EAX` is this procedure's
 /// result (as consumed by done callers `fn_00408274`/`fn_00408290`).
 ///
@@ -37,7 +37,7 @@ pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 /// `param_3` the format cursor, `end = param_3 + param_6*2`,
 /// `param_4`/`param_5` opaque args forwarded to `fn_0040862e`.
 /// Literal/`%%` lanes store and consume capacity; `%` specs run the
-/// `0x408599/59f` shape (optional `-`, `fn_0040862e`, `:` re-entry,
+/// `0x00408599/59f` shape (optional `-`, `fn_0040862e`, `:` re-entry,
 /// optional `.` + second call, `HOOK_0040867D`, three saturating
 /// copy/fill phases); every lane converges on the exit block.
 /// `param_5` travels as `u32` bits (zero-extended to a table pointer
@@ -205,7 +205,7 @@ pub unsafe fn fn_00408540(
             continue 'main;
         }
     }
-    // `0x408581`: byte difference `>> 1` (u16 count), tail call.
+    // `0x00408581`: byte difference `>> 1` (u16 count), tail call.
     // ponytail: `as u32` narrows a small element count (never a
     // pointer); exact while output stays under 2G units, as on target.
     let n = ((dst as usize).wrapping_sub(base as usize) >> 1) as u32;

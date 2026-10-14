@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b3cc` (230 bytes, `0x40b3cc–0x40b4b1`).
+//! Original procedure `0x0040b3cc` (230 bytes, `0x0040b3cc–0x0040b4b1`).
 //! Evidence: `evidence/0040b3cc_fn_0040b3cc.md`.
 
 unsafe extern "C" fn default_unit() -> u32 {
@@ -9,14 +9,14 @@ unsafe extern "C" fn default_class(_w: u16) -> u32 {
     0
 }
 
-/// Stride `0x40b32c` (`FUN_0040b32c`), takes void; its result
+/// Stride `0x0040b32c` (`FUN_0040b32c`), takes void; its result
 /// advances the scan (`ADD EBX,EAX`).
 ///
 /// ponytail: hook standing in for done `fn_0040b32c`, rewire to
 /// the real call (as `i32`) once cross-module linkage proven.
 pub static mut HOOK_0040B32C: unsafe extern "C" fn() -> u32 = default_unit;
 
-/// Classifier `0x40b334` (`FUN_0040b334`); only the low byte of
+/// Classifier `0x0040b334` (`FUN_0040b334`); only the low byte of
 /// its result is tested (`TEST AL,AL`).
 ///
 /// ponytail: hook standing in for done `fn_0040b334`, rewire to

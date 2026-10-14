@@ -1,4 +1,4 @@
-//! Original procedure `0x00403110` (7 bytes, `0x403110–0x403116`).
+//! Original procedure `0x00403110` (7 bytes, `0x00403110–0x00403116`).
 //! Evidence: `evidence/00403110_fn_00403110.md`.
 
 /// `PUSH 0; FNSTCW [ESP]; POP EAX`. No params, x87 control word

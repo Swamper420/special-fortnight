@@ -1,14 +1,14 @@
-//! Original procedure `0x0040e0d0` (65 bytes, `0x40e0d0–0x40e110`).
+//! Original procedure `0x0040e0d0` (65 bytes, `0x0040e0d0–0x0040e110`).
 //! Evidence: `evidence/0040e0d0_fn_0040e0d0.md`.
 
 unsafe extern "C" fn default_reset() {}
 unsafe extern "C" fn default_build(_t: *mut u32, _f: u32, _n: u32) {}
 
-/// Target `0x40df44` table reset.
+/// Target `0x0040df44` table reset.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040df44`.
 pub static mut HOOK_0040DF44: unsafe extern "C" fn() = default_reset;
-/// Target `0x405548` table build.
+/// Target `0x00405548` table build.
 ///
 /// ponytail: hook standing in for out-of-batch `fn_00405548`.
 pub static mut HOOK_00405548: unsafe extern "C" fn(*mut u32, u32, u32) = default_build;
@@ -34,7 +34,7 @@ pub unsafe fn fn_0040e0d0() {
             0xdd,
         );
     }
-    // ponytail: SEH frame (`0x40e111/18`) not modeled — test-platform init detail.
+    // ponytail: SEH frame (`0x0040e111/18`) not modeled — test-platform init detail.
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040a168` (30 bytes, `0x40a168–0x40a185`).
+//! Original procedure `0x0040a168` (30 bytes, `0x0040a168–0x0040a185`).
 //! Evidence: `evidence/0040a168_fn_0040a168.md`.
 
 unsafe extern "C" fn default_exchange(
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_exchange(
     0
 }
 
-/// Exchange target `0x406698` (`FUN_00406698`),
+/// Exchange target `0x00406698` (`FUN_00406698`),
 /// `(dest, *slotval, slotval)`; EAX result is a DATA pointer
 /// observed by the loop's `CMP EBX, EAX`.
 ///

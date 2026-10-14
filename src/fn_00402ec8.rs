@@ -1,11 +1,11 @@
-//! Original procedure `0x00402ec8` (49 bytes, `0x402ec8–0x402ef8`).
+//! Original procedure `0x00402ec8` (49 bytes, `0x00402ec8–0x00402ef8`).
 //! Evidence: `evidence/00402ec8_fn_00402ec8.md`.
 
 unsafe extern "C" fn default_resolver() -> *const u8 {
     core::ptr::null()
 }
 
-/// Target `0x406588`, queried once, result dereferenced for inner pointer.
+/// Target `0x00406588`, queried once, result dereferenced for inner pointer.
 ///
 /// ponytail: hook standing in for reconstructed `fn_00406588`, rewire to
 /// real call once cross-module linkage proven.

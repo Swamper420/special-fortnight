@@ -1,11 +1,11 @@
-//! Original procedure `0x00404830` (29 bytes, `0x404830–0x40484c`).
+//! Original procedure `0x00404830` (29 bytes, `0x00404830–0x0040484c`).
 //! Evidence: `evidence/00404830_fn_00404830.md`.
 
 unsafe extern "C" fn default_inner(_a: *mut u32, _b: *mut u8) -> *mut u32 {
     core::ptr::null_mut()
 }
 
-/// Callee `0x404820` (`FUN_00404820`); args `(param_1, reloaded
+/// Callee `0x00404820` (`FUN_00404820`); args `(param_1, reloaded
 /// *param_1)`, returns the slot pointer. Same shape as `fn_00404820`.
 ///
 /// ponytail: hook standing in for sibling `fn_00404820` (same

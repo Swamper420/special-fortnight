@@ -1,4 +1,4 @@
-//! Original procedure `0x0040822c` (69 bytes, `0x40822c–0x408270`).
+//! Original procedure `0x0040822c` (69 bytes, `0x0040822c–0x00408270`).
 //! Evidence: `evidence/0040822c_fn_0040822c.md`.
 
 unsafe extern "C" fn default_00408118(dst: *mut u8, src: *mut u8, count: u32) -> *mut u8 {
@@ -6,7 +6,7 @@ unsafe extern "C" fn default_00408118(dst: *mut u8, src: *mut u8, count: u32) ->
     dst
 }
 
-/// Copy target `0x408118` (`FUN_00408118`), called with
+/// Copy target `0x00408118` (`FUN_00408118`), called with
 /// `(buf, param_2, count)`; observed body copies `count*2` bytes via
 /// `FUN_00402fbc(src, dst, count<<1)` and returns `dst`.
 ///
@@ -16,7 +16,7 @@ unsafe extern "C" fn default_00408118(dst: *mut u8, src: *mut u8, count: u32) ->
 pub static mut HOOK_00408118: unsafe extern "C" fn(*mut u8, *mut u8, u32) -> *mut u8 =
     default_00408118;
 
-/// Table observed as `dword ptr [ESI*4+0x41281c]`
+/// Table observed as `dword ptr [ESI*4+0x0041281c]`
 /// (`PTR_PTR_0041281c`): base of a pointer table indexed by
 /// `param_1` (stride 4, no bounds check observed).
 ///

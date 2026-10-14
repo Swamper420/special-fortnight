@@ -1,9 +1,9 @@
-//! Original procedure `0x00404a7c` (13 bytes, `0x404a7c–0x404a88`).
+//! Original procedure `0x00404a7c` (13 bytes, `0x00404a7c–0x00404a88`).
 //! Evidence: `evidence/00404a7c_fn_00404a7c.md`.
 
 unsafe extern "C" fn default_sys_free_string(_bstr: u32) {}
 
-/// Thunk `0x401190` (`OLEAUT32.DLL::SysFreeString`).
+/// Thunk `0x00401190` (`OLEAUT32.DLL::SysFreeString`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" SysFreeString` once

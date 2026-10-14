@@ -1,4 +1,4 @@
-//! Original procedure `0x0040134c` (5 bytes, `0x40134c–0x401350`).
+//! Original procedure `0x0040134c` (5 bytes, `0x0040134c–0x00401350`).
 //! Evidence: `evidence/0040134c_fn_0040134c.md`.
 
 /// Locked byte compare-exchange: `old=*p; if param_1==old {

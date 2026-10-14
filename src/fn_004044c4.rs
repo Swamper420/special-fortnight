@@ -1,4 +1,4 @@
-//! Original procedure `0x004044c4` (42 bytes, `0x4044c4–0x4044ee`).
+//! Original procedure `0x004044c4` (42 bytes, `0x004044c4–0x004044ee`).
 //! Evidence: `evidence/004044c4_fn_004044c4.md`.
 
 /// Cell observed as `dword ptr [0x00412000]`, atomically swapped to 0.

@@ -1,11 +1,11 @@
-//! Original procedure `0x0040b6ec` (20 bytes, `0x40b6ec–0x40b6ff`).
+//! Original procedure `0x0040b6ec` (20 bytes, `0x0040b6ec–0x0040b6ff`).
 //! Evidence: `evidence/0040b6ec_fn_0040b6ec.md`.
 
 unsafe extern "C" fn default_probe(_obj: *mut u8) -> u32 {
     0
 }
 
-/// Probe `0x40b698` (`FUN_0040b698`). Observed `void`, but this
+/// Probe `0x0040b698` (`FUN_0040b698`). Observed `void`, but this
 /// caller reads EAX after the call, so the hook models the EAX
 /// residue as its return.
 ///

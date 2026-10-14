@@ -38,9 +38,9 @@ mod tests {
     #[test]
     fn forwards_and_echoes() {
         unsafe { HOOK_00406678 = target };
-        let r = unsafe { fn_00406678(0x400000, core::ptr::null(), core::ptr::null()) };
+        let r = unsafe { fn_00406678(0x00400000, core::ptr::null(), core::ptr::null()) };
         assert_eq!(r, 0x78);
         assert_eq!(HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(ARG.load(Ordering::SeqCst), 0x400000);
+        assert_eq!(ARG.load(Ordering::SeqCst), 0x00400000);
     }
 }

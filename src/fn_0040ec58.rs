@@ -1,4 +1,4 @@
-//! Original procedure `0x0040ec58` (67 bytes, `0x40ec58–0x40ec9a`).
+//! Original procedure `0x0040ec58` (67 bytes, `0x0040ec58–0x0040ec9a`).
 //! Evidence: `evidence/0040ec58_fn_0040ec58.md`.
 
 unsafe extern "C" fn default_format(
@@ -17,27 +17,27 @@ unsafe extern "C" fn default_raise(_msg: u32) {}
 /// image-relative import once data layout proven.
 pub static mut BASE_00412c08: *const u8 = core::ptr::null();
 
-/// Context observed at `[0x00406d5c]`, EAX lane of `0x409824` both branches.
+/// Context observed at `[0x00406d5c]`, EAX lane of `0x00409824` both branches.
 ///
 /// ponytail: absolute-address cell modeled as mutable static, upgrade to real
 /// image-relative import once data layout proven.
 pub static mut CTX_00406d5c: *mut u32 = core::ptr::null_mut();
 
-/// Literal at `0x40eca8`, ECX lane of `0x409824` on the null-slot path.
+/// Literal at `0x0040eca8`, ECX lane of `0x00409824` on the null-slot path.
 ///
 /// ponytail: NUL-terminated `u8` ceiling; encoding/terminator unproven,
 /// rewire to proven bytes once string bytes proven.
 pub static FALLBACK_MSG_0040eca8: &[u8] =
     b"The setup files are corrupted. Please obtain a new copy of the program.\0";
 
-/// Target `0x409824` (`FUN_00409824`), lanes `(EAX=ctx, DL=flag, ECX=msg)`.
+/// Target `0x00409824` (`FUN_00409824`), lanes `(EAX=ctx, DL=flag, ECX=msg)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00409824` once it exists.
 pub static mut FORMAT_00409824: unsafe extern "C" fn(*mut u32, u8, *const u8) -> u32 =
     default_format;
 
-/// Target `0x403f88` (`FUN_00403f88`), EAX lane = `0x409824` return.
+/// Target `0x00403f88` (`FUN_00403f88`), EAX lane = `0x00409824` return.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00403f88` once it exists.

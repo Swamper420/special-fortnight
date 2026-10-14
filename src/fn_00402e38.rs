@@ -1,4 +1,4 @@
-//! Original procedure `0x00402e38` (77 bytes, `0x402e38–0x402e84`).
+//! Original procedure `0x00402e38` (77 bytes, `0x00402e38–0x00402e84`).
 //! Evidence: `evidence/00402e38_fn_00402e38.md`.
 
 unsafe extern "C" fn default_indirect() -> u32 {
@@ -7,15 +7,15 @@ unsafe extern "C" fn default_indirect() -> u32 {
 
 unsafe extern "C" fn default_tail(_arg: u32) {}
 
-/// Indirect slot observed as `dword ptr [0x412744]` (`PTR_FUN_00412744`,
-/// resolved target `0x401e74`, unreconstructed).
+/// Indirect slot observed as `dword ptr [0x00412744]` (`PTR_FUN_00412744`,
+/// resolved target `0x00401e74`, unreconstructed).
 ///
 /// ponytail: absolute-address cell modeled as mutable hook, upgrade to real
 /// image-relative import once data layout proven.
 pub static mut PTR_00412744: unsafe extern "C" fn() -> u32 = default_indirect;
 
-/// Tail target `0x402f60` (`FUN_00402f60`), reached by `JMP` with `AL=2`
-/// over nonzero `[0x412740]` result (upper bytes preserved) or `AL=1`
+/// Tail target `0x00402f60` (`FUN_00402f60`), reached by `JMP` with `AL=2`
+/// over nonzero `[0x00412740]` result (upper bytes preserved) or `AL=1`
 /// over zeroed EAX from both zero-result lanes.
 ///
 /// ponytail: hook standing in for done `fn_00402f60`, rewire to real
@@ -26,10 +26,10 @@ pub static mut TAIL_00402F60: unsafe extern "C" fn(u32) = default_tail;
 /// held by cross-module tests that call `fn_00402e38` directly).
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-/// `*p` nonzero + `param_2==0`: clear slot, `r=[0x412740]()` (`fn_00402e20`
+/// `*p` nonzero + `param_2==0`: clear slot, `r=[0x00412740]()` (`fn_00402e20`
 /// owner cell), zero→ret, nonzero→`tail((r & ~0xff) | 2)`. `*p` nonzero +
-/// `param_2!=0`: `r=[0x412744](old)`, store-or-`tail(1)`. `*p==0`:
-/// `param_2==0`→ret, else `r=[0x41273c](param_2)` (`fn_00402e04` owner
+/// `param_2!=0`: `r=[0x00412744](old)`, store-or-`tail(1)`. `*p==0`:
+/// `param_2==0`→ret, else `r=[0x0041273c](param_2)` (`fn_00402e04` owner
 /// cell), store-or-`tail(1)`. `param_1` in EAX, `param_2` in EDX per
 /// Ghidra `__register` observation; PUSH/POP slot preservation has no
 /// host-visible effect.
@@ -123,7 +123,7 @@ mod tests {
             assert_eq!(HITS_40.load(Ordering::SeqCst), 0);
             assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 0);
 
-            // Nonzero slot, param_2==0, [0x412740]==0: slot cleared, ret.
+            // Nonzero slot, param_2==0, [0x00412740]==0: slot cleared, ret.
             slot = 5;
             RET_40.store(0, Ordering::SeqCst);
             TAIL_HITS.store(0, Ordering::SeqCst);
@@ -141,7 +141,7 @@ mod tests {
             assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 1);
             assert_eq!(TAIL_ARG.load(Ordering::SeqCst), 0x12345602);
 
-            // Nonzero slot, param_2!=0, [0x412744]==0: tail(1), slot kept.
+            // Nonzero slot, param_2!=0, [0x00412744]==0: tail(1), slot kept.
             slot = 5;
             RET_44.store(0, Ordering::SeqCst);
             HITS_44.store(0, Ordering::SeqCst);
@@ -159,7 +159,7 @@ mod tests {
             assert_eq!(slot, 0xab);
             assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 0);
 
-            // Null slot, param_2!=0, [0x41273c]==0: tail(1).
+            // Null slot, param_2!=0, [0x0041273c]==0: tail(1).
             slot = 0;
             RET_3C.store(0, Ordering::SeqCst);
             HITS_3C.store(0, Ordering::SeqCst);

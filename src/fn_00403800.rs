@@ -1,7 +1,7 @@
-//! Original procedure `0x00403800` (10 bytes, `0x403800–0x403809`).
+//! Original procedure `0x00403800` (10 bytes, `0x00403800–0x00403809`).
 //! Evidence: `evidence/00403800_fn_00403800.md`.
 
-/// `FNINIT; WAIT; FLDCW [0x41201c]; RET`. No args, void.
+/// `FNINIT; WAIT; FLDCW [0x0041201c]; RET`. No args, void.
 ///
 /// ponytail: `asm!` is the native `fninit`/`wait`/`fldcw` equivalent (no
 /// stable intrinsic, mirrors sibling `fn_00403100`); cell read through

@@ -1,4 +1,4 @@
-//! Original procedure `0x004047c0` (41 bytes, `0x4047c0–0x4047e8`).
+//! Original procedure `0x004047c0` (41 bytes, `0x004047c0–0x004047e8`).
 //! Evidence: `evidence/004047c0_fn_004047c0.md`.
 
 unsafe extern "C" fn default_w2m(
@@ -20,7 +20,7 @@ unsafe extern "C" fn default_w2m(
 /// with writer modules in `data.rs` once data layout proven.
 pub static mut DAT_004138C8: u32 = 0;
 
-/// Thunk `0x401170` (`KERNEL32.DLL::WideCharToMultiByte`).
+/// Thunk `0x00401170` (`KERNEL32.DLL::WideCharToMultiByte`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.

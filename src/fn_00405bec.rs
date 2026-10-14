@@ -1,12 +1,12 @@
-//! Original procedure `0x00405bec` (458 bytes, `0x405bec–0x405db5`).
+//! Original procedure `0x00405bec` (458 bytes, `0x00405bec–0x00405db5`).
 //! Evidence: `evidence/00405bec_fn_00405bec.md`.
 
-/// UTF-16 `L"kernel32.dll"` at `0x405db8` (wide: taken by `GetModuleHandleW`).
+/// UTF-16 `L"kernel32.dll"` at `0x00405db8` (wide: taken by `GetModuleHandleW`).
 pub static STR_KERNEL32_W: [u16; 13] = [
     0x6b, 0x65, 0x72, 0x6e, 0x65, 0x6c, 0x33, 0x32, 0x2e, 0x64, 0x6c, 0x6c, 0x00,
 ];
 
-/// ANSI `"GetLongPathNameW"` at `0x405dd4` (narrow: taken by `GetProcAddress`).
+/// ANSI `"GetLongPathNameW"` at `0x00405dd4` (narrow: taken by `GetProcAddress`).
 pub static STR_GETLONGPATHNAMEW: [u8; 17] = *b"GetLongPathNameW\0";
 
 unsafe extern "C" fn default_module_handle(_name: *const u16) -> u32 {
@@ -75,14 +75,14 @@ unsafe extern "C" fn real_scan(p: *const u16) -> *const u16 {
     }
 }
 
-/// Import `KERNEL32.DLL::GetModuleHandleW` (`CALL 0x401110`).
+/// Import `KERNEL32.DLL::GetModuleHandleW` (`CALL 0x00401110`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetModuleHandleW: unsafe extern "C" fn(*const u16) -> u32 =
     default_module_handle;
 
-/// Import `KERNEL32.DLL::GetProcAddress` (`CALL 0x401118`).
+/// Import `KERNEL32.DLL::GetProcAddress` (`CALL 0x00401118`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
@@ -96,33 +96,33 @@ pub static mut HOOK_GetProcAddress: unsafe extern "C" fn(u32, *const u8) -> usiz
 pub static mut HOOK_GetLongPathNameW: unsafe extern "C" fn(*mut u16, *const u16, u32) -> u32 =
     default_long_path;
 
-/// Import `KERNEL32.DLL::lstrcpynW` (`CALL 0x401140`).
+/// Import `KERNEL32.DLL::lstrcpynW` (`CALL 0x00401140`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_lstrcpynW: unsafe extern "C" fn(*mut u16, *const u16, i32) -> *mut u16 =
     real_lstrcpynW;
 
-/// Import `KERNEL32.DLL::FindFirstFileW` (`CALL 0x4010e8`).
+/// Import `KERNEL32.DLL::FindFirstFileW` (`CALL 0x004010e8`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_FindFirstFileW: unsafe extern "C" fn(*const u16, *mut u8) -> u32 =
     default_find_first;
 
-/// Import `KERNEL32.DLL::FindClose` (`CALL 0x4010e0`).
+/// Import `KERNEL32.DLL::FindClose` (`CALL 0x004010e0`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_FindClose: unsafe extern "C" fn(u32) -> u32 = default_find_close;
 
-/// Import `KERNEL32.DLL::lstrlenW` (`CALL 0x401148`).
+/// Import `KERNEL32.DLL::lstrlenW` (`CALL 0x00401148`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_lstrlenW: unsafe extern "C" fn(*const u16) -> i32 = real_lstrlenW;
 
-/// Local `FUN_00405bc8` (`CALL 0x405bc8` ×3).
+/// Local `FUN_00405bc8` (`CALL 0x00405bc8` ×3).
 ///
 /// ponytail: hook standing in for the unreconstructed callee, rewire to
 /// real `fn_00405bc8` once it exists.

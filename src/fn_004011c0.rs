@@ -1,4 +1,4 @@
-//! Original procedure `0x004011c0` (41 bytes, `0x4011c0–0x4011e8`).
+//! Original procedure `0x004011c0` (41 bytes, `0x004011c0–0x004011e8`).
 //! Evidence: `evidence/004011c0_fn_004011c0.md`.
 
 /// Minimal `STARTUPINFOA` shape: only observed offsets are modeled
@@ -14,7 +14,7 @@ pub struct StartupInfoA {
 
 unsafe extern "C" fn default_startup(_si: *mut StartupInfoA) {}
 
-/// Thunk `0x401120` (`KERNEL32.DLL::GetStartupInfoA`).
+/// Thunk `0x00401120` (`KERNEL32.DLL::GetStartupInfoA`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" GetStartupInfoA` once

@@ -1,4 +1,4 @@
-//! Original procedure `0x004097f0` (27 bytes, `0x4097f0–0x40980a`).
+//! Original procedure `0x004097f0` (27 bytes, `0x004097f0–0x0040980a`).
 //! Evidence: `evidence/004097f0_fn_004097f0.md`.
 
 unsafe extern "C" fn default_make(_slot: usize, _flag: u8, _ctx: usize, _arg: usize) -> usize {
@@ -7,34 +7,34 @@ unsafe extern "C" fn default_make(_slot: usize, _flag: u8, _ctx: usize, _arg: us
 
 unsafe extern "C" fn default_consume(_p: usize) {}
 
-/// Target `0x4098e0` (`FUN_004098e0`); lanes per ASSEMBLY:
-/// `EAX=[0x406dd8]`, `DL=1`, `ECX=[0x412bb8]`, stack=`entry EAX`.
+/// Target `0x004098e0` (`FUN_004098e0`); lanes per ASSEMBLY:
+/// `EAX=[0x00406dd8]`, `DL=1`, `ECX=[0x00412bb8]`, stack=`entry EAX`.
 /// Returns the DATA pointer the tail consumes.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004098e0` once it exists.
 pub static mut HOOK_004098E0: unsafe extern "C" fn(usize, u8, usize, usize) -> usize = default_make;
 
-/// Tail target `0x403f88` (`FUN_00403f88`), reached by `JMP` with the
+/// Tail target `0x00403f88` (`FUN_00403f88`), reached by `JMP` with the
 /// maker result in `EAX`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00403f88` once it exists.
 pub static mut TAIL_00403F88: unsafe extern "C" fn(usize) = default_consume;
 
-/// Data cell `0x406dd8`, read as an address (`MOV EAX,[0x406dd8]`).
+/// Data cell `0x00406dd8`, read as an address (`MOV EAX,[0x00406dd8]`).
 ///
 /// ponytail: absolute-address cell as own-module static, unify in
 /// `data.rs` once data layout proven.
 pub static mut DAT_00406DD8: usize = 0;
 
-/// Data cell `0x412bb8`, read as an address (`MOV ECX,[0x412bb8]`).
+/// Data cell `0x00412bb8`, read as an address (`MOV ECX,[0x00412bb8]`).
 ///
 /// ponytail: absolute-address cell as own-module static, unify in
 /// `data.rs` once data layout proven.
 pub static mut DAT_00412BB8: usize = 0;
 
-/// `tail(make(*0x406dd8, 1, *0x412bb8, entry_eax))`. No params per
+/// `tail(make(*0x00406dd8, 1, *0x00412bb8, entry_eax))`. No params per
 /// Ghidra `__register` observation, but ASSEMBLY consumes entry `EAX`,
 /// so it is an explicit lane.
 pub unsafe fn fn_004097f0(entry_eax: usize) {

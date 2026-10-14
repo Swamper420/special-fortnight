@@ -1,11 +1,11 @@
-//! Original procedure `0x0040d9d8` (78 bytes, `0x40d9d8–0x40da25`).
+//! Original procedure `0x0040d9d8` (78 bytes, `0x0040d9d8–0x0040da25`).
 //! Evidence: `evidence/0040d9d8_fn_0040d9d8.md`.
 
 unsafe extern "C" fn default_check(_p1: *mut u32, _p3: *mut u8, _p6: i32) -> i32 {
     1
 }
 
-/// Target `0x40d2bc` (`FUN_0040d2bc`), header check; nonzero return kept.
+/// Target `0x0040d2bc` (`FUN_0040d2bc`), header check; nonzero return kept.
 ///
 /// ponytail: hook standing in for out-of-batch `fn_0040d2bc`.
 pub static mut HOOK_0040D2BC: unsafe extern "C" fn(*mut u32, *mut u8, i32) -> i32 = default_check;

@@ -1,5 +1,5 @@
-//! Original procedure `0x00406198` (ranges `0x406198–0x4061d2` +
-//! `0x4061dd–0x4061f1`; gap `0x4061d3–0x4061dc` is the SEH handler).
+//! Original procedure `0x00406198` (ranges `0x00406198–0x004061d2` +
+//! `0x004061dd–0x004061f1`; gap `0x004061d3–0x004061dc` is the SEH handler).
 //! Evidence: `evidence/00406198_fn_00406198.md`.
 
 /// Dispatch each node: `f=node[1]; f(p1,p2,p3); node=*node`.

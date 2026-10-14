@@ -1,4 +1,4 @@
-//! Original procedure `0x00402b9c` (66 bytes, `0x402b9c–0x402bdd`).
+//! Original procedure `0x00402b9c` (66 bytes, `0x00402b9c–0x00402bdd`).
 //! Evidence: `evidence/00402b9c_fn_00402b9c.md`.
 
 /// Flag byte observed at `0x00413a22`: zero forces the fill lane, nonzero

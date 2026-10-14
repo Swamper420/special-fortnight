@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b2b4` (31 bytes, `0x40b2b4–0x40b2d2`).
+//! Original procedure `0x0040b2b4` (31 bytes, `0x0040b2b4–0x0040b2d2`).
 //! Evidence: `evidence/0040b2b4_fn_0040b2b4.md`.
 
 /// Unsigned 64-bit compare over two `[lo, hi]` u32 pairs: high

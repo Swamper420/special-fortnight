@@ -1,9 +1,9 @@
-//! Original procedure `0x00406a8c` (6 bytes, `0x406a8c–0x406a91`).
+//! Original procedure `0x00406a8c` (6 bytes, `0x00406a8c–0x00406a91`).
 //! Evidence: `evidence/00406a8c_fn_00406a8c.md`.
 
 unsafe extern "C" fn default_init() {}
 
-/// Thunk `0x406a8c` (`COMCTL32.DLL::InitCommonControls`), `JMP [0x00419500]`.
+/// Thunk `0x00406a8c` (`COMCTL32.DLL::InitCommonControls`), `JMP [0x00419500]`.
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.

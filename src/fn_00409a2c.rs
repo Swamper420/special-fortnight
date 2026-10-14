@@ -1,4 +1,4 @@
-//! Original procedure `0x00409a2c` (39 bytes, `0x409a2c–0x409a52`).
+//! Original procedure `0x00409a2c` (39 bytes, `0x00409a2c–0x00409a52`).
 //! Evidence: `evidence/00409a2c_fn_00409a2c.md`.
 
 unsafe extern "C" fn default_query() -> *const u8 {
@@ -13,7 +13,7 @@ unsafe extern "C" fn default_take() -> u32 {
     0
 }
 
-/// Target `0x402e88` (`FUN_00402e88`), no args; result feeds the
+/// Target `0x00402e88` (`FUN_00402e88`), no args; result feeds the
 /// match call as its object.
 ///
 /// ponytail: hook standing in for done `fn_00402e88` (which
@@ -21,21 +21,21 @@ unsafe extern "C" fn default_take() -> u32 {
 /// cross-module linkage proven.
 pub static mut HOOK_00402e88: unsafe extern "C" fn() -> *const u8 = default_query;
 
-/// Target `0x40392c` (`FUN_0040392c`), `(query, [0x406d5c])`;
+/// Target `0x0040392c` (`FUN_0040392c`), `(query, [0x00406d5c])`;
 /// only the low byte of the result is tested.
 ///
 /// ponytail: hook standing in for done `fn_0040392c`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_0040392c: unsafe extern "C" fn(*const u8, u32) -> u32 = default_match;
 
-/// Target `0x402ec8` (`FUN_00402ec8`), no args; result stored to
+/// Target `0x00402ec8` (`FUN_00402ec8`), no args; result stored to
 /// `[param_1+0xc]`.
 ///
 /// ponytail: hook standing in for done `fn_00402ec8`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_00402ec8: unsafe extern "C" fn() -> u32 = default_take;
 
-/// Dword VALUE at absolute `0x406d5c` (`PTR_PTR_00406d5c`,
+/// Dword VALUE at absolute `0x00406d5c` (`PTR_PTR_00406d5c`,
 /// nominally `PTR_LAB_00406db4`), passed by value as the match
 /// key (no dereference at this site).
 ///
@@ -44,7 +44,7 @@ pub static mut HOOK_00402ec8: unsafe extern "C" fn() -> u32 = default_take;
 /// proven.
 pub static mut DATA_00406D5C: u32 = 0;
 
-/// `if [p+0x14]!=0 { r=match(query(), [0x406d5c]);
+/// `if [p+0x14]!=0 { r=match(query(), [0x00406d5c]);
 /// if (r&0xff)!=0 { [p+0xc]=take() } }`. `p1` arrives in EAX
 /// (saved to EBX, the store base) per Ghidra `__register`
 /// observation. Flag is one byte, slot one dword per observed

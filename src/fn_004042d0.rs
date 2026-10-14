@@ -1,4 +1,4 @@
-//! Original procedure `0x004042d0` (69 bytes, `0x4042d0–0x404314`).
+//! Original procedure `0x004042d0` (69 bytes, `0x004042d0–0x00404314`).
 //! Evidence: `evidence/004042d0_fn_004042d0.md`.
 
 use crate::fn_00404204::{DAT_00415aec, DAT_00415af0};
@@ -9,12 +9,12 @@ use crate::fn_00404204::{DAT_00415aec, DAT_00415af0};
 /// to real image-relative data once data layout proven.
 pub static mut DAT_00415af4: *mut u8 = core::ptr::null_mut();
 
-/// `DAT_00413014`: set to immediate `0x4010a8`.
+/// `DAT_00413014`: set to immediate `0x004010a8`.
 ///
 /// ponytail: same absolute-cell modeling as `DAT_00415af4`.
 pub static mut DAT_00413014: u32 = 0;
 
-/// `DAT_00413018`: set to immediate `0x4010b0`.
+/// `DAT_00413018`: set to immediate `0x004010b0`.
 ///
 /// ponytail: same absolute-cell modeling as `DAT_00415af4`.
 pub static mut DAT_00413018: u32 = 0;
@@ -31,34 +31,34 @@ pub static mut DAT_0041303c: u8 = 0;
 
 unsafe extern "C" fn default_init(_arg: u32) {}
 
-/// First callee `0x4041bc` (`FUN_004041bc`), observed arg `0x415ae4`.
+/// First callee `0x004041bc` (`FUN_004041bc`), observed arg `0x00415ae4`.
 ///
 /// ponytail: hook standing in for the reconstructed `fn_004041bc` — a
-/// direct call would publish an SEH record at absolute `0x415ae8`
+/// direct call would publish an SEH record at absolute `0x00415ae8`
 /// (host-unmapped); rewire once Windows-target linkage proven.
 pub static mut HOOK_004041BC: unsafe extern "C" fn(u32) = default_init;
 
 unsafe extern "C" fn default_runner() {}
 
-/// Second callee `0x404268` (`FUN_00404268`), no args.
+/// Second callee `0x00404268` (`FUN_00404268`), no args.
 ///
 /// ponytail: hook standing in for same-batch `fn_00404268`; rewire to
 /// a direct call once module wiring is proven.
 pub static mut HOOK_00404268: unsafe extern "C" fn() = default_runner;
 
 /// Initializer: publishes table anchor/params and immediates, then
-/// `init(0x415ae4)` and `runner()`. `param_1` (EAX) feeds
+/// `init(0x00415ae4)` and `runner()`. `param_1` (EAX) feeds
 /// `DAT_00415aec`; `param_2` (EDX) feeds `DAT_00415af4` and
 /// `DAT_00413034=[param_2+4]`. Shared cells owned by
 /// `crate::fn_00404204` (no duplicate cells).
 pub unsafe fn fn_004042d0(param_1: *mut u8, param_2: *mut u8) {
-    DAT_00413014 = 0x4010a8;
-    DAT_00413018 = 0x4010b0;
+    DAT_00413014 = 0x004010a8;
+    DAT_00413018 = 0x004010b0;
     DAT_00415aec = param_1;
     DAT_00415af0 = 0;
     DAT_00415af4 = param_2;
     DAT_00413034 = core::ptr::read_unaligned(param_2.wrapping_byte_add(4) as *const u32);
-    HOOK_004041BC(0x415ae4);
+    HOOK_004041BC(0x00415ae4);
     DAT_0041303c = 0;
     HOOK_00404268();
 }
@@ -97,14 +97,14 @@ mod tests {
             param2[1] = 0xdead_beef;
             SEQ.store(0, Ordering::SeqCst);
             fn_004042d0(anchor_obj.as_mut_ptr(), param2.as_mut_ptr() as *mut u8);
-            assert_eq!(DAT_00413014, 0x4010a8);
-            assert_eq!(DAT_00413018, 0x4010b0);
+            assert_eq!(DAT_00413014, 0x004010a8);
+            assert_eq!(DAT_00413018, 0x004010b0);
             assert_eq!(DAT_00415aec, anchor_obj.as_mut_ptr());
             assert_eq!(DAT_00415af0, 0);
             assert_eq!(DAT_00415af4, param2.as_mut_ptr() as *mut u8);
             assert_eq!(DAT_00413034, 0xdead_beef);
             assert_eq!(DAT_0041303c, 0);
-            assert_eq!(INIT_ARG.load(Ordering::SeqCst), 0x415ae4);
+            assert_eq!(INIT_ARG.load(Ordering::SeqCst), 0x00415ae4);
             assert_eq!(INIT_AT.load(Ordering::SeqCst), 0);
             assert_eq!(RUN_AT.load(Ordering::SeqCst), 1);
 

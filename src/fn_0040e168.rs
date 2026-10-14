@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e168` (102 bytes, non-contiguous `0x40e168–0x40e1c4` + `0x40e1d5–0x40e1dd`).
+//! Original procedure `0x0040e168` (102 bytes, non-contiguous `0x0040e168–0x0040e1c4` + `0x0040e1d5–0x0040e1dd`).
 //! Evidence: `evidence/0040e168_fn_0040e168.md`.
 
 unsafe extern "C" fn default_convert(_p: *mut u8) -> *mut u16 {
@@ -17,19 +17,19 @@ unsafe extern "C" fn default_dispatch(_o: *mut u8) {}
 
 /// ponytail: hook for `fn_00404d24` (name conversion).
 pub static mut HOOK_00404D24: unsafe extern "C" fn(*mut u8) -> *mut u16 = default_convert;
-/// `KERNEL32.DLL::DeleteFileW` (`0x406668`).
+/// `KERNEL32.DLL::DeleteFileW` (`0x00406668`).
 ///
 /// ponytail: hook standing in for the raw import call at the original site.
 pub static mut HOOK_DeleteFileW: unsafe extern "C" fn(*mut u16) -> i32 = default_delete;
-/// `KERNEL32.DLL::GetLastError` (`0x406700`).
+/// `KERNEL32.DLL::GetLastError` (`0x00406700`).
 ///
 /// ponytail: hook standing in for the raw import call at the original site.
 pub static mut HOOK_GetLastError: unsafe extern "C" fn() -> u32 = default_lasterror;
-/// Target `0x40e11c` probe gate.
+/// Target `0x0040e11c` probe gate.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040e11c`.
 pub static mut HOOK_0040E11C: unsafe extern "C" fn(u8, *mut u8) -> bool = default_gate;
-/// Target `0x40e158` teardown dispatch.
+/// Target `0x0040e158` teardown dispatch.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040e158`.
 pub static mut HOOK_0040E158: unsafe extern "C" fn(*mut u8) = default_dispatch;
@@ -44,7 +44,7 @@ pub unsafe fn fn_0040e168(param_1: u8, param_2: *mut u8) -> i32 {
     let name = HOOK_00404D24(param_2);
     let ok = HOOK_DeleteFileW(name);
     let _err: u32 = HOOK_GetLastError();
-    // ponytail: SEH frame (`0x40e1c5/0x40e1cc`) not modeled — test-platform init detail.
+    // ponytail: SEH frame (`0x0040e1c5/0x0040e1cc`) not modeled — test-platform init detail.
     HOOK_0040E158(ctx.as_mut_ptr());
     // ponytail: pass-path EAX after void call indeterminate; stored BOOL is deterministic reading.
     ok

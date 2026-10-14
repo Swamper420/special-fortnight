@@ -1,9 +1,9 @@
-//! Original procedure `0x0040bb10` (34 bytes, `0x40bb10–0x40bb31`).
+//! Original procedure `0x0040bb10` (34 bytes, `0x0040bb10–0x0040bb31`).
 //! Evidence: `evidence/0040bb10_fn_0040bb10.md`.
 
 unsafe extern "C" fn default_grow(_slot: *mut u8, _n: u32) {}
 
-/// Grow `0x404f00` (`FUN_00404f00`), called as `(param_1, param_2)`
+/// Grow `0x00404f00` (`FUN_00404f00`), called as `(param_1, param_2)`
 /// with the original registers untouched.
 ///
 /// ponytail: hook standing in for done `fn_00404f00`, rewire to the

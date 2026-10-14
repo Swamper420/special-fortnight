@@ -1,4 +1,4 @@
-//! Original procedure `0x00408cb5` (274 bytes, `0x408cb5–0x408dc6`).
+//! Original procedure `0x00408cb5` (274 bytes, `0x00408cb5–0x00408dc6`).
 //! Evidence: `evidence/00408cb5_fn_00408cb5.md`.
 
 /// `DAT_00412824`: 10-byte extended-double compare const (observed
@@ -38,7 +38,7 @@ unsafe fn tail(out: *mut u8, sign_src: u16, est: i32) {
     core::ptr::write_unaligned(out.wrapping_byte_add(2), ((sign_src >> 15) & 1) as u8);
 }
 
-/// Normal lane (0x408ceb…): scale, round, normalize, BCD-unpack,
+/// Normal lane (0x00408ceb…): scale, round, normalize, BCD-unpack,
 /// keep-count round/truncate, sign tail.
 unsafe fn convert_normal(
     out: *mut u8,
@@ -48,19 +48,19 @@ unsafe fn convert_normal(
     param_4: u32,
     param_5: u32,
 ) {
-    // 0x408ceb FLD: full 80-bit magnitude (host f64 read).
+    // 0x00408ceb FLD: full 80-bit magnitude (host f64 read).
     let mantissa: u64 = core::ptr::read_unaligned(input as *const u64);
     let f = ext80_to_f64(mantissa, exp_word).abs();
-    // 0x408ced: est = (((mag-0x3fff)*0x4d10)>>16)+1, 32-bit wrap + SAR.
+    // 0x00408ced: est = (((mag-0x3fff)*0x4d10)>>16)+1, 32-bit wrap + SAR.
     let mut est =
         (mag.wrapping_sub(0x3fff).wrapping_mul(0x4d10) as i32 >> 16).wrapping_add(1);
-    // 0x408cff: EAX=0x12-est; FABS; thunk scales ST(0)
+    // 0x00408cff: EAX=0x12-est; FABS; thunk scales ST(0)
     // (EBX=[EBP-4]=0, the dispatcher-zeroed local).
     let scale_arg = 0x12i32.wrapping_sub(est);
     let mut r = crate::fn_004033f8::fn_004033f8(scale_arg, f);
-    // 0x408d13 FRNDINT (nearest-even assumed; see evidence).
+    // 0x00408d13 FRNDINT (nearest-even assumed; see evidence).
     r = r.round_ties_even();
-    // 0x408d15: EDI=[EBP-4]=0; FLD [0x412824]; FCOMP; FSTSW.
+    // 0x00408d15: EDI=[EBP-4]=0; FLD [0x00412824]; FCOMP; FSTSW.
     let tbytes: [u8; 10] =
         core::ptr::read_unaligned(core::ptr::addr_of!(DAT_00412824));
     let table = ext80_to_f64(
@@ -70,14 +70,14 @@ unsafe fn convert_normal(
         ]),
         u16::from_le_bytes([tbytes[8], tbytes[9]]),
     );
-    // 0x408d25 TEST 0x4100 (C3|C0): !(table > r) → FIDIV + est++.
+    // 0x00408d25 TEST 0x4100 (C3|C0): !(table > r) → FIDIV + est++.
     if !(table > r) {
         let div: f64 =
             core::ptr::read_unaligned(core::ptr::addr_of!(DAT_00412830)) as f64;
         r /= div;
         est = est.wrapping_add(1);
     }
-    // 0x408d36 FBSTP → 18 BCD digits (rounds again per RC).
+    // 0x00408d36 FBSTP → 18 BCD digits (rounds again per RC).
     // Out-of-f64-range magnitudes saturate (original stored
     // indefinite BCD; see Unknowns).
     let n: u64 = if r.is_finite() {
@@ -101,27 +101,27 @@ unsafe fn convert_normal(
         p = p.wrapping_byte_add(2);
     }
     core::ptr::write_unaligned(p, 0u8);
-    // 0x408d5a: keep = est + [EBP+8] (wrap); JNS else zero path.
+    // 0x00408d5a: keep = est + [EBP+8] (wrap); JNS else zero path.
     let keep = (est as u32).wrapping_add(param_4);
     if (keep as i32) < 0 {
         store_tail(out, 0, 0);
         return;
     }
-    // 0x408d69: unsigned min with [EBP+0xc].
+    // 0x00408d69: unsigned min with [EBP+0xc].
     let mut k = if keep < param_5 { keep } else { param_5 };
-    // 0x408d71: <0x12 → round-or-truncate at digit[k], else k=0x12.
+    // 0x00408d71: <0x12 → round-or-truncate at digit[k], else k=0x12.
     if k < 0x12 {
         let at = out.wrapping_byte_add(3).wrapping_byte_add(k as usize);
         let d: u8 = core::ptr::read_unaligned(at as *const u8);
         if d >= 0x35 {
-            // Round-up lane with '9'-carry (0x408d7d…).
+            // Round-up lane with '9'-carry (0x00408d7d…).
             let mut c = k;
             loop {
                 let slot = out.wrapping_byte_add(3).wrapping_byte_add(c as usize);
                 core::ptr::write_unaligned(slot, 0u8);
                 c = c.wrapping_sub(1);
                 if (c as i32) < 0 {
-                    // 0x408d92: [EBX+3]=0x31 word, est++.
+                    // 0x00408d92: [EBX+3]=0x31 word, est++.
                     core::ptr::write_unaligned(out.wrapping_byte_add(3) as *mut u16, 0x31);
                     est = est.wrapping_add(1);
                     break;
@@ -141,8 +141,8 @@ unsafe fn convert_normal(
     } else {
         k = 0x12;
     }
-    // Truncate/strip lane (0x408da2…): NUL at k, strip '0's down;
-    // running off the front clears the sign (0x408dc3→db5).
+    // Truncate/strip lane (0x00408da2…): NUL at k, strip '0's down;
+    // running off the front clears the sign (0x00408dc3→db5).
     let mut sign_src = exp_word;
     loop {
         let slot = out.wrapping_byte_add(3).wrapping_byte_add(k as usize);
@@ -163,13 +163,13 @@ unsafe fn convert_normal(
 /// Extended-double at `input` → `{exp, sign, digits}` at `out`
 /// (≥22 bytes: 3 header + 18 digits + NUL). `param_4`/`param_5` are
 /// the shared-frame `[EBP+8]`/`[EBP+0xC]`. No prologue: shares
-/// `0x408c88`'s frame (sole caller). `RET` pops nothing.
+/// `0x00408c88`'s frame (sole caller). `RET` pops nothing.
 pub unsafe fn fn_00408cb5(out: *mut u8, input: *mut u8, param_4: u32, param_5: u32) {
-    // 0x408cb5: AX=[ESI+8]; EDX=EAX; EAX&=0x7fff.
+    // 0x00408cb5: AX=[ESI+8]; EDX=EAX; EAX&=0x7fff.
     let exp_word: u16 =
         core::ptr::read_unaligned(input.wrapping_byte_add(8) as *const u16);
     let mag = (exp_word as u32) & 0x7fff;
-    // 0x408cc0 JZ: zero/subnormal lane (ce0→ce2→db8, EAX=0, EDX=0).
+    // 0x00408cc0 JZ: zero/subnormal lane (ce0→ce2→db8, EAX=0, EDX=0).
     if mag == 0 {
         store_tail(out, 0, 0);
         return;
@@ -178,7 +178,7 @@ pub unsafe fn fn_00408cb5(out: *mut u8, input: *mut u8, param_4: u32, param_5: u
         convert_normal(out, input, exp_word, mag, param_4, param_5);
         return;
     }
-    // Inf/nan lane (0x408cc9…): integer-bit test, then mantissa words.
+    // Inf/nan lane (0x00408cc9…): integer-bit test, then mantissa words.
     let intbit: u16 =
         core::ptr::read_unaligned(input.wrapping_byte_add(6) as *const u16) & 0x8000;
     if intbit == 0 {

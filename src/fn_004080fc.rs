@@ -1,4 +1,4 @@
-//! Original procedure `0x004080fc` (26 bytes, `0x4080fc–0x408115`).
+//! Original procedure `0x004080fc` (26 bytes, `0x004080fc–0x00408115`).
 //! Evidence: `evidence/004080fc_fn_004080fc.md`.
 
 /// Terminator-pointer word scan: `*p==0 → p`, else words up to and

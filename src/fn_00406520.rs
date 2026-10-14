@@ -1,11 +1,11 @@
-//! Original procedure `0x00406520` (6 bytes, `0x406520–0x406525`).
+//! Original procedure `0x00406520` (6 bytes, `0x00406520–0x00406525`).
 //! Evidence: `evidence/00406520_fn_00406520.md`.
 
 unsafe extern "C" fn default_tls_get(_index: u32) -> usize {
     0
 }
 
-/// Thunk `0x406520` (`KERNEL32.DLL::TlsGetValue`), `JMP [0x004193c0]`.
+/// Thunk `0x00406520` (`KERNEL32.DLL::TlsGetValue`), `JMP [0x004193c0]`.
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.

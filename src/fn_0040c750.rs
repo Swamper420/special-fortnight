@@ -1,4 +1,4 @@
-//! Original procedure `0x0040c750` (188 bytes, `0x40c750–0x40c80b`).
+//! Original procedure `0x0040c750` (188 bytes, `0x0040c750–0x0040c80b`).
 //! Evidence: `evidence/0040c750_fn_0040c750.md`.
 
 /// In-place marker transform over `buf[0..len)`: for each `0xe8`/`0xe9`

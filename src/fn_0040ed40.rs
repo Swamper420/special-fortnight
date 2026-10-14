@@ -1,4 +1,4 @@
-//! Original procedure `0x0040ed40` (211 bytes, `0x40ed40–0x40ee12`).
+//! Original procedure `0x0040ed40` (211 bytes, `0x0040ed40–0x0040ee12`).
 //! Evidence: `evidence/0040ed40_fn_0040ed40.md`.
 
 unsafe extern "C" fn default_sysinfo(_p: *mut u32) {}
@@ -22,14 +22,14 @@ pub struct Mbi {
     pub protect: u32,
 }
 
-/// Target `0x4067ac GetSystemInfo` → page size out.
+/// Target `0x004067ac GetSystemInfo` → page size out.
 pub static mut HOOK_GETSYSTEMINFO: unsafe extern "C" fn(*mut u32) = default_sysinfo;
-/// Target `0x406864 VirtualQuery (addr, *mbi, 0x1c)` → nonzero while mapped.
+/// Target `0x00406864 VirtualQuery (addr, *mbi, 0x1c)` → nonzero while mapped.
 pub static mut HOOK_VIRTUALQUERY: unsafe extern "C" fn(u32, *mut Mbi) -> u32 = default_query;
-/// Target `0x40685c VirtualProtect (base, size, prot, *old)` → nonzero ok.
+/// Target `0x0040685c VirtualProtect (base, size, prot, *old)` → nonzero ok.
 pub static mut HOOK_VIRTUALPROTECT: unsafe extern "C" fn(u32, u32, u32, *mut u32) -> u32 =
     default_prot;
-/// Target `0x40ed38` page touch.
+/// Target `0x0040ed38` page touch.
 pub static mut HOOK_0040ED38: unsafe extern "C" fn(u32) = default_touch;
 
 /// Commit-touch walk over the allocation containing `param_1` (EAX lane):

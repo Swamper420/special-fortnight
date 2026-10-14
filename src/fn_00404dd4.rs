@@ -1,4 +1,4 @@
-//! Original procedure `0x00404dd4` (48 bytes, `0x404dd4–0x404e03`).
+//! Original procedure `0x00404dd4` (48 bytes, `0x00404dd4–0x00404e03`).
 //! Evidence: `evidence/00404dd4_fn_00404dd4.md`.
 
 use crate::fn_004046c4::fn_004046c4;
@@ -9,14 +9,14 @@ unsafe extern "C" fn default_alloc(_n: u32) -> u32 {
 
 unsafe extern "C" fn default_fill(_a: *mut u8, _b: u32, _c: u32) {}
 
-/// Target `0x4054b4` (`FUN_004054b4`), called with `param_3`, result
+/// Target `0x004054b4` (`FUN_004054b4`), called with `param_3`, result
 /// forwarded to fill and stored to `*param_1`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_004054b4` once it exists.
 pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> u32 = default_alloc;
 
-/// Target `0x402fbc` (`FUN_00402fbc`), called with
+/// Target `0x00402fbc` (`FUN_00402fbc`), called with
 /// `(param_2, result, param_3<<1)` on the non-null lane.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to

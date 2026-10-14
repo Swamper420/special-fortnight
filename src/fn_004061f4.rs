@@ -1,8 +1,8 @@
-//! Original procedure `0x004061f4` (14 bytes, `0x4061f4–0x406201`).
+//! Original procedure `0x004061f4` (14 bytes, `0x004061f4–0x00406201`).
 //! Evidence: `evidence/004061f4_fn_004061f4.md`.
 
-/// Global list head observed as `DAT_0041202c` (read at `0x4061f4`,
-/// written at `0x4061fc`).
+/// Global list head observed as `DAT_0041202c` (read at `0x004061f4`,
+/// written at `0x004061fc`).
 ///
 /// ponytail: absolute-address cell as mutable hook, upgrade to real
 /// image-relative data once layout proven.

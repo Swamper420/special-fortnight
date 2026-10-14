@@ -1,4 +1,4 @@
-//! Original procedure `0x0040a9e8` (147 bytes, `0x40a9e8–0x40aa7a`).
+//! Original procedure `0x0040a9e8` (147 bytes, `0x0040a9e8–0x0040aa7a`).
 //! Evidence: `evidence/0040a9e8_fn_0040a9e8.md`.
 
 unsafe extern "C" fn default_strlen(_s: *const u8) -> u32 {
@@ -26,13 +26,13 @@ unsafe extern "C" fn default_alloc(_bytes: u32) -> *mut u8 {
 
 unsafe extern "C" fn default_free(_p: *mut u8) {}
 
-/// Length callee `0x404914` (`FUN_00404914`), `EAX` in/out.
+/// Length callee `0x00404914` (`FUN_00404914`), `EAX` in/out.
 ///
 /// ponytail: hook standing in for done `fn_00404914`, rewire to the
 /// real call once cross-module test serialization exists.
 pub static mut HOOK_00404914: unsafe extern "C" fn(*const u8) -> u32 = default_strlen;
 
-/// Import `KERNEL32.DLL::MultiByteToWideChar` (`CALL 0x4067f4` ×2:
+/// Import `KERNEL32.DLL::MultiByteToWideChar` (`CALL 0x004067f4` ×2:
 /// size query with `(NULL,0)`, then conversion).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
@@ -40,20 +40,20 @@ pub static mut HOOK_00404914: unsafe extern "C" fn(*const u8) -> u32 = default_s
 pub static mut HOOK_MultiByteToWideChar: unsafe extern "C" fn(u32, u32, *const u8, i32, *mut u16, u32) -> u32 =
     default_mbtwc;
 
-/// Import `USER32.DLL::CharUpperBuffW` (`CALL 0x40688c`).
+/// Import `USER32.DLL::CharUpperBuffW` (`CALL 0x0040688c`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_CharUpperBuffW: unsafe extern "C" fn(*mut u16, u32) -> u32 = default_upper;
 
-/// Alloc callee `0x402e04` (`FUN_00402e04`), called with `cch*2`
+/// Alloc callee `0x00402e04` (`FUN_00402e04`), called with `cch*2`
 /// (`ADD EAX,EAX`, wrapping); returns the DATA buffer pointer.
 ///
 /// ponytail: hook standing in for done `fn_00402e04`, rewire to the
 /// real call once cross-module test serialization exists.
 pub static mut HOOK_00402E04: unsafe extern "C" fn(u32) -> *mut u8 = default_alloc;
 
-/// Free callee `0x402e20` (`FUN_00402e20`), called with the heap-lane
+/// Free callee `0x00402e20` (`FUN_00402e20`), called with the heap-lane
 /// buffer (pointer-sized lane).
 ///
 /// ponytail: hook standing in for done `fn_00402e20`, rewire to the

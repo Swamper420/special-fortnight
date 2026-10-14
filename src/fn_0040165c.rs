@@ -1,4 +1,4 @@
-//! Original procedure `0x0040165c` (71 bytes, `0x40165c–0x4016a2`).
+//! Original procedure `0x0040165c` (71 bytes, `0x0040165c–0x004016a2`).
 //! Evidence: `evidence/0040165c_fn_0040165c.md`.
 
 unsafe extern "C" fn default_poll(
@@ -11,14 +11,14 @@ unsafe extern "C" fn default_poll(
 
 unsafe extern "C" fn default_sleep(_ms: u32) {}
 
-/// Callee `0x40134c` (`FUN_0040134c`), `(EAX=0, DL=1, ECX=cell)`.
+/// Callee `0x0040134c` (`FUN_0040134c`), `(EAX=0, DL=1, ECX=cell)`.
 ///
 /// ponytail: hook standing in for reconstructed `fn_0040134c`
 /// (register lanes preserved), rewire once linkage decided.
 pub static mut POLL_0040134c: unsafe extern "C" fn(u8, u8, *mut u8) -> u8 =
     default_poll;
 
-/// Import thunk `0x4011fc` (`KERNEL32.DLL::Sleep`).
+/// Import thunk `0x004011fc` (`KERNEL32.DLL::Sleep`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" Sleep` once

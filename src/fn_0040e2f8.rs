@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e2f8` (247 bytes, `0x40e2f8–0x40e3ee`).
+//! Original procedure `0x0040e2f8` (247 bytes, `0x0040e2f8–0x0040e3ee`).
 //! Evidence: `evidence/0040e2f8_fn_0040e2f8.md`.
 
 unsafe extern "C" fn default_retain(_p: i32) {}
@@ -23,7 +23,7 @@ unsafe extern "C" fn default_gate(_f: u8, _s: u32) -> u8 {
 unsafe extern "C" fn default_store(_d: *mut u32, _s: u32) {}
 unsafe extern "C" fn default_free(_s: *mut u32, _n: u32) {}
 
-/// ponytail: hook for `thunk 0x404c80` (retain).
+/// ponytail: hook for `thunk 0x00404c80` (retain).
 pub static mut HOOK_0040493C: unsafe extern "C" fn(i32) = default_retain;
 /// ponytail: hook for `fn_0040b2e0`.
 pub static mut HOOK_0040B2E0: unsafe extern "C" fn(*mut u8, *mut u32) = default_mkname;
@@ -33,7 +33,7 @@ pub static mut HOOK_00404CEC: unsafe extern "C" fn(*mut u32, u32) = default_take
 pub static mut HOOK_004030E4: unsafe extern "C" fn(u32) -> u32 = default_seed;
 /// ponytail: hook for `fn_0040b62c`.
 pub static mut HOOK_0040B62C: unsafe extern "C" fn(u32, *mut i32) -> u32 = default_stat;
-/// Target `0x40df20` cycle-fatal message.
+/// Target `0x0040df20` cycle-fatal message.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040df20`.
 pub static mut HOOK_0040DF20: unsafe extern "C" fn(u32, u32, *mut u8) = default_msg;
@@ -41,19 +41,19 @@ pub static mut HOOK_0040DF20: unsafe extern "C" fn(u32, u32, *mut u8) = default_
 pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u32, u8, u32) -> *mut u32 = default_mkmsg;
 /// ponytail: hook for `fn_00403f88`.
 pub static mut HOOK_00403F88: unsafe extern "C" fn(*mut u32) = default_fatal;
-/// Target `0x40e280` name encoder.
+/// Target `0x0040e280` name encoder.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040e280`.
 pub static mut HOOK_0040E280: unsafe extern "C" fn(u32, *mut u32) = default_name;
 /// ponytail: hook for `fn_0040513c`.
 pub static mut HOOK_0040513C: unsafe extern "C" fn(*mut u32, u32) = default_alloc;
-/// Target `0x40e1e0` gate.
+/// Target `0x0040e1e0` gate.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040e1e0`.
 pub static mut HOOK_0040E1E0: unsafe extern "C" fn(u8, u32) -> u8 = default_gate;
 /// ponytail: hook for `fn_00404c98`.
 pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u32, u32) = default_store;
-/// ponytail: hook for `thunk 0x404c90` (sized free).
+/// ponytail: hook for `thunk 0x00404c90` (sized free).
 pub static mut HOOK_004046E8: unsafe extern "C" fn(*mut u32, u32) = default_free;
 
 /// Temp-name hunt loop; stores found token to `*param_4`.

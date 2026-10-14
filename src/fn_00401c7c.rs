@@ -1,4 +1,4 @@
-//! Original procedure `0x00401c7c` (651 bytes, incl. `0x401708–0x4017aa`).
+//! Original procedure `0x00401c7c` (651 bytes, incl. `0x00401708–0x004017aa`).
 //! Evidence: `evidence/00401c7c_fn_00401c7c.md`.
 
 unsafe extern "C" fn default_free(_ptr: *mut u32, _hdr: u32) -> i32 {
@@ -19,7 +19,7 @@ pub static mut HOOK_SMALL_FREE: unsafe extern "C" fn(*mut u32, u32) -> i32 =
 pub static mut HOOK_HEAP_FREE: unsafe extern "C" fn(*mut u32, u32) -> i32 =
     default_free;
 
-/// Chunk lane (`hdr&5!=0, hdr&3==0`, body at `0x401708`): unlink,
+/// Chunk lane (`hdr&5!=0, hdr&3==0`, body at `0x00401708`): unlink,
 /// `VirtualFree`/`VirtualQuery` loop.
 ///
 /// ponytail: hook covers out-of-line body, rewire once proven.

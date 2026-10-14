@@ -1,29 +1,29 @@
-//! Original procedure `0x004043d0` (65 bytes, `0x4043d0–0x404411`).
+//! Original procedure `0x004043d0` (65 bytes, `0x004043d0–0x00404411`).
 //! Evidence: `evidence/004043d0_fn_004043d0.md`.
 
 unsafe extern "C" fn default_callee(_a: u32, _b: usize) {}
 
 unsafe extern "C" fn default_trap() {}
 
-/// Callee `0x404318` (`FUN_00404318`), taken when entry tag == 0.
+/// Callee `0x00404318` (`FUN_00404318`), taken when entry tag == 0.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00404318` (via lane adaptor) once its signature is proven.
 pub static mut HOOK_00404318: unsafe extern "C" fn(u32, usize) = default_callee;
 
-/// Callee `0x40436c` (`FUN_0040436c`), taken when entry tag == 1.
+/// Callee `0x0040436c` (`FUN_0040436c`), taken when entry tag == 1.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_0040436c` (via lane adaptor) once its signature is proven.
 pub static mut HOOK_0040436c: unsafe extern "C" fn(u32, usize) = default_callee;
 
-/// Callee `0x4043bc` (`FUN_004043bc`), taken when entry tag == 2.
+/// Callee `0x004043bc` (`FUN_004043bc`), taken when entry tag == 2.
 ///
 /// ponytail: hook standing in for `fn_004043bc` (keeps test hermetic),
 /// rewire to the real call once cross-module locking proven.
 pub static mut HOOK_004043bc: unsafe extern "C" fn(u32, usize) = default_callee;
 
-/// `INT3` at `0x4043f3`, taken when entry tag > 2.
+/// `INT3` at `0x004043f3`, taken when entry tag > 2.
 ///
 /// ponytail: hook standing in for the trap (host tests cannot raise
 /// SIGTRAP); default is a no-op.

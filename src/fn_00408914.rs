@@ -1,11 +1,11 @@
-//! Original procedure `0x00408914` (15 bytes, `0x408914–0x408922`).
+//! Original procedure `0x00408914` (15 bytes, `0x00408914–0x00408922`).
 //! Evidence: `evidence/00408914_fn_00408914.md`.
 
 unsafe extern "C" fn default_inner(_arg: u32) -> u32 {
     0
 }
 
-/// Callee `0x408904` (`FUN_00408904`).
+/// Callee `0x00408904` (`FUN_00408904`).
 ///
 /// ponytail: hook standing in for sibling `fn_00408904`, rewire to
 /// real call once cross-module linkage proven.

@@ -1,7 +1,7 @@
-//! Original procedure `0x004041bc` (29 bytes, `0x4041bc–0x4041d8`).
+//! Original procedure `0x004041bc` (29 bytes, `0x004041bc–0x004041d8`).
 //! Evidence: `evidence/004041bc_fn_004041bc.md`.
 
-/// Handler stored into record `+4` at `0x4041ca`.
+/// Handler stored into record `+4` at `0x004041ca`.
 pub const HANDLER_0040411C: u32 = 0x0040411c;
 
 /// SEH record: `prev/handler/ebp` at `+0/+4/+8` (caller-frame
@@ -13,7 +13,7 @@ pub struct SehRecord004041bc {
     pub ebp: u32,
 }
 
-/// EBP value stored into the record at `0x4041d1`.
+/// EBP value stored into the record at `0x004041d1`.
 ///
 /// ponytail: static stands in for callee-saved EBP read (host frame
 /// pointer meaningless), rewire to inline asm once Windows-target

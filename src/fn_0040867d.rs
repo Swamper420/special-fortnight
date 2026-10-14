@@ -1,5 +1,5 @@
-//! Original procedure `0x0040867d` (575 bytes, `0x40867d–0x4086a3` +
-//! `0x4086ec–0x408903`, non-contiguous; gap is the jump table).
+//! Original procedure `0x0040867d` (575 bytes, `0x0040867d–0x004086a3` +
+//! `0x004086ec–0x00408903`, non-contiguous; gap is the jump table).
 //! Evidence: `evidence/0040867d_fn_0040867d.md`.
 
 unsafe extern "C" fn default_8904(_arg: u32) -> u32 {
@@ -41,14 +41,14 @@ unsafe extern "C" fn default_tail(_val: *mut u8, _width: u32, _base: u32, _curso
     0
 }
 
-/// Fallback-loop head `0x408904` (`FUN_00408904`), always called
+/// Fallback-loop head `0x00408904` (`FUN_00408904`), always called
 /// with 0 from the loop.
 ///
 /// ponytail: hook standing in for sibling `fn_00408904`, rewire to
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00408904: unsafe extern "C" fn(u32) -> u32 = default_8904;
 
-/// Callee `0x408480` (`FUN_00408480`): `(v, start, count, ebx)`,
+/// Callee `0x00408480` (`FUN_00408480`): `(v, start, count, ebx)`,
 /// returns the class char in `ECX` and the pointer in `EAX`
 /// (split via `out`).
 ///
@@ -57,13 +57,13 @@ pub static mut HOOK_00408904: unsafe extern "C" fn(u32) -> u32 = default_8904;
 pub static mut HOOK_00408480: unsafe extern "C" fn(u32, *mut u8, u32, u32, *mut *mut u8) -> u32 =
     default_8480;
 
-/// Callee `0x408500` (`FUN_00408500`) with the `EBP-0x10` slot.
+/// Callee `0x00408500` (`FUN_00408500`) with the `EBP-0x10` slot.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_00408500` once it exists.
 pub static mut HOOK_00408500: unsafe extern "C" fn(*mut u8) = default_8500;
 
-/// Callee `0x408524` (`FUN_00408524`): `(buf:EAX, val:EDX,
+/// Callee `0x00408524` (`FUN_00408524`): `(buf:EAX, val:EDX,
 /// mode:ECX=bh, b:EDX-push, a:EAX-push, pack:EBX-push)` from the
 /// observed reg/push order.
 ///
@@ -72,33 +72,33 @@ pub static mut HOOK_00408500: unsafe extern "C" fn(*mut u8) = default_8500;
 pub static mut HOOK_00408524: unsafe extern "C" fn(*mut u8, u32, u32, u32, u32, u32) -> u32 =
     default_8524;
 
-/// Callee `0x404b9c` (`FUN_00404b9c`): `(slot, wide_src, len)`.
+/// Callee `0x00404b9c` (`FUN_00404b9c`): `(slot, wide_src, len)`.
 ///
 /// ponytail: hook standing in for reconstructed `fn_00404b9c`,
 /// rewire to real call once cross-module linkage proven.
 pub static mut HOOK_00404B9C: unsafe extern "C" fn(*mut u32, *const u16, u32) = default_4b9c;
 
-/// Tail target `0x407cd8` (`FUN_00407cd8`): `(value, width, base,
+/// Tail target `0x00407cd8` (`FUN_00407cd8`): `(value, width, base,
 /// cursor)`.
 ///
 /// ponytail: hook standing in for reconstructed `fn_00407cd8`,
 /// rewire to real call once cross-module linkage proven.
 pub static mut HOOK_00407CD8: unsafe extern "C" fn(u32, u32, u32, *mut u8) -> u32 = default_7cd8;
 
-/// Indirect `CALL ESI` (`0x4087ee`): `(base, frame_off, slot, val,
-/// count)`; base is one of `0x404b8c/0x404bc0/0x404bf0` per arm.
+/// Indirect `CALL ESI` (`0x004087ee`): `(base, frame_off, slot, val,
+/// count)`; base is one of `0x00404b8c/0x00404bc0/0x00404bf0` per arm.
 ///
 /// ponytail: hook standing in for unreconstructed indirect targets.
 pub static mut HOOK_INDIRECT: unsafe extern "C" fn(u32, u32, *mut u8, *mut u8, u32) =
     default_indirect;
 
-/// Tail target `0x407d38` (`LAB_00407d38`, out-of-body float/int
+/// Tail target `0x00407d38` (`LAB_00407d38`, out-of-body float/int
 /// tail): `(value:EAX, width:EDX, base:ECX, cursor:ESI)`.
 ///
 /// ponytail: hook standing in for code outside this procedure.
 pub static mut TAIL_00407D38: unsafe extern "C" fn(*mut u8, u32, u32, *mut u8) -> u32 = default_tail;
 
-/// Data byte `0x415b76` (`DAT_00415b76`), `M`-lane precision.
+/// Data byte `0x00415b76` (`DAT_00415b76`), `M`-lane precision.
 ///
 /// ponytail: absolute-address cell as mutable hook, upgrade to real
 /// image-relative import once data layout proven.
@@ -128,7 +128,7 @@ unsafe fn rd_base(f: *mut u8) -> *mut u8 {
     core::ptr::read_unaligned(f.wrapping_byte_add(0xc) as *const *mut u8)
 }
 
-/// Shared `0x408815/0x40881e` tail: null → 0, else
+/// Shared `0x00408815/0x0040881e` tail: null → 0, else
 /// `[esi-4]>>1` clamped (unsigned `JA`) to `[EBP-0x20]`.
 unsafe fn len_tail(frame: *mut u8, esi: *mut u8) -> u32 {
     if esi.is_null() {
@@ -185,7 +185,7 @@ unsafe fn case_c(frame: *mut u8, val: u32, ecx: u32, bh: u8) -> u32 {
     len_tail(frame, core::ptr::read_unaligned(slot as *const *mut u8))
 }
 
-/// Fallback/default loop at `0x4086ec`: `8904(0)`, `8480`, clamp
+/// Fallback/default loop at `0x004086ec`: `8904(0)`, `8480`, clamp
 /// width to `0x20`, classify raw `D/X/U` (no case mask here) else
 /// repeat.
 unsafe fn fallback(frame: *mut u8) -> u32 {
@@ -253,7 +253,7 @@ pub unsafe fn fn_0040867d(frame: *mut u8, param_1: u8, param_3: u32) -> u32 {
             if (ecx as u8) != 0x53 {
                 return fallback(frame);
             }
-            HOOK_INDIRECT(0x404b8c, rd32(frame, -4), slot, ent, 1);
+            HOOK_INDIRECT(0x00404b8c, rd32(frame, -4), slot, ent, 1);
             len_tail(frame, core::ptr::read_unaligned(slot as *const *mut u8))
         }
         3 => case_c(frame, val, ecx, 0),
@@ -263,7 +263,7 @@ pub unsafe fn fn_0040867d(frame: *mut u8, param_1: u8, param_3: u32) -> u32 {
             }
             let n: u8 = core::ptr::read_unaligned(val as *const u8);
             HOOK_INDIRECT(
-                0x404b8c,
+                0x00404b8c,
                 rd32(frame, -4),
                 slot,
                 val.wrapping_add(1) as *mut u8,
@@ -277,7 +277,7 @@ pub unsafe fn fn_0040867d(frame: *mut u8, param_1: u8, param_3: u32) -> u32 {
             }
             HOOK_00407CD8(val, 8, 0x10, frame.wrapping_byte_sub(0x86))
         }
-        6 => indirect(frame, ecx, slot, val, 0x404bc0),
+        6 => indirect(frame, ecx, slot, val, 0x00404bc0),
         9 => {
             if (ecx as u8) != 0x53 {
                 return fallback(frame);
@@ -300,7 +300,7 @@ pub unsafe fn fn_0040867d(frame: *mut u8, param_1: u8, param_3: u32) -> u32 {
             }
             k as u32
         }
-        11 => indirect(frame, ecx, slot, val, 0x404bf0),
+        11 => indirect(frame, ecx, slot, val, 0x00404bf0),
         12 => case_c(frame, val, ecx, 1),
         13 => {
             if (ecx as u8) != 0x53 {
@@ -460,11 +460,11 @@ mod tests {
         assert_eq!(CD_V.load(Ordering::SeqCst), 0x55);
         assert_eq!(CD_W.load(Ordering::SeqCst), 8);
         assert_eq!(CD_B.load(Ordering::SeqCst), 0x10);
-        // Case 2, 'S' → indirect via 0x404b8c with entry ptr and
+        // Case 2, 'S' → indirect via 0x00404b8c with entry ptr and
         // count 1; hook nulls the slot → length 0.
         let f = unsafe { setup(2, 0) };
         assert_eq!(unsafe { fn_0040867d(f, b'S', 0) }, 0);
-        assert_eq!(IN_BASE.load(Ordering::SeqCst), 0x404b8c);
+        assert_eq!(IN_BASE.load(Ordering::SeqCst), 0x00404b8c);
         assert_eq!(IN_COUNT.load(Ordering::SeqCst), 1);
         assert_eq!(
             IN_VAL.load(Ordering::SeqCst),

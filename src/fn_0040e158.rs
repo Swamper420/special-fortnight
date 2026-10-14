@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e158` (16 bytes, `0x40e158–0x40e167`).
+//! Original procedure `0x0040e158` (16 bytes, `0x0040e158–0x0040e167`).
 //! Evidence: `evidence/0040e158_fn_0040e158.md`.
 
 unsafe extern "C" fn default_dispatch(_arg: u32) {}

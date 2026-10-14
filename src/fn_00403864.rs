@@ -1,4 +1,4 @@
-//! Original procedure `0x00403864` (32 bytes, `0x403864–0x403883`).
+//! Original procedure `0x00403864` (32 bytes, `0x00403864–0x00403883`).
 //! Evidence: `evidence/00403864_fn_00403864.md`.
 
 /// Borland SEH link via `fn_004039e4`, then unchecked dispatch via

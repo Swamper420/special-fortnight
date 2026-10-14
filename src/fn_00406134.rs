@@ -1,9 +1,9 @@
-//! Original procedure `0x00406134` (99 bytes, `0x406134–0x406196`).
+//! Original procedure `0x00406134` (99 bytes, `0x00406134–0x00406196`).
 //! Evidence: `evidence/00406134_fn_00406134.md`.
 
 unsafe extern "C" fn default_free(_ptr: usize, _size: u32) {}
 
-/// Free `FUN_00402e20` (`CALL 0x402e20` with node in EAX, `EDX=8`).
+/// Free `FUN_00402e20` (`CALL 0x00402e20` with node in EAX, `EDX=8`).
 ///
 /// ponytail: hook standing in for done `fn_00402e20`, rewire to the real
 /// call once cross-module linkage exists.

@@ -1,9 +1,9 @@
-//! Original procedure `0x004046c4` (35 bytes, `0x4046c4–0x4046e6`).
+//! Original procedure `0x004046c4` (35 bytes, `0x004046c4–0x004046e6`).
 //! Evidence: `evidence/004046c4_fn_004046c4.md`.
 
 unsafe extern "C" fn default_target(_arg: u32) {}
 
-/// Target `0x402e20` (`FUN_00402e20`), called with `obj-12` when the
+/// Target `0x00402e20` (`FUN_00402e20`), called with `obj-12` when the
 /// locked count hits zero; slot (EAX) preserved across the call.
 ///
 /// ponytail: hook standing in for reconstructed `fn_00402e20`, rewire

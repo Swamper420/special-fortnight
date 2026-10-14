@@ -1,4 +1,4 @@
-//! Original procedure `0x00403f88` (108 bytes, `0x403f88–0x403ff3`).
+//! Original procedure `0x00403f88` (108 bytes, `0x00403f88–0x00403ff3`).
 //! Evidence: `evidence/00403f88_fn_00403f88.md`.
 
 unsafe extern "C" fn default_raise(_code: u32, _flags: u32, _extra: u32) {}
@@ -6,14 +6,14 @@ unsafe extern "C" fn default_raise(_code: u32, _flags: u32, _extra: u32) {}
 unsafe extern "C" fn default_tail14() {}
 
 /// Indirect slot `dword ptr [0x0041301c]` (`DAT_0041301c`), null-checked at
-/// `0x403fb1`; when set it is called with `(0xeedfade, 1, extra)` where
-/// `extra` is 0 or `[fn_00402efc()+0xC]` per `0x403fd4–0x403fe9`.
+/// `0x00403fb1`; when set it is called with `(0xeedfade, 1, extra)` where
+/// `extra` is 0 or `[fn_00402efc()+0xC]` per `0x00403fd4–0x00403fe9`.
 ///
 /// ponytail: `Option` models the observed null check (a plain hook cannot),
 /// upgrade to real image-relative import once data layout proven.
 pub static mut HOOK_0041301C: Option<unsafe extern "C" fn(u32, u32, u32)> = None;
 
-/// Terminal `JMP dword ptr [0x00413014]` at `0x403fee` (no null check).
+/// Terminal `JMP dword ptr [0x00413014]` at `0x00403fee` (no null check).
 /// The cell is owned as a 4-arg raise hook by `fn_00403b0c`, but this site
 /// passes no clean args (stack holds leftover struct words), so a hermetic
 /// nullary tail hook is used and the jump is modeled as call+return.
@@ -23,13 +23,13 @@ pub static mut HOOK_0041301C: Option<unsafe extern "C" fn(u32, u32, u32)> = None
 pub static mut TAIL_00413014: unsafe extern "C" fn() = default_tail14;
 
 /// Conditional raise-tail: `param_1==0` allocates via `fn_004046b8(0xd8)`
-/// (its `POP` source is the return-address slot, `0x403f96` on target);
-/// when the `0x41301c` slot is set, resolve `fn_00402efc()` and raise
-/// `(0xeedfade, 1, extra)`; always tail through `[0x413014]`.
+/// (its `POP` source is the return-address slot, `0x00403f96` on target);
+/// when the `0x0041301c` slot is set, resolve `fn_00402efc()` and raise
+/// `(0xeedfade, 1, extra)`; always tail through `[0x00413014]`.
 /// `param_1` arrives in EAX per Ghidra `__register` observation.
 pub unsafe fn fn_00403f88(param_1: u32) {
     if param_1 == 0 {
-        crate::fn_004046b8::fn_004046b8(0xd8, 0x403f96);
+        crate::fn_004046b8::fn_004046b8(0xd8, 0x00403f96);
     }
     if let Some(raise) = HOOK_0041301C {
         let r = crate::fn_00402efc::fn_00402efc();
@@ -106,14 +106,14 @@ mod tests {
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(RAISE_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 1);
-        // Zero param: alloc via 0x4046b8(0xd8) with the retaddr-slot word.
+        // Zero param: alloc via 0x004046b8(0xd8) with the retaddr-slot word.
         RAISE_HITS.store(0, Ordering::SeqCst);
         TAIL_HITS.store(0, Ordering::SeqCst);
         ALLOC_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_00403f88(0) };
         assert_eq!(ALLOC_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(ALLOC_ARG.load(Ordering::SeqCst), 0xd8);
-        assert_eq!(unsafe { crate::fn_004046b8::CELL_00412004 }, 0x403f96);
+        assert_eq!(unsafe { crate::fn_004046b8::CELL_00412004 }, 0x00403f96);
         assert_eq!(RAISE_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 1);
         // Set slot, ctx head zero → raise(eedfade, 1, 0), tail fires.

@@ -1,4 +1,4 @@
-//! Original procedure `0x00404c98` (81 bytes, `0x404c98–0x404ce8`).
+//! Original procedure `0x00404c98` (81 bytes, `0x00404c98–0x00404ce8`).
 //! Evidence: `evidence/00404c98_fn_00404c98.md`.
 
 use crate::fn_00402e20::fn_00402e20;
@@ -6,7 +6,7 @@ use crate::fn_00404dd4::{HOOK_00402fbc, HOOK_004054b4};
 
 unsafe extern "C" fn default_forward(_slot: *mut u8, _src: *mut u8) {}
 
-/// Target `0x404e6c` (`FUN_00404e6c`), reached by a terminal `JMP`
+/// Target `0x00404e6c` (`FUN_00404e6c`), reached by a terminal `JMP`
 /// on the non-`2` tag lane (decompiler shows call+return).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to

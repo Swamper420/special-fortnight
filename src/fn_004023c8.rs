@@ -1,11 +1,11 @@
-//! Original procedure `0x004023c8` (123 bytes, `0x4023c8–0x402442`).
+//! Original procedure `0x004023c8` (123 bytes, `0x004023c8–0x00402442`).
 //! Evidence: `evidence/004023c8_fn_004023c8.md`.
 
 unsafe extern "C" fn default_query(_addr: u32, _info: *mut u8, _len: u32) -> u32 {
     0
 }
 
-/// `VirtualQuery` thunk at `0x401178`, called with
+/// `VirtualQuery` thunk at `0x00401178`, called with
 /// `(param_1, param_4-0x1c, 0x1c)` on a stale cache entry.
 ///
 /// ponytail: hook standing in for import thunk, rewire to real import

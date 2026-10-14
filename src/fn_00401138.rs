@@ -1,4 +1,4 @@
-//! Original procedure `0x00401138` (6 bytes, `0x00401138–0x0040a5`).
+//! Original procedure `0x00401138` (6 bytes, `0x00401138–0x0040113d`).
 //! Evidence: `evidence/00401138_fn_00401138.md`.
 //!
 //! Import thunk `USER32.DLL::LoadStringW`: single `JMP [IAT]` tail jump,

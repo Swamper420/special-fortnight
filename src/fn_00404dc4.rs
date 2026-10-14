@@ -1,16 +1,16 @@
-//! Original procedure `0x00404dc4` (15 bytes, `0x404dc4–0x404dd2`).
+//! Original procedure `0x00404dc4` (15 bytes, `0x00404dc4–0x00404dd2`).
 //! Evidence: `evidence/00404dc4_fn_00404dc4.md`.
 
 use crate::fn_00404d30::fn_00404d30;
 
 /// Cell observed as `DAT_004138c8`: dword read once and pushed as
-/// the 4th arg to `0x404d30`.
+/// the 4th arg to `0x00404d30`.
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to real
 /// image-relative import once data layout proven.
 pub static mut DAT_004138c8: u32 = 0;
 
-/// `4d30(p1, p2, p3, [0x4138c8])`. Params arrive in EAX/EDX/ECX and
+/// `4d30(p1, p2, p3, [0x004138c8])`. Params arrive in EAX/EDX/ECX and
 /// forward untouched per Ghidra `__register` observation; the
 /// global travels on the stack (callee cleans 4 via `RET 0x4`).
 /// Direct call to sibling `fn_00404d30` (no hook).

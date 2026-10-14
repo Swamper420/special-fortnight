@@ -1,4 +1,4 @@
-//! Original procedure `0x00408028` (41 bytes, `0x408028–0x408050`).
+//! Original procedure `0x00408028` (41 bytes, `0x00408028–0x00408050`).
 //! Evidence: `evidence/00408028_fn_00408028.md`.
 
 unsafe extern "C" fn default_scan(_base: *mut u8, _s: *mut u8) -> i32 {
@@ -7,7 +7,7 @@ unsafe extern "C" fn default_scan(_base: *mut u8, _s: *mut u8) -> i32 {
 
 unsafe extern "C" fn default_emit(_d: *mut u8, _start: i32, _n: i32, _dst: *mut u8) {}
 
-/// Scanner `0x407f4c` (`FUN_00407f4c`), called with `(&DAT_00408060,
+/// Scanner `0x00407f4c` (`FUN_00407f4c`), called with `(&DAT_00408060,
 /// param_1)`; its EAX residue is taken as `i32` per this caller's
 /// observation (the callee's own dossier reports `void`; see evidence).
 ///
@@ -16,7 +16,7 @@ unsafe extern "C" fn default_emit(_d: *mut u8, _start: i32, _n: i32, _dst: *mut 
 pub static mut HOOK_00407F4C: unsafe extern "C" fn(*mut u8, *mut u8) -> i32 =
     default_scan;
 
-/// Emitter `0x40525c` (`FUN_0040525c`), called with
+/// Emitter `0x0040525c` (`FUN_0040525c`), called with
 /// `(param_1, res+1, 0x7fffffff, param_2)`.
 ///
 /// ponytail: hook mirroring done `fn_0040525c`'s shape, rewire to the

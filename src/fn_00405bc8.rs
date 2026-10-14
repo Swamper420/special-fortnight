@@ -1,4 +1,4 @@
-//! Original procedure `0x00405bc8` (33 bytes, `0x405bc8–0x405be8`).
+//! Original procedure `0x00405bc8` (33 bytes, `0x00405bc8–0x00405be8`).
 //! Evidence: `evidence/00405bc8_fn_00405bc8.md`.
 
 use core::ptr::read_unaligned;
@@ -7,7 +7,7 @@ unsafe extern "C" fn default_next(p: *const u16) -> *const u16 {
     p.wrapping_add(1)
 }
 
-/// Import `0x4010c8` (`USER32.DLL::CharNextW`); its result is the next
+/// Import `0x004010c8` (`USER32.DLL::CharNextW`); its result is the next
 /// cursor.
 ///
 /// ponytail: hook standing in for the stdcall import, rewire to raw

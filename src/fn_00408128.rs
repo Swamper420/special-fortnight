@@ -1,4 +1,4 @@
-//! Original procedure `0x00408128` (57 bytes, `0x408128–0x408160`).
+//! Original procedure `0x00408128` (57 bytes, `0x00408128–0x00408160`).
 //! Evidence: `evidence/00408128_fn_00408128.md`.
 
 use crate::fn_00402fbc::fn_00402fbc;
@@ -7,7 +7,7 @@ unsafe extern "C" fn default_len(_s: *mut u16) -> u32 {
     0
 }
 
-/// Length callee `0x4080dc` (`FUN_004080dc`), observed `(short *) -> uint`.
+/// Length callee `0x004080dc` (`FUN_004080dc`), observed `(short *) -> uint`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004080dc` once it exists.

@@ -1,4 +1,4 @@
-//! Original procedure `0x00408f68` (275 bytes, `0x408f68–0x40907a`).
+//! Original procedure `0x00408f68` (275 bytes, `0x00408f68–0x0040907a`).
 //! Evidence: `evidence/00408f68_fn_00408f68.md`.
 
 use crate::fn_00404c98::fn_00404c98;
@@ -19,7 +19,7 @@ unsafe extern "C" fn default_thread_locale() -> u32 {
 
 unsafe extern "C" fn default_release(_slots: *mut u8, _count: u32) {}
 
-/// `FUN_00408f2c` (`CALL 0x408f2c` ×4 per loop body).
+/// `FUN_00408f2c` (`CALL 0x00408f2c` ×4 per loop body).
 ///
 /// ponytail: hook standing in for same-batch `fn_00408f2c` (absolute
 /// table bases are unmapped on host, so a direct call would fault);
@@ -27,37 +27,37 @@ unsafe extern "C" fn default_release(_slots: *mut u8, _count: u32) {}
 pub static mut HOOK_00408f2c: unsafe extern "C" fn(u32, i32, *const u8, *mut u8, u32, *const u8) =
     default_resolve;
 
-/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x4067b4`).
+/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x004067b4`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetThreadLocale: unsafe extern "C" fn() -> u32 = default_thread_locale;
 
-/// `thunk_FUN_004046e8` (`CALL 0x404c90`), batch release of 4 slots.
+/// `thunk_FUN_004046e8` (`CALL 0x00404c90`), batch release of 4 slots.
 ///
 /// ponytail: hook standing in for the thunk target, rewire to real
 /// `fn_004046e8` once cross-module linkage proven.
 pub static mut HOOK_00404c90: unsafe extern "C" fn(*mut u8, u32) = default_release;
 
-/// Month-name destinations at `0x415b98` (12 pointer slots).
+/// Month-name destinations at `0x00415b98` (12 pointer slots).
 ///
 /// ponytail: absolute-address cells modeled as a host array, upgrade
 /// to real image-relative data once data layout proven.
 pub static mut DAT_00415b98: [*mut u8; 12] = [core::ptr::null_mut(); 12];
 
-/// Month-name destinations at `0x415bc8` (12 pointer slots).
+/// Month-name destinations at `0x00415bc8` (12 pointer slots).
 ///
 /// ponytail: absolute-address cells modeled as a host array, upgrade
 /// to real image-relative data once data layout proven.
 pub static mut DAT_00415bc8: [*mut u8; 12] = [core::ptr::null_mut(); 12];
 
-/// Day-name destinations at `0x415bf8` (7 pointer slots).
+/// Day-name destinations at `0x00415bf8` (7 pointer slots).
 ///
 /// ponytail: absolute-address cells modeled as a host array, upgrade
 /// to real image-relative data once data layout proven.
 pub static mut DAT_00415bf8: [*mut u8; 7] = [core::ptr::null_mut(); 7];
 
-/// Day-name destinations at `0x415c14` (7 pointer slots).
+/// Day-name destinations at `0x00415c14` (7 pointer slots).
 ///
 /// ponytail: absolute-address cells modeled as a host array, upgrade
 /// to real image-relative data once data layout proven.
@@ -91,7 +91,7 @@ pub unsafe fn fn_00408f68() {
         HOOK_00408f2c(
             (i as u32).wrapping_add(0x43),
             i.wrapping_sub(1),
-            0x412834 as *const u8,
+            0x00412834 as *const u8,
             &mut local_10 as *mut *mut u8 as *mut u8,
             0xb,
             frame,
@@ -100,7 +100,7 @@ pub unsafe fn fn_00408f68() {
         HOOK_00408f2c(
             (i as u32).wrapping_add(0x37),
             i.wrapping_sub(1),
-            0x412864 as *const u8,
+            0x00412864 as *const u8,
             &mut local_14 as *mut *mut u8 as *mut u8,
             0xb,
             frame,
@@ -121,7 +121,7 @@ pub unsafe fn fn_00408f68() {
         HOOK_00408f2c(
             (local_c as u32).wrapping_add(0x31),
             i.wrapping_sub(1),
-            0x412894 as *const u8,
+            0x00412894 as *const u8,
             &mut local_18 as *mut *mut u8 as *mut u8,
             6,
             frame,
@@ -130,7 +130,7 @@ pub unsafe fn fn_00408f68() {
         HOOK_00408f2c(
             (local_c as u32).wrapping_add(0x2a),
             i.wrapping_sub(1),
-            0x4128b0 as *const u8,
+            0x004128b0 as *const u8,
             &mut local_1c as *mut *mut u8 as *mut u8,
             6,
             frame,
@@ -205,18 +205,18 @@ mod tests {
         let calls = CALLS.lock().unwrap();
         // 12 month ×2 + 7 day ×2.
         assert_eq!(calls.len(), 38);
-        // Month i=1: (0x44, 0, 0x412834, 0xb), (0x38, 0, 0x412864, 0xb).
-        assert_eq!((calls[0].0, calls[0].1, calls[0].2, calls[0].4), (0x44, 0, 0x412834, 0xb));
-        assert_eq!((calls[1].0, calls[1].1, calls[1].2, calls[1].4), (0x38, 0, 0x412864, 0xb));
+        // Month i=1: (0x44, 0, 0x00412834, 0xb), (0x38, 0, 0x00412864, 0xb).
+        assert_eq!((calls[0].0, calls[0].1, calls[0].2, calls[0].4), (0x44, 0, 0x00412834, 0xb));
+        assert_eq!((calls[1].0, calls[1].1, calls[1].2, calls[1].4), (0x38, 0, 0x00412864, 0xb));
         // Month i=12 (last pair): (0x4f, 11, …), (0x43, 11, …).
-        assert_eq!((calls[22].0, calls[22].1, calls[22].2), (0x4f, 11, 0x412834));
-        assert_eq!((calls[23].0, calls[23].1, calls[23].2), (0x43, 11, 0x412864));
-        // Day i=1: (1+5)%7=6 -> (0x37, 0, 0x412894, 6), (0x30, 0, 0x4128b0, 6).
-        assert_eq!((calls[24].0, calls[24].1, calls[24].2, calls[24].4), (0x37, 0, 0x412894, 6));
-        assert_eq!((calls[25].0, calls[25].1, calls[25].2, calls[25].4), (0x30, 0, 0x4128b0, 6));
+        assert_eq!((calls[22].0, calls[22].1, calls[22].2), (0x4f, 11, 0x00412834));
+        assert_eq!((calls[23].0, calls[23].1, calls[23].2), (0x43, 11, 0x00412864));
+        // Day i=1: (1+5)%7=6 -> (0x37, 0, 0x00412894, 6), (0x30, 0, 0x004128b0, 6).
+        assert_eq!((calls[24].0, calls[24].1, calls[24].2, calls[24].4), (0x37, 0, 0x00412894, 6));
+        assert_eq!((calls[25].0, calls[25].1, calls[25].2, calls[25].4), (0x30, 0, 0x004128b0, 6));
         // Day i=7: (7+5)%7=5 -> (0x36, 6, …), (0x2f, 6, …).
-        assert_eq!((calls[36].0, calls[36].1, calls[36].2), (0x36, 6, 0x412894));
-        assert_eq!((calls[37].0, calls[37].1, calls[37].2), (0x2f, 6, 0x4128b0));
+        assert_eq!((calls[36].0, calls[36].1, calls[36].2), (0x36, 6, 0x00412894));
+        assert_eq!((calls[37].0, calls[37].1, calls[37].2), (0x2f, 6, 0x004128b0));
         // One frame cookie shared by every call.
         assert!(calls.iter().all(|c| c.5 == calls[0].5));
         // Terminal batch release (·, 4); destinations stayed null.

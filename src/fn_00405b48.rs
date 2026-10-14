@@ -1,4 +1,4 @@
-//! Original procedure `0x00405b48` (71 bytes, `0x405b48–0x405b8e`).
+//! Original procedure `0x00405b48` (71 bytes, `0x00405b48–0x00405b8e`).
 //! Evidence: `evidence/00405b48_fn_00405b48.md`.
 
 use core::ptr::{read_unaligned, write_unaligned};
@@ -15,7 +15,7 @@ unsafe extern "C" fn default_resolve(_path: *mut u16, _flag: u32) -> u32 {
     0
 }
 
-/// Import `0x401108` (`KERNEL32.DLL::GetModuleFileNameW`), called as
+/// Import `0x00401108` (`KERNEL32.DLL::GetModuleFileNameW`), called as
 /// `(u32 [obj+4], buf, 0x20a)`; return ignored.
 ///
 /// ponytail: hook standing in for the stdcall import, rewire to raw
@@ -23,7 +23,7 @@ unsafe extern "C" fn default_resolve(_path: *mut u16, _flag: u32) -> u32 {
 pub static mut HOOK_GetModuleFileNameW: unsafe extern "C" fn(u32, *mut u16, u32) -> u32 =
     default_get_name;
 
-/// Target `0x405de8` (`FUN_00405de8`), called as `(buf, 1)`.
+/// Target `0x00405de8` (`FUN_00405de8`), called as `(buf, 1)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00405de8` once it exists.

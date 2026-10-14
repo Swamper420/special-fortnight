@@ -1,4 +1,4 @@
-//! Original procedure `0x00409860` (90 bytes, `0x409860–0x4098b9`).
+//! Original procedure `0x00409860` (90 bytes, `0x00409860–0x004098b9`).
 //! Evidence: `evidence/00409860_fn_00409860.md`.
 
 unsafe extern "C" fn default_link(_p1: *mut u8, _p2: u8, _p3: *mut u16) -> *mut u8 {
@@ -11,7 +11,7 @@ unsafe extern "C" fn default_pin(_slot: *mut u8, _src: *mut u8) {}
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Link target `0x4039e4` (`FUN_004039e4`), `(EAX, DL, ECX)` plus
+/// Link target `0x004039e4` (`FUN_004039e4`), `(EAX, DL, ECX)` plus
 /// the 16-byte SEH record at reserved slots; returns the EAX lane.
 ///
 /// ponytail: hook standing in for done `fn_004039e4`, rewire to
@@ -20,22 +20,22 @@ unsafe extern "C" fn default_release(_slot: *mut u8) {}
 pub static mut HOOK_004039e4: unsafe extern "C" fn(*mut u8, u8, *mut u16) -> *mut u8 =
     default_link;
 
-/// Target `0x4082d4` (`FUN_004082d4`), `(p3, p5, p4, &local)`
+/// Target `0x004082d4` (`FUN_004082d4`), `(p3, p5, p4, &local)`
 /// per `EAX=ESI, EDX=[EBP+0xc], ECX=[EBP+0x8]`, stack slot
-/// pushed at `0x40988b`.
+/// pushed at `0x0040988b`.
 ///
 /// ponytail: hook standing in for done `fn_004082d4`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_004082d4: unsafe extern "C" fn(*mut u16, u32, u32, *mut u8) =
     default_convert;
 
-/// Target `0x404c98` (`FUN_00404c98`), `(obj+4, local)`.
+/// Target `0x00404c98` (`FUN_00404c98`), `(obj+4, local)`.
 ///
 /// ponytail: hook standing in for done `fn_00404c98`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_00404c98: unsafe extern "C" fn(*mut u8, *mut u8) = default_pin;
 
-/// Target `0x404c88` (`thunk_FUN_004046c4`), `(&local)`,
+/// Target `0x00404c88` (`thunk_FUN_004046c4`), `(&local)`,
 /// unconditional.
 ///
 /// ponytail: hook standing in for the thunk target, rewire to

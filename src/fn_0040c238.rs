@@ -1,4 +1,4 @@
-//! Original procedure `0x0040c238` (115 bytes, `0x40c238–0x40c2aa`).
+//! Original procedure `0x0040c238` (115 bytes, `0x0040c238–0x0040c2aa`).
 //! Evidence: `evidence/0040c238_fn_0040c238.md`.
 
 /// Optional SEH link via `fn_004039e4` (`TEST DL,DL` guard), then

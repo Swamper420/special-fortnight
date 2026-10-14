@@ -1,4 +1,4 @@
-//! Original procedure `0x0040c220` (22 bytes, `0x40c220–0x40c235`).
+//! Original procedure `0x0040c220` (22 bytes, `0x0040c220–0x0040c235`).
 //! Evidence: `evidence/0040c220_fn_0040c220.md`.
 
 /// `(param_1, &{param_2, 0})` through vtable slot `+0xc`.

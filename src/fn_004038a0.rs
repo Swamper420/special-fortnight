@@ -1,4 +1,4 @@
-//! Original procedure `0x004038a0` (86 bytes, `0x4038a0–0x4038f5`).
+//! Original procedure `0x004038a0` (86 bytes, `0x004038a0–0x004038f5`).
 //! Evidence: `evidence/004038a0_fn_004038a0.md`.
 
 /// Init `dest` from `obj`, then apply chained patch blocks.

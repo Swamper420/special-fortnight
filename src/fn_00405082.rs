@@ -1,4 +1,4 @@
-//! Original procedure `0x00405082` (170 bytes, `0x405082–0x405126` + `0x405135–0x405139`).
+//! Original procedure `0x00405082` (170 bytes, `0x00405082–0x00405126` + `0x00405135–0x00405139`).
 //! Evidence: `evidence/00405082_fn_00405082.md`.
 
 unsafe extern "C" fn default_norm_pin(_v: *mut u8) {}
@@ -19,14 +19,14 @@ unsafe extern "C" fn default_store(_a: *mut u8, _b: *mut u8) {}
 
 unsafe extern "C" fn default_fail(_n: u32) {}
 
-/// Pin `0x404c80` (`thunk_FUN_0040493c`), called with the raw
+/// Pin `0x00404c80` (`thunk_FUN_0040493c`), called with the raw
 /// object before normalization.
 ///
 /// ponytail: hook standing in for thunk target, rewire once
-/// `0x40493c` is reconstructed.
+/// `0x0040493c` is reconstructed.
 pub static mut HOOK_00404c80: unsafe extern "C" fn(*mut u8) = default_norm_pin;
 
-/// Normalizer `0x404830` (`FUN_00404830`), called with the local
+/// Normalizer `0x00404830` (`FUN_00404830`), called with the local
 /// address; reloads the normalized pointer from the local.
 ///
 /// ponytail: hook mirroring done `fn_00404830`'s
@@ -34,35 +34,35 @@ pub static mut HOOK_00404c80: unsafe extern "C" fn(*mut u8) = default_norm_pin;
 /// cross-module linkage proven.
 pub static mut HOOK_00404830: unsafe extern "C" fn(*mut u8) -> *mut u8 = default_norm;
 
-/// Allocator `0x4054b4` (`FUN_004054b4`), called with the summed
+/// Allocator `0x004054b4` (`FUN_004054b4`), called with the summed
 /// length; returns a DATA pointer.
 ///
 /// ponytail: hook standing in for unreconstructed allocator,
 /// rewire to real `fn_004054b4` once it exists.
 pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> *mut u8 = default_alloc;
 
-/// Copier `0x402fbc` (`FUN_00402fbc`).
+/// Copier `0x00402fbc` (`FUN_00402fbc`).
 ///
 /// ponytail: hook mirroring done `fn_00402fbc`'s
 /// `(src, dst, bytes)` shape, rewire to the real call once
 /// cross-module linkage proven.
 pub static mut HOOK_00402fbc: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_fill;
 
-/// Cleanup `0x4046e8` (`FUN_004046e8`), called with the locals
+/// Cleanup `0x004046e8` (`FUN_004046e8`), called with the locals
 /// base and 2 when either local is non-null.
 ///
 /// ponytail: hook mirroring done `fn_004046e8`'s shape, rewire
 /// to the real call once cross-module linkage proven.
 pub static mut HOOK_004046e8: unsafe extern "C" fn(*mut u8, u32) = default_cleanup;
 
-/// Store `0x404c98` (`FUN_00404c98`).
+/// Store `0x00404c98` (`FUN_00404c98`).
 ///
 /// ponytail: hook mirroring done `fn_00404c98`'s
 /// `(slot, obj)` shape, rewire to the real call once
 /// cross-module linkage proven.
 pub static mut HOOK_00404c98: unsafe extern "C" fn(*mut u8, *mut u8) = default_store;
 
-/// Failure `0x40380c` (`thunk_FUN_00402f60`), terminal `JMP`
+/// Failure `0x0040380c` (`thunk_FUN_00402f60`), terminal `JMP`
 /// with the overflowing sum.
 ///
 /// ponytail: hook standing in for thunk target; call+return

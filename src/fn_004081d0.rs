@@ -1,11 +1,11 @@
-//! Original procedure `0x004081d0` (2 bytes, `0x4081d0–0x4081d1`).
+//! Original procedure `0x004081d0` (2 bytes, `0x004081d0–0x004081d1`).
 //! Evidence: `evidence/004081d0_fn_004081d0.md`.
 
 unsafe extern "C" fn default_target(_s: *const u16, _ch: u16) -> *const u16 {
     core::ptr::null()
 }
 
-/// Target `0x4081dd` (`FUN_004081dd`), reached by terminal `JMP`.
+/// Target `0x004081dd` (`FUN_004081dd`), reached by terminal `JMP`.
 ///
 /// ponytail: hook standing in for unreconstructed target, rewire to
 /// real `fn_004081dd` once cross-module linkage proven.

@@ -1,4 +1,4 @@
-//! Original procedure `0x004014bc` (27 bytes, `0x4014bc–0x4014d6`).
+//! Original procedure `0x004014bc` (27 bytes, `0x004014bc–0x004014d6`).
 //! Evidence: `evidence/004014bc_fn_004014bc.md`.
 
 /// x87 `FILD`/`FISTP` roundtrip on an `i64`.

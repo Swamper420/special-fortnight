@@ -1,11 +1,11 @@
-//! Original procedure `0x00404c88` (5 bytes, `0x404c88–0x404c8c`).
+//! Original procedure `0x00404c88` (5 bytes, `0x00404c88–0x00404c8c`).
 //! Evidence: `evidence/00404c88_fn_00404c88.md`.
 
 unsafe extern "C" fn default_target(_slot: *mut u32) -> *mut u32 {
     core::ptr::null_mut()
 }
 
-/// Target `0x4046c4` (`FUN_004046c4`), reached by terminal `JMP`.
+/// Target `0x004046c4` (`FUN_004046c4`), reached by terminal `JMP`.
 ///
 /// ponytail: hook standing in for done `fn_004046c4`, rewire to the
 /// real call once cross-module linkage proven.

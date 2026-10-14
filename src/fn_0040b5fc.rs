@@ -1,11 +1,11 @@
-//! Original procedure `0x0040b5fc` (34 bytes, `0x40b5fc–0x40b61d`).
+//! Original procedure `0x0040b5fc` (34 bytes, `0x0040b5fc–0x0040b61d`).
 //! Evidence: `evidence/0040b5fc_fn_0040b5fc.md`.
 
 unsafe extern "C" fn default_end(_obj: usize, end: usize) -> usize {
     end
 }
 
-/// Callee `0x40b620` (`FUN_0040b620`), called with `(obj, obj+len*2)`.
+/// Callee `0x0040b620` (`FUN_0040b620`), called with `(obj, obj+len*2)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_0040b620` once it exists.

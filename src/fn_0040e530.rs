@@ -1,4 +1,4 @@
-//! Original import thunk `0x0040e530` (6 bytes, `JMP [0x419510]`).
+//! Original import thunk `0x0040e530` (6 bytes, `JMP [0x00419510]`).
 //! Evidence: `evidence/0040e530_fn_0040e530.md`.
 
 unsafe extern "C" fn default_fwd(
@@ -10,7 +10,7 @@ unsafe extern "C" fn default_fwd(
     _rl: *mut u32,
 ) -> i32 {
     // ponytail: raw import unavailable on non-Windows hosts; tests override the hook.
-    // The i686-pc-windows-gnu build links the real `JMP [0x419510]` target.
+    // The i686-pc-windows-gnu build links the real `JMP [0x00419510]` target.
     0
 }
 
@@ -26,7 +26,7 @@ pub static mut HOOK_AdjustTokenPrivileges: unsafe extern "C" fn(
     *mut u32,
 ) -> i32 = default_fwd;
 
-/// Thunk `JMP [0x419510]`; forwards all six `__stdcall` args.
+/// Thunk `JMP [0x00419510]`; forwards all six `__stdcall` args.
 pub unsafe fn fn_0040e530(
     tok: u32,
     dis: i32,

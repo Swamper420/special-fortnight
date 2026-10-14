@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b348` (116 bytes, `0x40b348–0x40b3bb`).
+//! Original procedure `0x0040b348` (116 bytes, `0x0040b348–0x0040b3bb`).
 //! Evidence: `evidence/0040b348_fn_0040b348.md`.
 
 unsafe extern "C" fn default_count(_p: *mut u8) -> i32 {
@@ -11,14 +11,14 @@ unsafe extern "C" fn default_build(_a: *mut u8, _n: i32, _m: i32, _d: *mut u8) {
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Counter `0x40b58c` (`FUN_0040b58c`), called with `param_1`;
+/// Counter `0x0040b58c` (`FUN_0040b58c`), called with `param_1`;
 /// zero selects the direct lane.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_0040b58c` once it exists.
 pub static mut HOOK_0040B58C: unsafe extern "C" fn(*mut u8) -> i32 = default_count;
 
-/// Target `0x405058` (`FUN_00405058`), called as
+/// Target `0x00405058` (`FUN_00405058`), called as
 /// `(param_3, param_1|local_c, param_2)`.
 ///
 /// ponytail: hook mirroring done `fn_00405058`'s shape, rewire to
@@ -26,7 +26,7 @@ pub static mut HOOK_0040B58C: unsafe extern "C" fn(*mut u8) -> i32 = default_cou
 pub static mut HOOK_00405058: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) =
     default_take;
 
-/// Builder `0x40525c` (`FUN_0040525c`), called as
+/// Builder `0x0040525c` (`FUN_0040525c`), called as
 /// `(param_1, 1, count-1, &local_c)`.
 ///
 /// ponytail: hook mirroring done `fn_0040525c`'s shape, rewire to
@@ -34,7 +34,7 @@ pub static mut HOOK_00405058: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) =
 pub static mut HOOK_0040525C: unsafe extern "C" fn(*mut u8, i32, i32, *mut u8) =
     default_build;
 
-/// Release `0x404c88` (`thunk_FUN_004046c4`), always run on
+/// Release `0x00404c88` (`thunk_FUN_004046c4`), always run on
 /// `&local_c` (SEH finally on target).
 ///
 /// ponytail: hook mirroring done `fn_004046c4`'s shape, rewire to

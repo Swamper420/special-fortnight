@@ -1,4 +1,4 @@
-//! Original procedure `0x00409a54` (4 bytes, `0x409a54–0x409a57`).
+//! Original procedure `0x00409a54` (4 bytes, `0x00409a54–0x00409a57`).
 //! Evidence: `evidence/00409a54_fn_00409a54.md`.
 
 /// `*(param_1+0x10) = param_2`. `param_1` arrives in EAX, `param_2` in

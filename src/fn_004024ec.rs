@@ -1,4 +1,4 @@
-//! Original procedure `0x004024ec` (114 bytes, `0x4024ec–0x40255d`).
+//! Original procedure `0x004024ec` (114 bytes, `0x004024ec–0x0040255d`).
 //! Evidence: `evidence/004024ec_fn_004024ec.md`.
 
 use crate::fn_0040134c::fn_0040134c;
@@ -39,14 +39,14 @@ pub static mut BYTE_00415adc: u8 = 0;
 /// image-relative import once data layout proven.
 pub static mut DAT_00415ad8: *mut u32 = core::ptr::null_mut();
 
-/// Thunk `0x4011fc` (`KERNEL32.DLL::Sleep`).
+/// Thunk `0x004011fc` (`KERNEL32.DLL::Sleep`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" Sleep` once
 /// Windows-target linkage proven.
 pub static mut SLEEP_004011fc: unsafe extern "C" fn(u32) = default_sleep;
 
-/// Thunk `0x4011ec` (`KERNEL32.DLL::VirtualAlloc`).
+/// Thunk `0x004011ec` (`KERNEL32.DLL::VirtualAlloc`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" VirtualAlloc` once

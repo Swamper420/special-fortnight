@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e640` (43 bytes, `0x40e640–0x40e66a`).
+//! Original procedure `0x0040e640` (43 bytes, `0x0040e640–0x0040e66a`).
 //! Evidence: `evidence/0040e640_fn_0040e640.md`.
 
 unsafe extern "C" fn default_locale(
@@ -10,7 +10,7 @@ unsafe extern "C" fn default_locale(
     0
 }
 
-/// Target `0x406708` (`KERNEL32.DLL::GetLocaleInfoW` thunk).
+/// Target `0x00406708` (`KERNEL32.DLL::GetLocaleInfoW` thunk).
 ///
 /// ponytail: hook standing in for import thunk.
 /// Args: `(langid & 0xffff, 0x20001004, &local, 2)`.

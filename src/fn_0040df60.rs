@@ -1,4 +1,4 @@
-//! Original procedure `0x0040df60` (23 bytes, `0x40df60–0x40df76`).
+//! Original procedure `0x0040df60` (23 bytes, `0x0040df60–0x0040df76`).
 //! Evidence: `evidence/0040df60_fn_0040df60.md`.
 
 unsafe extern "C" fn default_mkmsg(_e: *mut u32, _f: u8, _s: *const u8) -> *mut u32 {
@@ -6,17 +6,17 @@ unsafe extern "C" fn default_mkmsg(_e: *mut u32, _f: u8, _s: *const u8) -> *mut 
 }
 unsafe extern "C" fn default_fatal(_m: *mut u32) {}
 
-/// Target `0x409824` message-record builder.
+/// Target `0x00409824` message-record builder.
 ///
 /// ponytail: hook standing in for out-of-batch `fn_00409824`.
 pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u32, u8, *const u8) -> *mut u32 =
     default_mkmsg;
-/// Target `0x403f88` fatal raise.
+/// Target `0x00403f88` fatal raise.
 ///
 /// ponytail: hook standing in for out-of-batch `fn_00403f88`.
 pub static mut HOOK_00403F88: unsafe extern "C" fn(*mut u32) = default_fatal;
 
-/// Format-handle slot `PTR_LAB_00406db4` (`[0x406d5c]`).
+/// Format-handle slot `PTR_LAB_00406db4` (`[0x00406d5c]`).
 ///
 /// ponytail: address-named static; handle value unknown, default 0.
 pub static mut PTR_LAB_00406DB4: u32 = 0;
@@ -32,7 +32,7 @@ pub unsafe fn fn_0040df60() {
     HOOK_00403F88(msg);
 }
 
-/// NUL-terminated message at `0x40df84` (observed bytes).
+/// NUL-terminated message at `0x0040df84` (observed bytes).
 pub static MSG_CORRUPT: &[u8] =
     b"The setup files are corrupted. Please obtain a new copy of the program.\0";
 

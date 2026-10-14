@@ -1,8 +1,8 @@
-//! Original procedure `0x0040c6b0` (49 bytes, `0x40c6b0–0x40c6e0`).
+//! Original procedure `0x0040c6b0` (49 bytes, `0x0040c6b0–0x0040c6e0`).
 //! Evidence: `evidence/0040c6b0_fn_0040c6b0.md`.
 
 /// `void` / no args per Ghidra `__register` observation; writes 256-entry
-/// `u32` table at `0x417d9c` shared with `fn_0040c6e4`.
+/// `u32` table at `0x00417d9c` shared with `fn_0040c6e4`.
 pub unsafe fn fn_0040c6b0() {
     // ponytail: writes through existing TABLE_00417d9c static, upgrade to real
     // image-relative import once data layout proven.

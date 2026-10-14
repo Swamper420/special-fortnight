@@ -1,5 +1,5 @@
 //! Original procedure `0x00403bf4` (266 bytes, ranges
-//! `0x403bf4–0x403cf7` + `0x403d18–0x403d1d`).
+//! `0x00403bf4–0x00403cf7` + `0x00403d18–0x00403d1d`).
 //! Evidence: `evidence/00403bf4_fn_00403bf4.md`.
 
 unsafe extern "C" fn default_filter(_exinfo: *const usize) -> u32 {
@@ -14,20 +14,20 @@ unsafe extern "C" fn default_tail(_target: u32) -> u32 {
 
 /// Indirect slot observed as `dword ptr [0x00413010]` (`DAT_00413010`):
 /// null slot returns 1 without firing; a set slot is called with no args
-/// and a zero result returns 1 (`0x403c19–0x403c2b`).
+/// and a zero result returns 1 (`0x00403c19–0x00403c2b`).
 ///
 /// ponytail: `Option` models the observed null check (a plain hook cannot),
 /// upgrade to real image-relative import once data layout proven.
 pub static mut HOOK_00413010: Option<unsafe extern "C" fn() -> u32> = None;
 
 /// Byte cell observed at `0x00412024` (`DAT_00412024`), compared unsigned
-/// (`JBE` shape) against 0 at `0x403c46` and against 1 at `0x403c81`.
+/// (`JBE` shape) against 0 at `0x00403c46` and against 1 at `0x00403c81`.
 ///
 /// ponytail: absolute-address cell as mutable static; hermetic own-module
 /// copy, unify into `data.rs` once layout proven.
 pub static mut CELL_00412024: u8 = 0;
 
-/// Import `0x4010b8` (`KERNEL32.DLL::UnhandledExceptionFilter` thunk),
+/// Import `0x004010b8` (`KERNEL32.DLL::UnhandledExceptionFilter` thunk),
 /// called with a pointer to stack-built arg words; a zero result
 /// returns 1, nonzero continues.
 ///
@@ -38,15 +38,15 @@ pub static mut HOOK_UnhandledExceptionFilter: unsafe extern "C" fn(*const usize)
     default_filter;
 
 /// Indirect slot observed as `dword ptr [0x00413018]` (`DAT_00413018`),
-/// called with `(edx, 0x403ccc, eax_record, 0)` per the four trailing
-/// pushes at `0x403cbd–0x403cc5`.
+/// called with `(edx, 0x00403ccc, eax_record, 0)` per the four trailing
+/// pushes at `0x00403cbd–0x00403cc5`.
 ///
 /// ponytail: hook standing in for runtime-filled slot, rewire to real
 /// image-relative import once data layout proven.
 pub static mut HOOK_00413018: unsafe extern "C" fn(usize, u32, usize, u32) =
     default_hook13018;
 
-/// Computed tail `JMP EBX` at `0x403cf6`, where EBX is the old `[frame+4]`
+/// Computed tail `JMP EBX` at `0x00403cf6`, where EBX is the old `[frame+4]`
 /// value `wrapping_add(5)`; its result is the function result.
 ///
 /// ponytail: hook standing in for unrecoverable jump target (decompiler:
@@ -57,7 +57,7 @@ pub static mut TAIL_00403BF4: unsafe extern "C" fn(u32) -> u32 = default_tail;
 /// `[ESP+4]`, `[ESP+8]`, `[ESP+0xC]`: early-1 lanes for
 /// `flags&6`/`code==0xeedfade` short-circuits, slot null/zero, and zero
 /// filter results; otherwise `flags|=2`, slot call, TLS link, frame
-/// stamp `0x403cf8`, `0x403b5c` call, computed tail. Direct callees reuse
+/// stamp `0x00403cf8`, `0x00403b5c` call, computed tail. Direct callees reuse
 /// their reconstructed functions; flag cell reuses owner
 /// `crate::fn_00403b0c::FLAG_00412020` (never duplicated).
 pub unsafe fn fn_00403bf4(record: *mut u32, frame: *mut u32, context: *mut u32) -> u32 {
@@ -106,9 +106,9 @@ pub unsafe fn fn_00403bf4(record: *mut u32, frame: *mut u32, context: *mut u32) 
     // `OR [EAX+4],2` (ExceptionFlags).
     let flags: u32 = core::ptr::read_unaligned(record.wrapping_add(1) as *const u32);
     core::ptr::write_unaligned(record.wrapping_add(1), flags | 2);
-    HOOK_00413018(edx, 0x403ccc, record as usize, 0);
+    HOOK_00413018(edx, 0x00403ccc, record as usize, 0);
     // `MOV EDI,[ESP+0x28]` reloads the frame after the stdcall-4 slot call
-    // (see evidence); `CALL 0x406588` result links the TLS head.
+    // (see evidence); `CALL 0x00406588` result links the TLS head.
     let tls = crate::fn_00406588::fn_00406588();
     let _saved_head: u32 = core::ptr::read_unaligned(tls as *const u32);
     // ponytail: `MOV [EAX],ESP` stores a target stack address (meaningless
@@ -116,7 +116,7 @@ pub unsafe fn fn_00403bf4(record: *mut u32, frame: *mut u32, context: *mut u32) 
     // if an unlink reader is proven.
     let _ebp: u32 = core::ptr::read_unaligned(frame.wrapping_add(2) as *const u32);
     let target: u32 = core::ptr::read_unaligned(frame.wrapping_add(1) as *const u32);
-    core::ptr::write_unaligned(frame.wrapping_add(1), 0x403cf8);
+    core::ptr::write_unaligned(frame.wrapping_add(1), 0x00403cf8);
     crate::fn_00403b5c::fn_00403b5c();
     TAIL_00403BF4(target.wrapping_add(5))
 }
@@ -244,11 +244,11 @@ mod tests {
             0x77
         );
         assert_eq!(rec[1], 2);
-        assert_eq!(frm[1], 0x403cf8);
+        assert_eq!(frm[1], 0x00403cf8);
         assert_eq!(frm[2], 0x9);
         assert_eq!(HOOK18_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(HOOK18_A0.load(Ordering::SeqCst), 0x22);
-        assert_eq!(HOOK18_A1.load(Ordering::SeqCst), 0x403ccc);
+        assert_eq!(HOOK18_A1.load(Ordering::SeqCst), 0x00403ccc);
         assert_eq!(HOOK18_A2.load(Ordering::SeqCst), rec.as_ptr() as usize);
         assert_eq!(HOOK18_A3.load(Ordering::SeqCst), 0);
         assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 1);
@@ -277,7 +277,7 @@ mod tests {
         );
         assert_eq!(SLOT_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 0);
-        // Passthrough (FLAG clear ⇒ 0x403b0c identity) → tail; EDX is result.
+        // Passthrough (FLAG clear ⇒ 0x00403b0c identity) → tail; EDX is result.
         reset();
         unsafe { SLOT_RET.store(0x55, Ordering::SeqCst) };
         let mut frm = [0u32, 0x1000, 0x9];
@@ -287,7 +287,7 @@ mod tests {
         );
         assert_eq!(HOOK18_A0.load(Ordering::SeqCst), 0x55);
         assert_eq!(TAIL_ARG.load(Ordering::SeqCst), 0x1005);
-        // eefface skips the 0x403b0c lane; EDX is the slot result.
+        // eefface skips the 0x00403b0c lane; EDX is the slot result.
         reset();
         unsafe { SLOT_RET.store(0x66, Ordering::SeqCst) };
         let mut rec = [0xeefface, 0, 0, 0x40, 0, 0x11, 0x22];

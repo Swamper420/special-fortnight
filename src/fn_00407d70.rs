@@ -1,4 +1,4 @@
-//! Original procedure `0x00407d70` (171 bytes, `0x407d70–0x407e1a`).
+//! Original procedure `0x00407d70` (171 bytes, `0x00407d70–0x00407e1a`).
 //! Evidence: `evidence/00407d70_fn_00407d70.md`.
 
 /// FPU `u64`-to-digits writer: emits `*param_1` in base

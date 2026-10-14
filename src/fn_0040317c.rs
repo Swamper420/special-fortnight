@@ -1,4 +1,4 @@
-//! Original procedure `0x0040317c` (9 bytes, `0x40317c–0x403184`).
+//! Original procedure `0x0040317c` (9 bytes, `0x0040317c–0x00403184`).
 //! Evidence: `evidence/0040317c_fn_0040317c.md`.
 
 /// Method slot type at `[obj+0x1c]`, matches `fn_00403134` param_2.
@@ -8,7 +8,7 @@ unsafe extern "C" fn default_callee(_obj: *const u8, _m: Method00403134) -> u32 
     0
 }
 
-/// Target `0x403134`, called with `(obj, [obj+0x1c])`, result discarded.
+/// Target `0x00403134`, called with `(obj, [obj+0x1c])`, result discarded.
 ///
 /// ponytail: hook standing in for reconstructed `fn_00403134`, rewire to
 /// real call once cross-module linkage proven.

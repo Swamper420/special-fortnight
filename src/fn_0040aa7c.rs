@@ -1,11 +1,11 @@
-//! Original procedure `0x0040aa7c` (52 bytes, `0x40aa7c–0x40aaaf`).
+//! Original procedure `0x0040aa7c` (52 bytes, `0x0040aa7c–0x0040aaaf`).
 //! Evidence: `evidence/0040aa7c_fn_0040aa7c.md`.
 
 unsafe extern "C" fn default_fallback(_s: *const u8) -> u32 {
     0
 }
 
-/// Tail target `0x40a9e8` (`FUN_0040a9e8`), reached by `JMP` with
+/// Tail target `0x0040a9e8` (`FUN_0040a9e8`), reached by `JMP` with
 /// `EAX=param_1` when a byte has the high bit set.
 ///
 /// ponytail: hook standing in for done `fn_0040a9e8`, rewire to the

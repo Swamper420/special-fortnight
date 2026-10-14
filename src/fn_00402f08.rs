@@ -1,4 +1,4 @@
-//! Original procedure `0x00402f08` (12 bytes, `0x402f08–0x402f13`).
+//! Original procedure `0x00402f08` (12 bytes, `0x00402f08–0x00402f13`).
 //! Evidence: `evidence/00402f08_fn_00402f08.md`.
 
 unsafe extern "C" fn default_target(_arg: u32) {}
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_target(_arg: u32) {}
 /// image-relative import once data layout proven.
 pub static mut CELL_00412004: u32 = 0;
 
-/// Target `0x4046ac` (`FUN_004046ac`), called with EAX lane (`param_1`).
+/// Target `0x004046ac` (`FUN_004046ac`), called with EAX lane (`param_1`).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004046ac` once it exists.

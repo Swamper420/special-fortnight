@@ -1,4 +1,4 @@
-//! Original procedure `0x00405ae4` (58 bytes, `0x405ae4–0x405b1d`).
+//! Original procedure `0x00405ae4` (58 bytes, `0x00405ae4–0x00405b1d`).
 //! Evidence: `evidence/00405ae4_fn_00405ae4.md`.
 
 use core::ptr::{null_mut, read_unaligned, write_unaligned};
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_convert(p: *mut u8, _d: *mut u8, _n: u32) -> *mut u
 
 unsafe extern "C" fn default_free(_p: *mut u8) {}
 
-/// Target `0x405548` (`FUN_00405548`), called as `(obj, *entry, extra)`
+/// Target `0x00405548` (`FUN_00405548`), called as `(obj, *entry, extra)`
 /// when both the table entry and `u32 [obj-4]` are nonzero.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
@@ -17,7 +17,7 @@ unsafe extern "C" fn default_free(_p: *mut u8) {}
 pub static mut HOOK_00405548: unsafe extern "C" fn(*mut u8, *mut u8, u32) -> *mut u8 =
     default_convert;
 
-/// Target `0x402e20` (`FUN_00402e20`), called with `obj-8` (header base).
+/// Target `0x00402e20` (`FUN_00402e20`), called with `obj-8` (header base).
 /// Image param is `u32`; hook widens to host pointer.
 ///
 /// ponytail: hook standing in for done `fn_00402e20`, rewire to real

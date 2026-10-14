@@ -1,9 +1,9 @@
-//! Original procedure `0x0040c1f8` (40 bytes, `0x40c1f8–0x40c21f`).
+//! Original procedure `0x0040c1f8` (40 bytes, `0x0040c1f8–0x0040c21f`).
 //! Evidence: `evidence/0040c1f8_fn_0040c1f8.md`.
 
 unsafe extern "C" fn default_target(_p1: *const u8, _p2: u32) {}
 
-/// Target `0x40c130` (`FUN_0040c130`), called as `(*param_1, 0x26)`.
+/// Target `0x0040c130` (`FUN_0040c130`), called as `(*param_1, 0x26)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_0040c130` once it exists.

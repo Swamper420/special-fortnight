@@ -1,4 +1,4 @@
-//! Original procedure `0x0040ac84` (84 bytes, `0x40ac84–0x40acd7`).
+//! Original procedure `0x0040ac84` (84 bytes, `0x0040ac84–0x0040acd7`).
 //! Evidence: `evidence/0040ac84_fn_0040ac84.md`.
 
 unsafe extern "C" fn default_set_error_mode(_mode: u32) -> u32 {
@@ -9,13 +9,13 @@ unsafe extern "C" fn default_load_library(_name: *const u16) -> u32 {
     0
 }
 
-/// Import thunk `0x40681c` (`KERNEL32.DLL::SetErrorMode`).
+/// Import thunk `0x0040681c` (`KERNEL32.DLL::SetErrorMode`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to the real
 /// `windows-sys` import once imports are modeled.
 pub static mut SETERRORMODE_0040681C: unsafe extern "C" fn(u32) -> u32 = default_set_error_mode;
 
-/// Import thunk `0x4067dc` (`KERNEL32.DLL::LoadLibraryW`).
+/// Import thunk `0x004067dc` (`KERNEL32.DLL::LoadLibraryW`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to the real
 /// `windows-sys` import once imports are modeled.

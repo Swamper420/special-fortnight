@@ -1,4 +1,4 @@
-//! Original procedure `0x0040bec8` (48 bytes, `0x40bec8–0x40bef7`).
+//! Original procedure `0x0040bec8` (48 bytes, `0x0040bec8–0x0040bef7`).
 //! Evidence: `evidence/0040bec8_fn_0040bec8.md`.
 
 /// Default `b5fc` lane target: a zero first word (takes the `JBE`
@@ -13,14 +13,14 @@ unsafe extern "C" fn default_b5fc(_v: usize) -> usize {
 
 unsafe extern "C" fn default_4f98(_a: *mut u8, _b: *mut u8) {}
 
-/// Target `0x404c98` (`FUN_00404c98`), called swapped as
+/// Target `0x00404c98` (`FUN_00404c98`), called swapped as
 /// `(param_2, param_1)` per `MOV EAX,EBX / MOV EDX,ESI`.
 ///
 /// ponytail: hook standing in for done `fn_00404c98`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u8, *mut u8) = default_4c98;
 
-/// Target `0x40b5fc` (`FUN_0040b5fc`), called with `*param_2`,
+/// Target `0x0040b5fc` (`FUN_0040b5fc`), called with `*param_2`,
 /// returns a DATA pointer whose first word is compared.
 ///
 /// ponytail: hook standing in for done `fn_0040b5fc` (same
@@ -28,15 +28,15 @@ pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u8, *mut u8) = default_4
 /// cross-module linkage proven.
 pub static mut HOOK_0040B5FC: unsafe extern "C" fn(usize) -> usize = default_b5fc;
 
-/// Target `0x404f98` (`FUN_00404f98`), called with
-/// `(param_2, 0x40bf04)`; result discarded per observed `void`.
+/// Target `0x00404f98` (`FUN_00404f98`), called with
+/// `(param_2, 0x0040bf04)`; result discarded per observed `void`.
 ///
 /// ponytail: hook standing in for done `fn_00404f98`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00404F98: unsafe extern "C" fn(*mut u8, *mut u8) = default_4f98;
 
 /// `4c98(p2, p1); if *p2 { r=b5fc(*p2); if *r > 0x2e {
-/// 4f98(p2, 0x40bf04) } }`. Params arrive in EAX/EDX per Ghidra
+/// 4f98(p2, 0x0040bf04) } }`. Params arrive in EAX/EDX per Ghidra
 /// `__register` observation. The word compare is unsigned (`JBE`).
 pub unsafe fn fn_0040bec8(param_1: *mut u8, param_2: *mut u32) {
     HOOK_00404C98(param_2 as *mut u8, param_1);
@@ -118,7 +118,7 @@ mod tests {
         assert_eq!(B5FC_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(B5FC_ARG.load(Ordering::SeqCst), 0x1234);
         assert_eq!(F98_HITS.load(Ordering::SeqCst), 0);
-        // Greater lane: 4f98 sees (p2, 0x40bf04).
+        // Greater lane: 4f98 sees (p2, 0x0040bf04).
         arena[0] = 0x2f;
         unsafe { fn_0040bec8(p1, p2) };
         assert_eq!(F98_HITS.load(Ordering::SeqCst), 1);

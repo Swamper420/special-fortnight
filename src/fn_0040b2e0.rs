@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b2e0` (58 bytes, `0x40b2e0–0x40b319`).
+//! Original procedure `0x0040b2e0` (58 bytes, `0x0040b2e0–0x0040b319`).
 //! Evidence: `evidence/0040b2e0_fn_0040b2e0.md`.
 
 unsafe extern "C" fn default_tag(_obj: usize) -> *mut u16 {
@@ -13,21 +13,21 @@ unsafe extern "C" fn default_take(_a: *mut u8, _b: *mut u8, _c: *mut u8) {}
 
 unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8) {}
 
-/// Tag lookup `0x40b5fc` (`FUN_0040b5fc`), called with the object
+/// Tag lookup `0x0040b5fc` (`FUN_0040b5fc`), called with the object
 /// address; returns the tag-word pointer (`short *`).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_0040b5fc` once it exists.
 pub static mut HOOK_0040B5FC: unsafe extern "C" fn(usize) -> *mut u16 = default_tag;
 
-/// Classifier `0x40b334` (`FUN_0040b334`), called with the tag word;
+/// Classifier `0x0040b334` (`FUN_0040b334`), called with the tag word;
 /// only its low byte is tested (`TEST AL,AL`).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_0040b334` once it exists.
 pub static mut HOOK_0040B334: unsafe extern "C" fn(u16) -> u32 = default_class;
 
-/// Target `0x405058` (`FUN_00405058`), zero-tag lane with
+/// Target `0x00405058` (`FUN_00405058`), zero-tag lane with
 /// `(param_2, param_1, &DAT_0040b328)`.
 ///
 /// ponytail: hook mirroring done `fn_00405058`'s shape, rewire to
@@ -36,7 +36,7 @@ pub static mut HOOK_0040B334: unsafe extern "C" fn(u16) -> u32 = default_class;
 pub static mut HOOK_00405058: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) =
     default_take;
 
-/// Target `0x404c98` (`FUN_00404c98`), null/tagged lane with
+/// Target `0x00404c98` (`FUN_00404c98`), null/tagged lane with
 /// `(param_2, param_1)`.
 ///
 /// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire to

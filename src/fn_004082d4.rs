@@ -1,4 +1,4 @@
-//! Original procedure `0x004082d4` (19 bytes, `0x4082d4–0x4082e6`).
+//! Original procedure `0x004082d4` (19 bytes, `0x004082d4–0x004082e6`).
 //! Evidence: `evidence/004082d4_fn_004082d4.md`.
 
 /// Arg-rotation wrapper: `fn_004082e8(p4, p1, p2, p3)`. `PUSH ECX`

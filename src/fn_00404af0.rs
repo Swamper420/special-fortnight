@@ -1,4 +1,4 @@
-//! Original procedure `0x00404af0` (153 bytes, `0x404af0–0x404b88`).
+//! Original procedure `0x00404af0` (153 bytes, `0x00404af0–0x00404b88`).
 //! Evidence: `evidence/00404af0_fn_00404af0.md`.
 
 unsafe extern "C" fn default_clear(_slot: *mut u32) {}
@@ -21,14 +21,14 @@ unsafe extern "C" fn default_deref(_cur: u32) -> *mut u16 {
     core::ptr::null_mut()
 }
 
-/// Clear target `0x404a8c` (`FUN_00404a8c`), called with the slot when
+/// Clear target `0x00404a8c` (`FUN_00404a8c`), called with the slot when
 /// `count < 1`.
 ///
 /// ponytail: hook standing in for done `fn_00404a8c`, rewire to real
 /// call once cross-module linkage proven.
 pub static mut HOOK_00404A8C: unsafe extern "C" fn(*mut u32) = default_clear;
 
-/// Convert target `0x4047ec` (`FUN_004047ec`), called with
+/// Convert target `0x004047ec` (`FUN_004047ec`), called with
 /// `(buf, size, src, param_4, count)`; signed return (output length,
 /// negative = error).
 ///
@@ -37,21 +37,21 @@ pub static mut HOOK_00404A8C: unsafe extern "C" fn(*mut u32) = default_clear;
 pub static mut HOOK_004047EC: unsafe extern "C" fn(*mut u16, u32, *const u8, u32, i32) -> i32 =
     default_convert;
 
-/// Store target `0x404b9c` (`FUN_00404b9c`), called with
+/// Store target `0x00404b9c` (`FUN_00404b9c`), called with
 /// `(slot, stackbuf, n)` on the stack fast path.
 ///
 /// ponytail: hook standing in for `fn_00404b9c` (same batch), rewire to
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00404B9C: unsafe extern "C" fn(*mut u32, *const u16, u32) = default_store;
 
-/// Reserve target `0x404c2c` (`FUN_00404c2c`), called with `(slot, size)`
+/// Reserve target `0x00404c2c` (`FUN_00404c2c`), called with `(slot, size)`
 /// then `(slot, clamped n)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00404c2c` once it exists.
 pub static mut HOOK_00404C2C: unsafe extern "C" fn(*mut u32, u32) = default_reserve;
 
-/// Deref target `0x404c1c` (`FUN_00404c1c`), called with `*slot`,
+/// Deref target `0x00404c1c` (`FUN_00404c1c`), called with `*slot`,
 /// returns the write buffer (or the empty default cell).
 ///
 /// ponytail: hook standing in for done `fn_00404c1c`, rewire to real

@@ -1,4 +1,4 @@
-//! Original procedure `0x004065c8` (11 bytes, `0x4065c8–0x4065d2`).
+//! Original procedure `0x004065c8` (11 bytes, `0x004065c8–0x004065d2`).
 //! Evidence: `evidence/004065c8_fn_004065c8.md`.
 
 unsafe extern "C" fn default_push(_node: *mut usize) {}
@@ -10,7 +10,7 @@ unsafe extern "C" fn default_push(_node: *mut usize) {}
 /// data layout proven.
 pub static mut DAT_004127b4: usize = 0;
 
-/// Target `0x4061f4` (`FUN_004061f4`), called with `&DAT_004127b4`.
+/// Target `0x004061f4` (`FUN_004061f4`), called with `&DAT_004127b4`.
 ///
 /// ponytail: hook standing in for done `fn_004061f4`, rewire to the
 /// real call once both modules are linked.

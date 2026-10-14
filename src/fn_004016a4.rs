@@ -1,4 +1,4 @@
-//! Original procedure `0x004016a4` (98 bytes, `0x4016a4–0x401705`).
+//! Original procedure `0x004016a4` (98 bytes, `0x004016a4–0x00401705`).
 //! Evidence: `evidence/004016a4_fn_004016a4.md`.
 
 unsafe extern "C" fn default_virtual_alloc(
@@ -12,7 +12,7 @@ unsafe extern "C" fn default_virtual_alloc(
 
 unsafe extern "C" fn default_postalloc() {}
 
-/// Import thunk `0x4011ec` (`KERNEL32.DLL::VirtualAlloc`).
+/// Import thunk `0x004011ec` (`KERNEL32.DLL::VirtualAlloc`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" VirtualAlloc` once
@@ -24,7 +24,7 @@ pub static mut VIRTUAL_ALLOC_004011ec: unsafe extern "C" fn(
     u32,
 ) -> *mut u8 = default_virtual_alloc;
 
-/// Post-alloc call `0x40165c` (`FUN_0040165c`).
+/// Post-alloc call `0x0040165c` (`FUN_0040165c`).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_0040165c` once linkage decided.

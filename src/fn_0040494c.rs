@@ -1,5 +1,5 @@
 //! Original procedure `0x0040494c` (11 bytes, ranges
-//! `0x40494c–0x404950` + `0x40495e–0x404963`).
+//! `0x0040494c–0x00404950` + `0x0040495e–0x00404963`).
 //! Evidence: `evidence/0040494c_fn_0040494c.md`.
 
 /// Embedded zero byte at `0x0040495d` (gap padding in `.text`, read-only
@@ -11,7 +11,7 @@
 pub static DAT_0040495D: u8 = 0;
 
 /// `if p!=0 {p} else {&DAT_0040495d}`. Param arrives in EAX per
-/// `__register` observation; returns EAX. Caller `0x406728` passes result
+/// `__register` observation; returns EAX. Caller `0x00406728` passes result
 /// as `LPCSTR` to `GetProcAddress`, hence `*const u8`.
 pub unsafe fn fn_0040494c(param_1: *const u8) -> *const u8 {
     if !param_1.is_null() {

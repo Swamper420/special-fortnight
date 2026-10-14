@@ -1,11 +1,11 @@
-//! Original procedure `0x004054f8` (53 bytes, `0x4054f8–0x40552c`).
+//! Original procedure `0x004054f8` (53 bytes, `0x004054f8–0x0040552c`).
 //! Evidence: `evidence/004054f8_fn_004054f8.md`.
 
 use core::ptr::read_unaligned;
 
 unsafe extern "C" fn default_dispatch(_dest: *mut u8, _src: *mut u8, _n: u32) {}
 
-/// Target `0x405548` (`FUN_00405548`), called per entry as
+/// Target `0x00405548` (`FUN_00405548`), called per entry as
 /// `(add+base, **entry_ptr, 1)`; result ignored.
 ///
 /// ponytail: hook standing in for same-batch `fn_00405548`, rewire to

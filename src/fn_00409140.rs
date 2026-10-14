@@ -1,4 +1,4 @@
-//! Original procedure `0x00409140` (151 bytes, `0x409140–0x4091d6`).
+//! Original procedure `0x00409140` (151 bytes, `0x00409140–0x004091d6`).
 //! Evidence: `evidence/00409140_fn_00409140.md`.
 
 use crate::fn_00407f10::fn_00407f10;
@@ -14,13 +14,13 @@ unsafe extern "C" fn default_enum(_cb: u32, _loc: u32, _cal: u32, _typ: u32) -> 
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x4067b4` ×3).
+/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x004067b4` ×3).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetThreadLocale: unsafe extern "C" fn() -> u32 = default_thread_locale;
 
-/// Import `KERNEL32.DLL::EnumCalendarInfoW` (`CALL 0x406670` ×2).
+/// Import `KERNEL32.DLL::EnumCalendarInfoW` (`CALL 0x00406670` ×2).
 /// Args are `(callback, locale, calendar, type)`; the callback is an
 /// observed code address passed through as `u32`, never called.
 ///
@@ -29,16 +29,16 @@ pub static mut HOOK_GetThreadLocale: unsafe extern "C" fn() -> u32 = default_thr
 pub static mut HOOK_EnumCalendarInfoW: unsafe extern "C" fn(u32, u32, u32, u32) -> i32 =
     default_enum;
 
-/// `thunk_FUN_004046c4` (`CALL 0x404c88`), single-slot release.
+/// `thunk_FUN_004046c4` (`CALL 0x00404c88`), single-slot release.
 ///
 /// ponytail: hook standing in for the thunk target, rewire to real
 /// `fn_004046c4` once cross-module linkage proven.
 pub static mut HOOK_00404c88: unsafe extern "C" fn(*mut u8) = default_release;
 
-/// Wide `L"1"` observed at `0x4091f0` (file bytes `31 00 00 00`).
+/// Wide `L"1"` observed at `0x004091f0` (file bytes `31 00 00 00`).
 pub static S_004091F0: [u16; 2] = [0x31, 0];
 
-/// Seven calendar-word cells at `0x415c5c`, filled with
+/// Seven calendar-word cells at `0x00415c5c`, filled with
 /// `0xffffffff` on the enum lane.
 ///
 /// ponytail: absolute-address cells modeled as a host array, upgrade
@@ -67,7 +67,7 @@ pub unsafe fn fn_00409140() {
     let cal = fn_00407f10(local_8 as *const u16, 1, 0);
     if cal.wrapping_sub(3) < 3 {
         let locale2 = HOOK_GetThreadLocale();
-        HOOK_EnumCalendarInfoW(0x40908c, locale2, cal, 4);
+        HOOK_EnumCalendarInfoW(0x0040908c, locale2, cal, 4);
         let mut p = core::ptr::addr_of_mut!(DAT_00415c5c) as *mut u32;
         let mut left: u32 = 7;
         loop {
@@ -79,7 +79,7 @@ pub unsafe fn fn_00409140() {
             }
         }
         let locale3 = HOOK_GetThreadLocale();
-        HOOK_EnumCalendarInfoW(0x4090c8, locale3, cal, 3);
+        HOOK_EnumCalendarInfoW(0x004090c8, locale3, cal, 3);
     }
     HOOK_00404c88(&mut local_8 as *mut *mut u8 as *mut u8);
 }

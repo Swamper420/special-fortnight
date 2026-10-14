@@ -1,4 +1,4 @@
-//! Original procedure `0x0040eb50` (213 bytes, `0x40eb50–0x40ec24`).
+//! Original procedure `0x0040eb50` (213 bytes, `0x0040eb50–0x0040ec24`).
 //! Evidence: `evidence/0040eb50_fn_0040eb50.md`.
 
 unsafe extern "C" fn default_build(_p: *mut u8, _n: u32) {}
@@ -18,25 +18,25 @@ unsafe extern "C" fn default_wait(_h: u32) -> u32 {
 unsafe extern "C" fn default_exit(_h: u32, _out: *mut u32) {}
 unsafe extern "C" fn default_release(_p: *mut u8) {}
 
-/// Target `0x40513c (args → cmdline obj, 4)`.
+/// Target `0x0040513c (args → cmdline obj, 4)`.
 pub static mut HOOK_0040513C: unsafe extern "C" fn(*mut u8, u32) = default_build;
-/// Target `0x403250 (STARTUPINFO zero, 0x44)`.
+/// Target `0x00403250 (STARTUPINFO zero, 0x44)`.
 pub static mut HOOK_00403250: unsafe extern "C" fn(*mut u8, u32, u32) = default_zero;
-/// Target `0x404d24 (obj → cmdline ptr)`.
+/// Target `0x00404d24 (obj → cmdline ptr)`.
 pub static mut HOOK_00404D24: unsafe extern "C" fn(*mut u8) -> u32 = default_data;
-/// Target `0x406660 CreateProcessW` (nonzero = ok).
+/// Target `0x00406660 CreateProcessW` (nonzero = ok).
 pub static mut HOOK_CREATEPROCESSW: unsafe extern "C" fn(u32) -> i32 = default_create;
-/// Target `0x40e770` failure reporter (caller passes `0x6a`).
+/// Target `0x0040e770` failure reporter (caller passes `0x6a`).
 pub static mut HOOK_0040E770: unsafe extern "C" fn(u32) = default_e770;
-/// Target `0x406640 CloseHandle`.
+/// Target `0x00406640 CloseHandle`.
 pub static mut HOOK_CLOSEHANDLE: unsafe extern "C" fn(u32) = default_close;
-/// Target `0x40eb24` message pump.
+/// Target `0x0040eb24` message pump.
 pub static mut HOOK_0040EB24: unsafe extern "C" fn() = default_pump;
-/// Target `0x4068c4 MsgWaitForMultipleObjects` (1 = message arrived).
+/// Target `0x004068c4 MsgWaitForMultipleObjects` (1 = message arrived).
 pub static mut HOOK_MSGWAIT: unsafe extern "C" fn(u32) -> u32 = default_wait;
-/// Target `0x4066e0 GetExitCodeProcess (hproc, *out)`.
+/// Target `0x004066e0 GetExitCodeProcess (hproc, *out)`.
 pub static mut HOOK_GETEXITCODEPROCESS: unsafe extern "C" fn(u32, *mut u32) = default_exit;
-/// Target `0x404c88` thunk (release obj).
+/// Target `0x00404c88` thunk (release obj).
 pub static mut HOOK_00404C88: unsafe extern "C" fn(*mut u8) = default_release;
 
 /// Spawn-and-wait: builds command line, `CreateProcessW`, pumps UI while

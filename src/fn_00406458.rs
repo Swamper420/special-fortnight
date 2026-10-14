@@ -1,9 +1,9 @@
-//! Original procedure `0x00406458` (17 bytes, `0x406458–0x406468`).
+//! Original procedure `0x00406458` (17 bytes, `0x00406458–0x00406468`).
 //! Evidence: `evidence/00406458_fn_00406458.md`.
 
 unsafe extern "C" fn default_get_system_info(_info: *mut u8) {}
 
-/// Thunk `0x4011b8` (`KERNEL32.DLL::GetSystemInfo`).
+/// Thunk `0x004011b8` (`KERNEL32.DLL::GetSystemInfo`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" GetSystemInfo` once

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040e280` (104 bytes, `0x40e280–0x40e2e7`).
+//! Original procedure `0x0040e280` (104 bytes, `0x0040e280–0x0040e2e7`).
 //! Evidence: `evidence/0040e280_fn_0040e280.md`.
 
 unsafe extern "C" fn default_init(_d: *mut u32, _s: u32) {}
@@ -12,7 +12,7 @@ pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u32, u32) = default_init
 pub static mut HOOK_00404E04: unsafe extern "C" fn(*mut u32, u16) = default_conv;
 /// ponytail: hook for `fn_0040532c`.
 pub static mut HOOK_0040532C: unsafe extern "C" fn(u32, *mut u32, u32) = default_append;
-/// ponytail: hook for `thunk 0x404c88`.
+/// ponytail: hook for `thunk 0x00404c88`.
 pub static mut HOOK_00404C88: unsafe extern "C" fn(*mut u32) = default_free;
 
 /// Char table `DAT_00412a9c` (word-indexed by 5-bit chunks).
@@ -39,7 +39,7 @@ pub unsafe fn fn_0040e280(mut param_1: u32, param_2: *mut u32) {
     }
     let mut s: u32 = 0;
     HOOK_00404C88(&mut s);
-    // ponytail: SEH frame (`0x40e2e8/ef`) not modeled — test-platform init detail.
+    // ponytail: SEH frame (`0x0040e2e8/ef`) not modeled — test-platform init detail.
 }
 
 #[cfg(test)]

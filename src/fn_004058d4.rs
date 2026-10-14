@@ -1,16 +1,16 @@
-//! Original procedure `0x004058d4` (13 bytes, `0x4058d4–0x4058e0`).
+//! Original procedure `0x004058d4` (13 bytes, `0x004058d4–0x004058e0`).
 //! Evidence: `evidence/004058d4_fn_004058d4.md`.
 
 unsafe extern "C" fn default_first(_a: *mut u8, _b: *mut u8) {}
 unsafe extern "C" fn default_second(_a: usize) {}
 
-/// First call `0x405658` (`FUN_00405658`), args `(param_1, param_2)`.
+/// First call `0x00405658` (`FUN_00405658`), args `(param_1, param_2)`.
 ///
 /// ponytail: hook standing in for sibling `fn_00405658` (same work
 /// package), rewire to real call once modules are declared.
 pub static mut HOOK_00405658: unsafe extern "C" fn(*mut u8, *mut u8) = default_first;
 
-/// Second call `0x402e20` (`FUN_00402e20`), arg is the preserved
+/// Second call `0x00402e20` (`FUN_00402e20`), arg is the preserved
 /// `param_1`.
 ///
 /// ponytail: hook standing in for done `fn_00402e20` (which takes the

@@ -1,4 +1,4 @@
-//! Original procedure `0x00407bdc` (249 bytes, `0x407bdc–0x407cd4`).
+//! Original procedure `0x00407bdc` (249 bytes, `0x00407bdc–0x00407cd4`).
 //! Evidence: `evidence/00407bdc_fn_00407bdc.md`.
 
 /// Case-insensitive ordinal compare of two header-tagged wide objects.

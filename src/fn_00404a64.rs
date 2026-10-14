@@ -1,5 +1,5 @@
 //! Original procedure `0x00404a64` (28 bytes, ranges
-//! `0x404a5c–0x404a62` + `0x404a64–0x404a78`).
+//! `0x00404a5c–0x00404a62` + `0x00404a64–0x00404a78`).
 //! Evidence: `evidence/00404a64_fn_00404a64.md`.
 
 unsafe extern "C" fn default_alloc_string(_psz: u32, _cch: u32) -> u32 {
@@ -8,7 +8,7 @@ unsafe extern "C" fn default_alloc_string(_psz: u32, _cch: u32) -> u32 {
 
 unsafe extern "C" fn default_tail(_arg: u32) {}
 
-/// Thunk `0x401180` (`OLEAUT32.DLL::SysAllocStringLen`).
+/// Thunk `0x00401180` (`OLEAUT32.DLL::SysAllocStringLen`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" SysAllocStringLen` once
@@ -16,7 +16,7 @@ unsafe extern "C" fn default_tail(_arg: u32) {}
 pub static mut SYS_ALLOC_STRING_LEN_00401180: unsafe extern "C" fn(u32, u32) -> u32 =
     default_alloc_string;
 
-/// Tail target `0x402f60` (`FUN_00402f60`, done as `fn_00402f60`),
+/// Tail target `0x00402f60` (`FUN_00402f60`, done as `fn_00402f60`),
 /// reached by `JMP` with `AL=1` (EAX is 0 there, so EAX lane is 1).
 ///
 /// ponytail: hook standing in for done `fn_00402f60`, rewire to real
@@ -29,7 +29,7 @@ pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 /// `if param==0 { return 0 } r=SysAllocStringLen(0,param);
 /// if r==0 { tail(1) } return r`. `param_1` arrives in EAX per Ghidra
-/// `__register` observation; `u32` return in EAX per caller `0x404c2c`
+/// `__register` observation; `u32` return in EAX per caller `0x00404c2c`
 /// dataflow (`CALL; MOV EBX,EAX`).
 pub unsafe fn fn_00404a64(param_1: u32) -> u32 {
     if param_1 == 0 {

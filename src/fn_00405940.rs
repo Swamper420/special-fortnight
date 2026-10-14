@@ -1,4 +1,4 @@
-//! Original procedure `0x00405940` (408 bytes, `0x405940–0x405ad7`).
+//! Original procedure `0x00405940` (408 bytes, `0x00405940–0x00405ad7`).
 //! Evidence: `evidence/00405940_fn_00405940.md`.
 
 unsafe extern "C" fn default_fail(_code: u32) {}
@@ -7,24 +7,24 @@ unsafe extern "C" fn default_alloc(_size: u32) -> usize {
 }
 unsafe extern "C" fn default_realloc(_slot: *mut usize, _size: u32) {}
 
-/// Fail target `0x402f60` (`FUN_00402f60`), reached by `CALL` with
+/// Fail target `0x00402f60` (`FUN_00402f60`), reached by `CALL` with
 /// `AL=4` over preserved upper EAX (error code in the low byte).
 ///
 /// ponytail: hook standing in for done `fn_00402f60` (which takes an
 /// extra stack-top lane Rust cannot observe); rewire to the real
 /// call once cross-module test serialization exists. The
-/// pointer-derived code (site `0x405963`) keeps only the low 32
+/// pointer-derived code (site `0x00405963`) keeps only the low 32
 /// (sibling `fn_00405548` low-32 precedent).
 pub static mut HOOK_00402F60: unsafe extern "C" fn(u32) = default_fail;
 
-/// Allocator `0x402e04` (`FUN_00402e04`): byte size in EAX, object
+/// Allocator `0x00402e04` (`FUN_00402e04`): byte size in EAX, object
 /// base back in EAX.
 ///
 /// ponytail: hook standing in for done `fn_00402e04` (which returns
 /// a 32-bit lane); `usize` return keeps the host pointer whole.
 pub static mut HOOK_00402E04: unsafe extern "C" fn(u32) -> usize = default_alloc;
 
-/// Reallocator `0x402e38` (`FUN_00402e38`): slot pointer in EAX,
+/// Reallocator `0x00402e38` (`FUN_00402e38`): slot pointer in EAX,
 /// byte size in EDX, slot updated in place.
 ///
 /// ponytail: emulation hook standing in for done `fn_00402e38`;
@@ -98,8 +98,8 @@ pub unsafe fn fn_00405940(
         if ebx.is_null() || core::ptr::read_unaligned(ebx as *const u32) == 1 {
             let mut local_24: usize = ebx as usize;
             if edi < local_14 && !esi_pc.is_null() {
-                // Shrink-copy kept chars via the `0x405930` thunk
-                // (transparent `JMP` to `0x405548`): dest
+                // Shrink-copy kept chars via the `0x00405930` thunk
+                // (transparent `JMP` to `0x00405548`): dest
                 // `base+8+EDI*elem`, src chars, count
                 // `local_14-EDI`.
                 let dst = (ebx as *mut u8)
@@ -324,7 +324,7 @@ mod tests {
             // below (SUB0+8, SUB1+8); no zeroing is expected here.
             // Old refcount DEC'd 2 -> 1.
             assert_eq!(*old.add(0), 1);
-            // 0x405920 forward: (newdata, olddata, desc2, 2).
+            // 0x00405920 forward: (newdata, olddata, desc2, 2).
             assert_eq!(FILL_HITS.load(Ordering::SeqCst), 1);
             assert_eq!(FILL_A.load(Ordering::SeqCst), top.add(2) as usize);
             assert_eq!(FILL_B.load(Ordering::SeqCst), old_data as usize);

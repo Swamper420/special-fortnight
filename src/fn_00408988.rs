@@ -1,4 +1,4 @@
-//! Original procedure `0x00408988` (213 bytes, `0x408988–0x408a5c`).
+//! Original procedure `0x00408988` (213 bytes, `0x00408988–0x00408a5c`).
 //! Evidence: `evidence/00408988_fn_00408988.md`.
 
 unsafe extern "C" fn default_8c88(
@@ -15,7 +15,7 @@ unsafe extern "C" fn default_8a88(_arg: u32) -> u32 {
 unsafe extern "C" fn default_tbl() {}
 unsafe extern "C" fn default_tail(_count: u32) {}
 
-/// Callee `0x408c88` (`FUN_00408c88`): `(buf, EDX, ECX, push1,
+/// Callee `0x00408c88` (`FUN_00408c88`): `(buf, EDX, ECX, push1,
 /// push2)` positionally — `push1` is the clamped precision,
 /// `push2` is `9999` or `[EBP+8]`.
 ///
@@ -24,27 +24,27 @@ unsafe extern "C" fn default_tail(_count: u32) {}
 pub static mut HOOK_00408C88: unsafe extern "C" fn(*mut u8, u32, u32, u32, u32) =
     default_8c88;
 
-/// Callee `0x408a88` (`FUN_00408a88`): takes `ECX`, returns next
+/// Callee `0x00408a88` (`FUN_00408a88`): takes `ECX`, returns next
 /// `ECX` (table index).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_00408a88` once it exists.
 pub static mut HOOK_00408A88: unsafe extern "C" fn(u32) -> u32 = default_8a88;
 
-/// Word source `0x408a71` (`DAT_00408a71`) for the 3-word copy.
+/// Word source `0x00408a71` (`DAT_00408a71`) for the 3-word copy.
 ///
 /// ponytail: absolute-address table as mutable base pointer, upgrade
 /// to real image-relative import once data layout proven.
 pub static mut DAT_00408A71: *const u16 = core::ptr::null();
 
-/// Indirect table `0x408a5d` (`PTR_LAB_00408a5d`), indices 0–4.
+/// Indirect table `0x00408a5d` (`PTR_LAB_00408a5d`), indices 0–4.
 ///
 /// ponytail: absolute-address table as mutable hooks, rewire to real
 /// callees once reconstructed.
 pub static mut TBL_00408A5D: [unsafe extern "C" fn(); 5] =
     [default_tbl, default_tbl, default_tbl, default_tbl, default_tbl];
 
-/// Tail target `0x408c82` (`FUN_00408c82`), reached by `JMP` with
+/// Tail target `0x00408c82` (`FUN_00408c82`), reached by `JMP` with
 /// `EAX` = words written.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to

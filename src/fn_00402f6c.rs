@@ -1,4 +1,4 @@
-//! Original procedure `0x00402f6c` (28 bytes, `0x402f6c–0x402f87`).
+//! Original procedure `0x00402f6c` (28 bytes, `0x00402f6c–0x00402f87`).
 //! Evidence: `evidence/00402f6c_fn_00402f6c.md`.
 
 unsafe extern "C" fn default_ctx() -> *const u8 {
@@ -7,13 +7,13 @@ unsafe extern "C" fn default_ctx() -> *const u8 {
 
 unsafe extern "C" fn default_tail(_arg: u32, _stack_top: u32) {}
 
-/// Target `0x406588` (`FUN_00406588`), context getter, no args.
+/// Target `0x00406588` (`FUN_00406588`), context getter, no args.
 ///
 /// ponytail: hook standing in for reconstructed `fn_00406588`, rewire to
 /// real call once cross-module test serialization exists.
 pub static mut HOOK_00406588: unsafe extern "C" fn() -> *const u8 = default_ctx;
 
-/// Tail target `0x402f60` (`FUN_00402f60`), reached by `JMP` with `EAX=0`.
+/// Tail target `0x00402f60` (`FUN_00402f60`), reached by `JMP` with `EAX=0`.
 ///
 /// ponytail: hook standing in for reconstructed `fn_00402f60`, rewire to
 /// real call once cross-module test serialization + ABI decided

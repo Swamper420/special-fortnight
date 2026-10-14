@@ -1,4 +1,4 @@
-//! Original procedure `0x00407bb8` (34 bytes, `0x407bb8–0x407bd9`).
+//! Original procedure `0x00407bb8` (34 bytes, `0x00407bb8–0x00407bd9`).
 //! Evidence: `evidence/00407bb8_fn_00407bb8.md`.
 
 unsafe extern "C" fn default_40991c(
@@ -19,7 +19,7 @@ unsafe extern "C" fn default_40991c(
 /// data once layout proven.
 pub static mut DAT_0040751C: *mut u8 = core::ptr::null_mut();
 
-/// Callee `0x40991c` (`FUN_0040991c`), set up with `EAX=[0x40751c]`,
+/// Callee `0x0040991c` (`FUN_0040991c`), set up with `EAX=[0x0040751c]`,
 /// `DL=1`, `ECX=orig EAX`, stack `orig ECX` then `orig EDX` (first
 /// pushed = deepest = 5th param).
 ///

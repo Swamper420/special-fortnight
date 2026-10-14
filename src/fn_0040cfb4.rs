@@ -1,4 +1,4 @@
-//! Original procedure `0x0040cfb4` (61 bytes, `0x40cfb4–0x40cff0`).
+//! Original procedure `0x0040cfb4` (61 bytes, `0x0040cfb4–0x0040cff0`).
 //! Evidence: `evidence/0040cfb4_fn_0040cfb4.md`.
 
 /// Buffered byte source: refill iff `[base]==[base+4]` via raw indirect

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040493c` (15 bytes, `0x40493c–0x40494a`).
+//! Original procedure `0x0040493c` (15 bytes, `0x0040493c–0x0040494a`).
 //! Evidence: `evidence/0040493c_fn_0040493c.md`.
 
 /// Refcount AddRef guard: `if p { count=[p-8]; next=count+1;

@@ -70,7 +70,7 @@ pub unsafe fn fn_0040e538() -> bool {
     HOOK_ExitWindowsEx(2, 0) == 1
 }
 
-/// `"SeShutdownPrivilege"` at `0x40e5b4` (observed bytes + NUL).
+/// `"SeShutdownPrivilege"` at `0x0040e5b4` (observed bytes + NUL).
 pub static SE_SHUTDOWN: &[u8] = b"SeShutdownPrivilege\0";
 
 #[cfg(test)]

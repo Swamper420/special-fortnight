@@ -1,4 +1,4 @@
-//! Original procedure `0x00409824` (58 bytes, `0x409824–0x40985d`).
+//! Original procedure `0x00409824` (58 bytes, `0x00409824–0x0040985d`).
 //! Evidence: `evidence/00409824_fn_00409824.md`.
 
 unsafe extern "C" fn default_link(_p1: *mut u8, _p2: u8, _p3: *mut u8) -> *mut u8 {
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_pin(_slot: *mut u8, _src: *mut u8) {}
 
 unsafe extern "C" fn default_release(_obj: *mut u8) {}
 
-/// Link target `0x4039e4` (`FUN_004039e4`), `(EAX, DL, ECX)` plus
+/// Link target `0x004039e4` (`FUN_004039e4`), `(EAX, DL, ECX)` plus
 /// the 16-byte SEH record at reserved slots; returns the EAX lane
 /// (`EDI`).
 ///
@@ -20,13 +20,13 @@ unsafe extern "C" fn default_release(_obj: *mut u8) {}
 pub static mut HOOK_004039e4: unsafe extern "C" fn(*mut u8, u8, *mut u8) -> *mut u8 =
     default_link;
 
-/// Target `0x404c98` (`FUN_00404c98`), `(obj+4, param_3)`.
+/// Target `0x00404c98` (`FUN_00404c98`), `(obj+4, param_3)`.
 ///
 /// ponytail: hook standing in for done `fn_00404c98`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_00404c98: unsafe extern "C" fn(*mut u8, *mut u8) = default_pin;
 
-/// Target `0x403a3c` (`FUN_00403a3c`), `(obj)` on the saved-flag
+/// Target `0x00403a3c` (`FUN_00403a3c`), `(obj)` on the saved-flag
 /// lane.
 ///
 /// ponytail: hook standing in for done `fn_00403a3c`, rewire to

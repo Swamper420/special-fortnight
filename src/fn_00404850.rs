@@ -1,4 +1,4 @@
-//! Original procedure `0x00404850` (130 bytes, `0x404850–0x4048d1`).
+//! Original procedure `0x00404850` (130 bytes, `0x00404850–0x004048d1`).
 //! Evidence: `evidence/00404850_fn_00404850.md`.
 
 unsafe extern "C" fn default_release(_a: *mut u32) {}
@@ -15,13 +15,13 @@ unsafe extern "C" fn default_convert(
 
 unsafe extern "C" fn default_alloc(_a: *mut u32, _b: u32, _c: u32) {}
 
-/// Release `0x4046c4` (`FUN_004046c4`); return discarded by body.
+/// Release `0x004046c4` (`FUN_004046c4`); return discarded by body.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004046c4` once it exists.
 pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u32) = default_release;
 
-/// Convert `0x4047c0` (`FUN_004047c0`); probe `(NULL,0,src,tag,count)`
+/// Convert `0x004047c0` (`FUN_004047c0`); probe `(NULL,0,src,tag,count)`
 /// returns size, fill `(*slot,size,src,tag,count)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
@@ -29,7 +29,7 @@ pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u32) = default_release;
 pub static mut HOOK_004047C0: unsafe extern "C" fn(*mut u8, u32, *mut u16, u32, i32) -> u32 =
     default_convert;
 
-/// Alloc `0x4049c4` (`FUN_004049c4`); args `(slot,size,0)`.
+/// Alloc `0x004049c4` (`FUN_004049c4`); args `(slot,size,0)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004049c4` once it exists.

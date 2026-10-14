@@ -1,9 +1,9 @@
-//! Original procedure `0x00403ae0` (15 bytes, `0x403ae0–0x403aee`).
+//! Original procedure `0x00403ae0` (15 bytes, `0x00403ae0–0x00403aee`).
 //! Evidence: `evidence/00403ae0_fn_00403ae0.md`.
 
 /// `ret = obj + [vtbl-0x34] - 4` where `vtbl=[obj]`.
 /// `param_1` arrives in EAX per Ghidra `__register` observation;
-/// caller `0x403a9c` derefs result as pointer. Pointer links read
+/// caller `0x00403a9c` derefs result as pointer. Pointer links read
 /// pointer-sized; dword field stays `u32`.
 ///
 /// ponytail: address math runs full-width `usize` on host (low 32 bits

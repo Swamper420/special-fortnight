@@ -1,4 +1,4 @@
-//! Original procedure `0x00405918` (7 bytes, `0x405918–0x40591e`).
+//! Original procedure `0x00405918` (7 bytes, `0x00405918–0x0040591e`).
 //! Evidence: `evidence/00405918_fn_00405918.md`.
 
 /// Length-minus-one: `fn_00405910(param_1).wrapping_sub(1)`.

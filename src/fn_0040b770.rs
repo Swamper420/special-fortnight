@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b770` (76 bytes, `0x40b770–0x40b7bb`).
+//! Original procedure `0x0040b770` (76 bytes, `0x0040b770–0x0040b7bb`).
 //! Evidence: `evidence/0040b770_fn_0040b770.md`.
 
 /// Scan a wide string with `"` quote handling: `*count=0`, then per

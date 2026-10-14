@@ -1,8 +1,8 @@
-//! Original procedure `0x00408dd7` (212 bytes, `0x408dd7–0x408eaa`).
+//! Original procedure `0x00408dd7` (212 bytes, `0x00408dd7–0x00408eaa`).
 //! Evidence: `evidence/00408dd7_fn_00408dd7.md`.
 
 /// Embedded `FIDIV` divisor table reused from code bytes at
-/// `0x408dc3`: `[0x408dc3]` decodes from live instruction bytes
+/// `0x00408dc3`: `[0x00408dc3]` decodes from live instruction bytes
 /// (`XOR EDX,EDX; JMP -0x12` = `0xEEEBD231`, never consumed — the
 /// `scale == 4` lane always skips `FIDIV`); the rest are the `.text`
 /// gap dwords `10, 100, 1000, 10000` (see evidence).
@@ -11,7 +11,7 @@
 /// image-relative data once data layout proven.
 pub static mut TABLE_00408DC3: [u32; 5] = [0xEEEB_D231, 10, 100, 1000, 10000];
 
-/// Zero lane (`0x408e9d→0x408ea4`): `{len 0, sign 0, ""}`.
+/// Zero lane (`0x00408e9d→0x00408ea4`): `{len 0, sign 0, ""}`.
 unsafe fn store_zero(out: *mut u8) {
     core::ptr::write_unaligned(out.wrapping_byte_add(3), 0u8);
     core::ptr::write_unaligned(out as *mut u16, 0u16);
@@ -20,7 +20,7 @@ unsafe fn store_zero(out: *mut u8) {
 
 /// Emit `dig[2*j]…` nibble pairs as ASCII chars (MSB-first),
 /// returning the end pointer. Shared by the count-char lane and the
-/// skip-lane tail (assembly shares them via `JNZ 0x408e6e`).
+/// skip-lane tail (assembly shares them via `JNZ 0x00408e6e`).
 unsafe fn emit_from(mut p: *mut u8, dig: &[u8; 18], mut j: usize) -> *mut u8 {
     while j < 9 {
         core::ptr::write_unaligned(p, dig[2 * j].wrapping_add(b'0'));
@@ -37,7 +37,7 @@ unsafe fn emit_from(mut p: *mut u8, dig: &[u8; 18], mut j: usize) -> *mut u8 {
 /// `[EBP+0xC]` is never read here (see evidence). `RET` pops
 /// nothing. `WAIT`s are host no-ops.
 pub unsafe fn fn_00408dd7(out: *mut u8, input: *mut u8, param_4: u32) {
-    // 0x408dd7: EAX=[ESI]; EDX=[ESI+4]; ECX=EAX|EDX; JZ e9d.
+    // 0x00408dd7: EAX=[ESI]; EDX=[ESI+4]; ECX=EAX|EDX; JZ e9d.
     let mut lo: u32 = core::ptr::read_unaligned(input as *const u32);
     let mut hi: u32 = core::ptr::read_unaligned(input.wrapping_byte_add(4) as *const u32);
     if lo | hi == 0 {
@@ -45,13 +45,13 @@ pub unsafe fn fn_00408dd7(out: *mut u8, input: *mut u8, param_4: u32) {
         return;
     }
     let orig_hi = hi;
-    // 0x408de6: JNS df1 else NEG EDX; NEG EAX; SBB EDX,0 (64-bit negate).
+    // 0x00408de6: JNS df1 else NEG EDX; NEG EAX; SBB EDX,0 (64-bit negate).
     if (hi as i32) < 0 {
         let borrow = if lo != 0 { 1u32 } else { 0u32 };
         lo = lo.wrapping_neg();
         hi = hi.wrapping_neg().wrapping_sub(borrow);
     }
-    // 0x408df1: count=0; scale=[EBP+8] clamped <0→0, >3→4.
+    // 0x00408df1: count=0; scale=[EBP+8] clamped <0→0, >3→4.
     let mut scale = param_4 as i32;
     if scale < 0 {
         scale = 0;
@@ -59,7 +59,7 @@ pub unsafe fn fn_00408dd7(out: *mut u8, input: *mut u8, param_4: u32) {
     let mut count: u32 = 0;
     if scale > 3 {
         scale = 4;
-        // 0x408e06: INC/SUB/SBB/JNC … DEC/ADD/ADC = exact udivmod by 10^18.
+        // 0x00408e06: INC/SUB/SBB/JNC … DEC/ADD/ADC = exact udivmod by 10^18.
         let full = ((hi as u64) << 32) | lo as u64;
         count = (full / 1_000_000_000_000_000_000) as u32;
         let rem = full % 1_000_000_000_000_000_000;
@@ -97,11 +97,11 @@ pub unsafe fn fn_00408dd7(out: *mut u8, input: *mut u8, param_4: u32) {
     }
     let mut edi = out.wrapping_byte_add(3);
     if count != 0 {
-        // 0x408e64: count char + full 18-digit emission.
+        // 0x00408e64: count char + full 18-digit emission.
         core::ptr::write_unaligned(edi, (count as u8).wrapping_add(b'0'));
         edi = emit_from(edi.wrapping_byte_add(1), &dig, 0);
     } else {
-        // Leading-nibble skip (0x408e49…): the first nonzero nibble
+        // Leading-nibble skip (0x00408e49…): the first nonzero nibble
         // starts emission (hi, then lo); all-zero falls to zero lane.
         let mut j = 0;
         loop {
@@ -129,10 +129,10 @@ pub unsafe fn fn_00408dd7(out: *mut u8, input: *mut u8, param_4: u32) {
         }
         edi = emit_from(edi, &dig, j);
     }
-    // 0x408e84: EAX=EDI(end); ECX=EBX+scale+3; len = EAX-ECX (short).
+    // 0x00408e84: EAX=EDI(end); ECX=EBX+scale+3; len = EAX-ECX (short).
     let trunc = out.wrapping_byte_add(3).wrapping_byte_add(scale as usize);
     let len = (edi as usize).wrapping_sub(trunc as usize) as u16;
-    // NUL + trailing-zero strip (0x408e8c…).
+    // NUL + trailing-zero strip (0x00408e8c…).
     core::ptr::write_unaligned(edi, 0u8);
     loop {
         edi = edi.wrapping_byte_sub(1);
@@ -141,7 +141,7 @@ pub unsafe fn fn_00408dd7(out: *mut u8, input: *mut u8, param_4: u32) {
         }
         core::ptr::write_unaligned(edi, 0u8);
     }
-    // 0x408e95: sign = original [ESI+4] >> 31; tail stores.
+    // 0x00408e95: sign = original [ESI+4] >> 31; tail stores.
     core::ptr::write_unaligned(out as *mut u16, len);
     core::ptr::write_unaligned(out.wrapping_byte_add(2), (orig_hi >> 31) as u8);
 }

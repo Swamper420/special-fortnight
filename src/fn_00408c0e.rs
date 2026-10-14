@@ -1,4 +1,4 @@
-//! Original procedure `0x00408c0e` (16 bytes, `0x408c0e–0x408c1d`).
+//! Original procedure `0x00408c0e` (16 bytes, `0x00408c0e–0x00408c1d`).
 //! Evidence: `evidence/00408c0e_fn_00408c0e.md`.
 
 /// Counted word copy: null `src` returns `dst` untouched;

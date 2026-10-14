@@ -1,11 +1,11 @@
-//! Original procedure `0x0040cff4` (61 bytes, `0x40cff4–0x40d030`).
+//! Original procedure `0x0040cff4` (61 bytes, `0x0040cff4–0x0040d030`).
 //! Evidence: `evidence/0040cff4_fn_0040cff4.md`.
 
 unsafe extern "C" fn default_next(_b: *mut u8, _p2: u32, _p3: i32) -> u8 {
     0
 }
 
-/// Target `0x40cfb4` (`FUN_0040cfb4`), exactly 5 folds.
+/// Target `0x0040cfb4` (`FUN_0040cfb4`), exactly 5 folds.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040cfb4`, rewire to the
 /// real call once cross-module linkage proven.

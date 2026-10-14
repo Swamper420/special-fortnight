@@ -1,11 +1,11 @@
-//! Original procedure `0x0040cdcc` (35 bytes, `0x40cdcc–0x40cdee`).
+//! Original procedure `0x0040cdcc` (35 bytes, `0x0040cdcc–0x0040cdee`).
 //! Evidence: `evidence/0040cdcc_fn_0040cdcc.md`.
 
 unsafe extern "C" fn default_free(_p: u32, _s: u32, _t: u32) -> u32 {
     0
 }
 
-/// Thunk `0x406854` (`KERNEL32.DLL::VirtualFree`).
+/// Thunk `0x00406854` (`KERNEL32.DLL::VirtualFree`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.

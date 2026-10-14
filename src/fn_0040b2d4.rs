@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b2d4` (10 bytes, `0x40b2d4–0x40b2dd`).
+//! Original procedure `0x0040b2d4` (10 bytes, `0x0040b2d4–0x0040b2dd`).
 //! Evidence: `evidence/0040b2d4_fn_0040b2d4.md`.
 
 /// Adds `param_2` into u64 slot at `param_1`; returns true if no 64-bit

@@ -1,27 +1,27 @@
 //! Original procedure `0x00405de8` (633 bytes, ranges
-//! `0x405de8–0x405f1b` + `0x405f23–0x406067`; gap `0x405f1c–0x405f22`
+//! `0x00405de8–0x00405f1b` + `0x00405f23–0x00406067`; gap `0x00405f1c–0x00405f22`
 //! is the SEH handler). Evidence: `evidence/00405de8_fn_00405de8.md`.
 
-/// UTF-16 `L"Software\CodeGear\Locales"` at `0x406068` (both HKCU/HKLM opens).
+/// UTF-16 `L"Software\CodeGear\Locales"` at `0x00406068` (both HKCU/HKLM opens).
 pub static SUBKEY_CODEGEAR: [u16; 26] = [
     0x53, 0x6f, 0x66, 0x74, 0x77, 0x61, 0x72, 0x65, 0x5c, 0x43, 0x6f, 0x64, 0x65, 0x47,
     0x65, 0x61, 0x72, 0x5c, 0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x65, 0x73, 0x00,
 ];
 
-/// UTF-16 `L"Software\Borland\Locales"` at `0x40609c`.
+/// UTF-16 `L"Software\Borland\Locales"` at `0x0040609c`.
 pub static SUBKEY_BORLAND: [u16; 25] = [
     0x53, 0x6f, 0x66, 0x74, 0x77, 0x61, 0x72, 0x65, 0x5c, 0x42, 0x6f, 0x72, 0x6c, 0x61,
     0x6e, 0x64, 0x5c, 0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x65, 0x73, 0x00,
 ];
 
-/// UTF-16 `L"Software\Borland\Delphi\Locales"` at `0x4060d0`.
+/// UTF-16 `L"Software\Borland\Delphi\Locales"` at `0x004060d0`.
 pub static SUBKEY_DELPHI: [u16; 32] = [
     0x53, 0x6f, 0x66, 0x74, 0x77, 0x61, 0x72, 0x65, 0x5c, 0x42, 0x6f, 0x72, 0x6c, 0x61,
     0x6e, 0x64, 0x5c, 0x44, 0x65, 0x6c, 0x70, 0x68, 0x69, 0x5c, 0x4c, 0x6f, 0x63, 0x61,
     0x6c, 0x65, 0x73, 0x00,
 ];
 
-/// Empty value name at `0x406110` (second `RegQueryValueExW` fallback).
+/// Empty value name at `0x00406110` (second `RegQueryValueExW` fallback).
 ///
 /// ponytail: bytes unobserved (absent from string inventory); `L""`
 /// inferred from the decompiler, revisit if data layout is mapped.
@@ -66,28 +66,28 @@ unsafe extern "C" fn default_canonicalize(path: *mut u16, _n: i32) -> *mut u16 {
     path
 }
 
-/// Import `KERNEL32.DLL::GetModuleFileNameW` (`CALL 0x401108`).
+/// Import `KERNEL32.DLL::GetModuleFileNameW` (`CALL 0x00401108`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetModuleFileNameW: unsafe extern "C" fn(u32, *mut u16, u32) -> u32 =
     default_module_file_name;
 
-/// Import `ADVAPI32.DLL::RegOpenKeyExW` (`CALL 0x401160` ×4).
+/// Import `ADVAPI32.DLL::RegOpenKeyExW` (`CALL 0x00401160` ×4).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_RegOpenKeyExW: unsafe extern "C" fn(u32, *const u16, u32, u32, *mut u32) -> u32 =
     default_open;
 
-/// Callee `FUN_00405bec` (`CALL 0x405bec`, path + `0x105`).
+/// Callee `FUN_00405bec` (`CALL 0x00405bec`, path + `0x105`).
 ///
 /// ponytail: hook standing in for the sibling reconstruction, rewire to
 /// real `fn_00405bec` once cross-module linkage exists.
 pub static mut HOOK_FN_00405bec: unsafe extern "C" fn(*mut u16, i32) -> *mut u16 =
     default_canonicalize;
 
-/// Import `ADVAPI32.DLL::RegQueryValueExW` (`CALL 0x401168` ×2).
+/// Import `ADVAPI32.DLL::RegQueryValueExW` (`CALL 0x00401168` ×2).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
@@ -100,40 +100,40 @@ pub static mut HOOK_RegQueryValueExW: unsafe extern "C" fn(
     *mut u32,
 ) -> u32 = default_query;
 
-/// Import `ADVAPI32.DLL::RegCloseKey` (`CALL 0x401158`).
+/// Import `ADVAPI32.DLL::RegCloseKey` (`CALL 0x00401158`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_RegCloseKey: unsafe extern "C" fn(u32) -> u32 = default_close;
 
-/// Import `KERNEL32.DLL::lstrcpynW` (`CALL 0x401140` ×4).
+/// Import `KERNEL32.DLL::lstrcpynW` (`CALL 0x00401140` ×4).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_lstrcpynW: unsafe extern "C" fn(*mut u16, *const u16, i32) -> *mut u16 =
     crate::fn_00405bec::real_lstrcpynW;
 
-/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x401128`).
+/// Import `KERNEL32.DLL::GetThreadLocale` (`CALL 0x00401128`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetThreadLocale: unsafe extern "C" fn() -> u32 = default_thread_locale;
 
-/// Import `KERNEL32.DLL::GetLocaleInfoW` (`CALL 0x401100`).
+/// Import `KERNEL32.DLL::GetLocaleInfoW` (`CALL 0x00401100`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetLocaleInfoW: unsafe extern "C" fn(u32, u32, *mut u16, i32) -> i32 =
     default_locale_info;
 
-/// Import `KERNEL32.DLL::lstrlenW` (`CALL 0x401148`).
+/// Import `KERNEL32.DLL::lstrlenW` (`CALL 0x00401148`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_lstrlenW: unsafe extern "C" fn(*const u16) -> i32 =
     crate::fn_00405bec::real_lstrlenW;
 
-/// Import `KERNEL32.DLL::LoadLibraryExW` (`CALL 0x401130` ×3).
+/// Import `KERNEL32.DLL::LoadLibraryExW` (`CALL 0x00401130` ×3).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.

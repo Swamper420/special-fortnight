@@ -1,4 +1,4 @@
-//! Original procedure `0x0040c130` (119 bytes, `0x40c130–0x40c1a6`).
+//! Original procedure `0x0040c130` (119 bytes, `0x0040c130–0x0040c1a6`).
 //! Evidence: `evidence/0040c130_fn_0040c130.md`.
 
 unsafe extern "C" fn default_bf84(_mode: u32, _slot: *mut u8) {}
@@ -19,14 +19,14 @@ unsafe extern "C" fn default_consume(_obj: *mut u8) {}
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Target `0x40bf84` (`FUN_0040bf84`), `(param_2, &local_8)`.
+/// Target `0x0040bf84` (`FUN_0040bf84`), `(param_2, &local_8)`.
 /// Fills the pointer-sized slot; null means the error lane.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_0040bf84` once it exists.
 pub static mut HOOK_0040BF84: unsafe extern "C" fn(u32, *mut u8) = default_bf84;
 
-/// Target `0x4082d4` (`FUN_004082d4`), `(fmt, &local_10, 0, &local_8)`
+/// Target `0x004082d4` (`FUN_004082d4`), `(fmt, &local_10, 0, &local_8)`
 /// on the null-slot lane.
 ///
 /// ponytail: hook standing in for done `fn_004082d4`; lane 2 stays
@@ -35,7 +35,7 @@ pub static mut HOOK_0040BF84: unsafe extern "C" fn(u32, *mut u8) = default_bf84;
 pub static mut HOOK_004082D4: unsafe extern "C" fn(*const u16, *const u32, u32, *mut usize) =
     default_report;
 
-/// Target `0x409824` (`FUN_00409824`), `(base, 1, local_8)`;
+/// Target `0x00409824` (`FUN_00409824`), `(base, 1, local_8)`;
 /// returns the object (a DATA pointer).
 ///
 /// ponytail: hook standing in for done `fn_00409824`, rewire to the real
@@ -43,14 +43,14 @@ pub static mut HOOK_004082D4: unsafe extern "C" fn(*const u16, *const u32, u32, 
 pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u8, u8, *mut u8) -> *mut u8 =
     default_link;
 
-/// Target `0x403f88` (`FUN_00403f88`), `(obj)`.
+/// Target `0x00403f88` (`FUN_00403f88`), `(obj)`.
 ///
 /// ponytail: hook standing in for done `fn_00403f88` (which takes the
 /// object as a `u32` lane on target); pointer-sized here so host
 /// pointers are never truncated, rewire once linkage proven.
 pub static mut HOOK_00403F88: unsafe extern "C" fn(*mut u8) = default_consume;
 
-/// Thunk `0x404c88` (`thunk_FUN_004046c4`), `(&local_8)`; return discarded.
+/// Thunk `0x00404c88` (`thunk_FUN_004046c4`), `(&local_8)`; return discarded.
 ///
 /// ponytail: hook standing in for done `fn_004046c4`, rewire to the real
 /// call once cross-module linkage proven.
@@ -63,7 +63,7 @@ pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u8) = default_release;
 /// `data.rs` once data layout proven.
 pub static mut DAT_0040C0C4: usize = 0;
 
-/// Wide format observed at `0x40c1c0` (`L"File I/O error %d"`).
+/// Wide format observed at `0x0040c1c0` (`L"File I/O error %d"`).
 ///
 /// ponytail: bytes from the observed string table; fill from the image
 /// once data layout proven.
@@ -73,7 +73,7 @@ pub static FMT_0040C1C0: [u16; 18] = [
 ];
 
 /// `bf84(mode, &slot); if slot==0 { report(fmt, &copy, 0, &slot) };
-/// obj=link([0x40c0c4], 1, slot); obj[6]=mode; consume(obj);
+/// obj=link([0x0040c0c4], 1, slot); obj[6]=mode; consume(obj);
 /// release(&slot)`. `param_1` (EAX) unread, `param_2` (EDX) saved
 /// across all calls. SEH `FS:[0]` link/unlink omitted
 /// (host-incompatible). Returns void.

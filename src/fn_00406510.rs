@@ -1,11 +1,11 @@
-//! Original procedure `0x00406510` (6 bytes, `0x406510–0x406515`).
+//! Original procedure `0x00406510` (6 bytes, `0x00406510–0x00406515`).
 //! Evidence: `evidence/00406510_fn_00406510.md`.
 
 unsafe extern "C" fn default_get_module(_name: *const u16) -> usize {
     0
 }
 
-/// Thunk `0x406510` (`KERNEL32.DLL::GetModuleHandleW`), `JMP [0x004193c8]`.
+/// Thunk `0x00406510` (`KERNEL32.DLL::GetModuleHandleW`), `JMP [0x004193c8]`.
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.

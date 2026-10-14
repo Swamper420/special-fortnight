@@ -1,4 +1,4 @@
-//! Original procedure `0x004017ac` (332 bytes, `0x4017ac–0x4018f7`).
+//! Original procedure `0x004017ac` (332 bytes, `0x004017ac–0x004018f7`).
 //! Evidence: `evidence/004017ac_fn_004017ac.md`.
 
 unsafe extern "C" fn default_virtual_query(
@@ -31,7 +31,7 @@ unsafe extern "C" fn default_copy(
 
 unsafe extern "C" fn default_free(_ptr: *mut u8) {}
 
-/// Import thunk `0x401178` (`KERNEL32.DLL::VirtualQuery`).
+/// Import thunk `0x00401178` (`KERNEL32.DLL::VirtualQuery`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" VirtualQuery` once
@@ -42,7 +42,7 @@ pub static mut VIRTUAL_QUERY_00401178: unsafe extern "C" fn(
     u32,
 ) -> u32 = default_virtual_query;
 
-/// Import thunk `0x4011ec` (`KERNEL32.DLL::VirtualAlloc`).
+/// Import thunk `0x004011ec` (`KERNEL32.DLL::VirtualAlloc`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" VirtualAlloc` once
@@ -54,28 +54,28 @@ pub static mut VIRTUAL_ALLOC_004011ec: unsafe extern "C" fn(
     u32,
 ) -> *mut u8 = default_virtual_alloc;
 
-/// Allocator `0x4018f8` (`FUN_004018f8`), size arrives in EAX.
+/// Allocator `0x004018f8` (`FUN_004018f8`), size arrives in EAX.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004018f8` once it exists.
 pub static mut ALLOC_004018f8: unsafe extern "C" fn(u32) -> *mut u32 =
     default_alloc;
 
-/// Grow-path copy `0x40148c` (`FUN_0040148c`), `(EAX=old, EDX=new, ECX=n)`.
+/// Grow-path copy `0x0040148c` (`FUN_0040148c`), `(EAX=old, EDX=new, ECX=n)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_0040148c` once it exists.
 pub static mut COPY_0040148c: unsafe extern "C" fn(*mut u8, *mut u8, u32) =
     default_copy;
 
-/// Shrink-path copy `0x4014bc` (`FUN_004014bc`), `(EAX=old, EDX=new, ECX=n)`.
+/// Shrink-path copy `0x004014bc` (`FUN_004014bc`), `(EAX=old, EDX=new, ECX=n)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_004014bc` once it exists.
 pub static mut COPY_004014bc: unsafe extern "C" fn(*mut u8, *mut u8, u32) =
     default_copy;
 
-/// Release `0x401c7c` (`FUN_00401c7c`), pointer arrives in EAX.
+/// Release `0x00401c7c` (`FUN_00401c7c`), pointer arrives in EAX.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00401c7c` once it exists.

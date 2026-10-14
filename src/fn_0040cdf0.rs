@@ -1,4 +1,4 @@
-//! Original procedure `0x0040cdf0` (49 bytes, `0x40cdf0–0x40ce20`).
+//! Original procedure `0x0040cdf0` (49 bytes, `0x0040cdf0–0x0040ce20`).
 //! Evidence: `evidence/0040cdf0_fn_0040cdf0.md`.
 
 /// `*p2=base+0x6c; *p3=0;` if `[base+0x10]==0` → indirect `[base+8]` fill.

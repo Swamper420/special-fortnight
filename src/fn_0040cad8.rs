@@ -1,17 +1,17 @@
-//! Original procedure `0x0040cad8` (91 bytes, `0x40cad8–0x40cb32`).
+//! Original procedure `0x0040cad8` (91 bytes, `0x0040cad8–0x0040cb32`).
 //! Evidence: `evidence/0040cad8_fn_0040cad8.md`.
 
 unsafe extern "C" fn default_refill(_o: *mut u8, _d: *mut u8, _r: u32) {}
 unsafe extern "C" fn default_copy(_s: *mut u8, _d: *mut u8, _l: u32) {}
 
-/// Refill target `0x40ca08`, `(obj, dst, rem)`.
+/// Refill target `0x0040ca08`, `(obj, dst, rem)`.
 ///
 /// ponytail: hook standing in for done `fn_0040ca08`, rewire to the
 /// real call once cross-module linkage proven. Buffer lanes widened
 /// to pointer-sized (never `as u32` on pointers).
 pub static mut HOOK_0040ca08: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_refill;
 
-/// Copy target `0x402fbc`, `(src, dst, chunk)`.
+/// Copy target `0x00402fbc`, `(src, dst, chunk)`.
 ///
 /// ponytail: hook standing in for done `fn_00402fbc`, rewire to the
 /// real call once cross-module linkage proven.

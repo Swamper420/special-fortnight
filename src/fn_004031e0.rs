@@ -1,4 +1,4 @@
-//! Original procedure `0x004031e0` (111 bytes, `0x4031e0–0x40324e`).
+//! Original procedure `0x004031e0` (111 bytes, `0x004031e0–0x0040324e`).
 //! Evidence: `evidence/004031e0_fn_004031e0.md`.
 
 /// Fixed-length compare of `n` bytes: `(ptr, zf)` where `zf` true iff equal.

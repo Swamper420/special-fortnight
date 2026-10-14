@@ -1,4 +1,4 @@
-//! Original procedure `0x00408480` (112 bytes, `0x408480–0x4084ef`).
+//! Original procedure `0x00408480` (112 bytes, `0x00408480–0x004084ef`).
 //! Evidence: `evidence/00408480_fn_00408480.md`.
 
 use crate::fn_004046c4::fn_004046c4;
@@ -16,7 +16,7 @@ use crate::fn_0040822c::fn_0040822c;
 /// to `4c2c`/`4b9c`/`822c`. Callee results are ignored exactly where
 /// the assembly overwrites `EAX`. The `thunk_FUN_004046c4` (5 bytes)
 /// is a transparent jump: done `fn_004046c4` is called directly.
-/// FS install/teardown and the `0x4084f0`/`0x4084f7` handler labels
+/// FS install/teardown and the `0x004084f0`/`0x004084f7` handler labels
 /// have no host effect.
 ///
 /// ponytail: locals are host `usize` slots (4B `u32` cells on the

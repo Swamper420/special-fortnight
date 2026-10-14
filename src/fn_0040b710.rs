@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b710` (94 bytes, `0x40b710–0x40b76d`).
+//! Original procedure `0x0040b710` (94 bytes, `0x0040b710–0x0040b76d`).
 //! Evidence: `evidence/0040b710_fn_0040b710.md`.
 
 unsafe extern "C" fn default_grow(_slot: *mut u8, _n: u32) {}
@@ -17,13 +17,13 @@ unsafe extern "C" fn default_fit(_slot: *mut u8, _n: u32) -> u8 {
 
 unsafe extern "C" fn default_store(_slot: *mut u8, _src: *mut u8) {}
 
-/// Grow `0x404f00` (`FUN_00404f00`), `(slot, total)`.
+/// Grow `0x00404f00` (`FUN_00404f00`), `(slot, total)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee,
 /// rewire to real `fn_00404f00` once it exists.
 pub static mut HOOK_00404f00: unsafe extern "C" fn(*mut u8, u32) = default_grow;
 
-/// Data extractor `0x404d24` (`FUN_00404d24`), `(obj)`.
+/// Data extractor `0x00404d24` (`FUN_00404d24`), `(obj)`.
 /// Returns a DATA pointer (buffer/name args).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire
@@ -31,21 +31,21 @@ pub static mut HOOK_00404f00: unsafe extern "C" fn(*mut u8, u32) = default_grow;
 pub static mut HOOK_00404d24: unsafe extern "C" fn(*mut u8) -> *mut u8 = default_data;
 
 /// Import `KERNEL32.DLL::GetEnvironmentVariableW`
-/// (`CALL 0x4066d8`), `(name, buffer, size) -> needed`.
+/// (`CALL 0x004066d8`), `(name, buffer, size) -> needed`.
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetEnvironmentVariableW: unsafe extern "C" fn(*mut u8, *mut u8, u32) -> u32 =
     default_env;
 
-/// Fitter `0x40bb10` (`FUN_0040bb10`), `(slot, needed)`.
+/// Fitter `0x0040bb10` (`FUN_0040bb10`), `(slot, needed)`.
 /// Success reported in AL.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire
 /// to real `fn_0040bb10` once it exists.
 pub static mut HOOK_0040bb10: unsafe extern "C" fn(*mut u8, u32) -> u8 = default_fit;
 
-/// Store `0x404c98` (`FUN_00404c98`), `(slot, src)`; the miss
+/// Store `0x00404c98` (`FUN_00404c98`), `(slot, src)`; the miss
 /// lane passes null src.
 ///
 /// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire

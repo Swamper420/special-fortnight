@@ -1,4 +1,4 @@
-//! Original procedure `0x00403250` (150 bytes, `0x403250–0x403292` + `0x403296–0x4032ab` + `0x4032ae–0x4032ea`).
+//! Original procedure `0x00403250` (150 bytes, `0x00403250–0x00403292` + `0x00403296–0x004032ab` + `0x004032ae–0x004032ea`).
 //! Evidence: `evidence/00403250_fn_00403250.md`.
 
 unsafe fn w16(dst: *mut u8, off: usize, v: u16) {

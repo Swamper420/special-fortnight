@@ -1,9 +1,9 @@
-//! Original procedure `0x00409c60` (13 bytes, `0x409c60–0x409c6c`).
+//! Original procedure `0x00409c60` (13 bytes, `0x00409c60–0x00409c6c`).
 //! Evidence: `evidence/00409c60_fn_00409c60.md`.
 
 unsafe extern "C" fn default_tail(_arg: u32) {}
 
-/// Tail target `0x403f88` (`FUN_00403f88`), reached by `JMP` with
+/// Tail target `0x00403f88` (`FUN_00403f88`), reached by `JMP` with
 /// `param_1` still in EAX.
 ///
 /// ponytail: hook standing in for reconstructed `fn_00403f88`,

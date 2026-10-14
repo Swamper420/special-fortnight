@@ -1,4 +1,4 @@
-//! Original procedure `0x0040dd80` (303 bytes, `0x40dd80–0x40deae`).
+//! Original procedure `0x0040dd80` (303 bytes, `0x0040dd80–0x0040deae`).
 //! Evidence: `evidence/0040dd80_fn_0040dd80.md`.
 
 unsafe extern "C" fn default_init(_d: *mut u32, _s: u32) {}
@@ -18,9 +18,9 @@ pub static mut HOOK_00404F98: unsafe extern "C" fn(*mut u8, u32) = default_push;
 pub static mut HOOK_00404DD4: unsafe extern "C" fn(*mut u32, *mut u8, i32) = default_mkprefix;
 /// ponytail: hook for `fn_00404e14` (tail convert).
 pub static mut HOOK_00404E14: unsafe extern "C" fn(*mut u32, *mut u8) = default_tail;
-/// ponytail: hook for `thunk 0x4081d0` (`strchr(s,0x25)`-shaped scan).
+/// ponytail: hook for `thunk 0x004081d0` (`strchr(s,0x25)`-shaped scan).
 pub static mut HOOK_004081D0: unsafe extern "C" fn(*mut u8, u16) -> *mut u8 = default_scan;
-/// ponytail: hook for `thunk 0x404c88` (cleanup).
+/// ponytail: hook for `thunk 0x00404c88` (cleanup).
 pub static mut HOOK_00404C88: unsafe extern "C" fn(*mut u32) = default_free;
 
 /// Format-scan decoder: init, null-guard, `%`-scan loop, tail convert, dual cleanup.

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b524` (102 bytes, `0x40b524–0x40b589`).
+//! Original procedure `0x0040b524` (102 bytes, `0x0040b524–0x0040b589`).
 //! Evidence: `evidence/0040b524_fn_0040b524.md`.
 
 unsafe extern "C" fn default_norm(_p: *const u16) -> *const u16 {
@@ -18,7 +18,7 @@ unsafe extern "C" fn default_take(_a: *mut u8, _b: *mut u8, _c: u32) {}
 
 unsafe extern "C" fn default_store(_a: *mut u8, _b: *mut u8) {}
 
-/// Callee `0x404d24` (`FUN_00404d24`), called with raw `param_1`;
+/// Callee `0x00404d24` (`FUN_00404d24`), called with raw `param_1`;
 /// returns the normalized name.
 ///
 /// ponytail: hook mirroring done `fn_00404d24`'s shape at wide
@@ -26,14 +26,14 @@ unsafe extern "C" fn default_store(_a: *mut u8, _b: *mut u8) {}
 /// hook so the test stays hermetic under the own lock.
 pub static mut HOOK_00404D24: unsafe extern "C" fn(*const u16) -> *const u16 = default_norm;
 
-/// Import `KERNEL32.DLL::GetFullPathNameW` (`CALL 0x4066f8`).
+/// Import `KERNEL32.DLL::GetFullPathNameW` (`CALL 0x004066f8`).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetFullPathNameW: unsafe extern "C" fn(*const u16, u32, *mut u16, *mut *mut u16) -> u32 =
     default_path;
 
-/// Callee `0x404dd4` (`FUN_00404dd4`), take lane with
+/// Callee `0x00404dd4` (`FUN_00404dd4`), take lane with
 /// `(param_2, buffer, len)`; shape mirrors done `fn_00404dd4`.
 ///
 /// ponytail: hook mirroring done `fn_00404dd4`'s shape, rewire to
@@ -41,7 +41,7 @@ pub static mut HOOK_GetFullPathNameW: unsafe extern "C" fn(*const u16, u32, *mut
 /// own test mutates shared hook globals under its own locks).
 pub static mut HOOK_00404DD4: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_take;
 
-/// Callee `0x404c98` (`FUN_00404c98`), fail lane with
+/// Callee `0x00404c98` (`FUN_00404c98`), fail lane with
 /// `(param_2, RAW param_1)`; shape mirrors done `fn_00404c98`.
 ///
 /// ponytail: hook mirroring done `fn_00404c98`'s shape, rewire to

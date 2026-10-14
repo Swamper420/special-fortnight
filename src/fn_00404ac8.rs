@@ -1,4 +1,4 @@
-//! Original procedure `0x00404ac8` (40 bytes, `0x404ac8–0x404aef`).
+//! Original procedure `0x00404ac8` (40 bytes, `0x00404ac8–0x00404aef`).
 //! Evidence: `evidence/00404ac8_fn_00404ac8.md`.
 
 unsafe extern "C" fn default_realloc(_slot: u32, _src: u32, _len: u32) -> u32 {
@@ -7,7 +7,7 @@ unsafe extern "C" fn default_realloc(_slot: u32, _src: u32, _len: u32) -> u32 {
 
 unsafe extern "C" fn default_tail(_arg: u32) {}
 
-/// Thunk `0x401188` (`OLEAUT32.DLL::SysReAllocStringLen`).
+/// Thunk `0x00401188` (`OLEAUT32.DLL::SysReAllocStringLen`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" SysReAllocStringLen` once
@@ -15,7 +15,7 @@ unsafe extern "C" fn default_tail(_arg: u32) {}
 pub static mut SYS_REALLOC_STRING_LEN_00401188: unsafe extern "C" fn(u32, u32, u32) -> u32 =
     default_realloc;
 
-/// Fail tail `0x404a5c` (`MOV AL,1; JMP 0x402f60`), reached with EAX=0
+/// Fail tail `0x00404a5c` (`MOV AL,1; JMP 0x00402f60`), reached with EAX=0
 /// so EAX lane is 1.
 ///
 /// ponytail: hook duplicated per tail-caller (known debt), rewire to

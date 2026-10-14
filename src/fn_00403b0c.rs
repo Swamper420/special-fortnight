@@ -1,4 +1,4 @@
-//! Original procedure `0x00403b0c` (33 bytes, `0x403b0c–0x403b2c`).
+//! Original procedure `0x00403b0c` (33 bytes, `0x00403b0c–0x00403b2c`).
 //! Evidence: `evidence/00403b0c_fn_00403b0c.md`.
 
 unsafe extern "C" fn default_raise(_code: u32, _flags: u32, _nargs: u32, _args: *const u32) {}
@@ -19,7 +19,7 @@ pub static mut HOOK_00413014: unsafe extern "C" fn(u32, u32, u32, *const u32) =
     default_raise;
 
 /// `param_1` arrives in EAX, `param_2` in EDX per `__register`
-/// observation plus caller setup at `0x403c31–0x403c41`. Flag clear:
+/// observation plus caller setup at `0x00403c31–0x00403c41`. Flag clear:
 /// return `param_1`. Flag set: raise via hook, return `param_1`
 /// (EAX restored by `POP` after the stdcall call; see evidence).
 pub unsafe fn fn_00403b0c(param_1: u32, param_2: u32) -> u32 {

@@ -1,9 +1,9 @@
-//! Original procedure `0x00403814` (21 bytes, `0x403814–0x403828`).
+//! Original procedure `0x00403814` (21 bytes, `0x00403814–0x00403828`).
 //! Evidence: `evidence/00403814_fn_00403814.md`.
 
 unsafe extern "C" fn default_callee(_a: *mut u8, _b: *mut u8) {}
 
-/// Target `0x4063d0` (`FUN_004063d0`), called with the derefed
+/// Target `0x004063d0` (`FUN_004063d0`), called with the derefed
 /// link and the `param_2` passthrough.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to

@@ -1,22 +1,22 @@
-//! Original procedure `0x00409818` (11 bytes, `0x409818–0x409822`).
+//! Original procedure `0x00409818` (11 bytes, `0x00409818–0x00409822`).
 //! Evidence: `evidence/00409818_fn_00409818.md`.
 
 unsafe extern "C" fn default_consume(_p: usize) {}
 
-/// Target `0x403f88` (`FUN_00403f88`), called with the `0x415c9c` cell.
+/// Target `0x00403f88` (`FUN_00403f88`), called with the `0x00415c9c` cell.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00403f88` once it exists.
 pub static mut HOOK_00403F88: unsafe extern "C" fn(usize) = default_consume;
 
-/// Data cell `0x415c9c`, read as a dword (`MOV EAX,[0x415c9c]`) and
+/// Data cell `0x00415c9c`, read as a dword (`MOV EAX,[0x00415c9c]`) and
 /// forwarded as the callee's DATA-pointer lane.
 ///
 /// ponytail: absolute-address cell as own-module static, unify in
 /// `data.rs` once data layout proven.
 pub static mut DAT_00415C9C: usize = 0;
 
-/// `consume(*0x415c9c)`; `() -> void` per `__register` observation.
+/// `consume(*0x00415c9c)`; `() -> void` per `__register` observation.
 pub unsafe fn fn_00409818() {
     HOOK_00403F88(DAT_00415C9C);
 }

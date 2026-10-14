@@ -1,4 +1,4 @@
-//! Original procedure `0x004096ac` (293 bytes, `0x4096ac–0x4097d0`).
+//! Original procedure `0x004096ac` (293 bytes, `0x004096ac–0x004097d0`).
 //! Evidence: `evidence/004096ac_fn_004096ac.md`.
 
 #[allow(clippy::too_many_arguments)]
@@ -60,7 +60,7 @@ unsafe extern "C" fn default_box(
 }
 unsafe extern "C" fn default_free(_slot: *mut usize, _desc: *const u8) {}
 
-/// Target `0x4094c0` (builds the 1024-WCHAR message; `EAX` echo is the
+/// Target `0x004094c0` (builds the 1024-WCHAR message; `EAX` echo is the
 /// wide length the caller consumes).
 ///
 /// ponytail: hook standing in for done `fn_004094c0`, rewire to the real
@@ -68,19 +68,19 @@ unsafe extern "C" fn default_free(_slot: *mut usize, _desc: *const u8) {}
 pub static mut HOOK_004094C0: unsafe extern "C" fn(*mut u8, usize, *mut u16, u32) -> i32 =
     default_build;
 
-/// Target `0x40317c` (console-lane setup).
+/// Target `0x0040317c` (console-lane setup).
 ///
 /// ponytail: hook standing in for done `fn_0040317c`, rewire to the real
 /// call once cross-module linkage proven.
 pub static mut HOOK_0040317C: unsafe extern "C" fn(usize) = default_one;
 
-/// Target `0x402f6c` (console-lane setup).
+/// Target `0x00402f6c` (console-lane setup).
 ///
 /// ponytail: hook standing in for done `fn_00402f6c`, rewire to the real
 /// call once cross-module linkage proven.
 pub static mut HOOK_00402F6C: unsafe extern "C" fn() = default_void;
 
-/// Thunk `0x406874` (`KERNEL32.DLL::WideCharToMultiByte`), both sites.
+/// Thunk `0x00406874` (`KERNEL32.DLL::WideCharToMultiByte`), both sites.
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.
@@ -88,27 +88,27 @@ pub static mut HOOK_00402F6C: unsafe extern "C" fn() = default_void;
 pub static mut HOOK_WideCharToMultiByte: unsafe extern "C" fn(u32, u32, *const u16, i32, *mut u8, i32, usize, usize) -> u32 =
     default_w2m;
 
-/// Target `0x405ad8` (fills `local_8`; pushed size word is its 4th lane).
+/// Target `0x00405ad8` (fills `local_8`; pushed size word is its 4th lane).
 ///
 /// ponytail: hook standing in for done `fn_00405ad8`, rewire to the real
 /// call once cross-module linkage proven.
 pub static mut HOOK_00405AD8: unsafe extern "C" fn(*mut usize, *const u8, i32, *mut i32) =
     default_alloc;
 
-/// Thunk `0x40679c` (`KERNEL32.DLL::GetStdHandle`), both sites.
+/// Thunk `0x0040679c` (`KERNEL32.DLL::GetStdHandle`), both sites.
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.
 pub static mut HOOK_GetStdHandle: unsafe extern "C" fn(i32) -> usize = default_std;
 
-/// Thunk `0x40687c` (`KERNEL32.DLL::WriteFile`), both sites.
+/// Thunk `0x0040687c` (`KERNEL32.DLL::WriteFile`), both sites.
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.
 pub static mut HOOK_WriteFile: unsafe extern "C" fn(usize, *const u8, u32, *mut u32, usize) -> u32 =
     default_write;
 
-/// Target `0x405b90` (resolve; returns the `LoadStringW` instance, a
+/// Target `0x00405b90` (resolve; returns the `LoadStringW` instance, a
 /// DATA pointer).
 ///
 /// ponytail: hook standing in for done `fn_00405b90` (which returns the
@@ -116,28 +116,28 @@ pub static mut HOOK_WriteFile: unsafe extern "C" fn(usize, *const u8, u32, *mut 
 /// cross-module linkage proven.
 pub static mut HOOK_00405B90: unsafe extern "C" fn(usize) -> usize = default_resolve;
 
-/// Thunk `0x4068b4` (`USER32.DLL::LoadStringW`).
+/// Thunk `0x004068b4` (`USER32.DLL::LoadStringW`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.
 pub static mut HOOK_LoadStringW: unsafe extern "C" fn(usize, u32, *mut u16, i32) -> i32 =
     default_load;
 
-/// Thunk `0x4068bc` (`USER32.DLL::MessageBoxW`).
+/// Thunk `0x004068bc` (`USER32.DLL::MessageBoxW`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.
 pub static mut HOOK_MessageBoxW: unsafe extern "C" fn(usize, *const u16, *const u16, u32) -> i32 =
     default_box;
 
-/// Target `0x405ae4` (always-fired release of `local_8`).
+/// Target `0x00405ae4` (always-fired release of `local_8`).
 ///
 /// ponytail: hook standing in for done `fn_00405ae4`, rewire to the real
 /// call once cross-module linkage proven.
 pub static mut HOOK_00405AE4: unsafe extern "C" fn(*mut usize, *const u8) = default_free;
 
-/// Absolute-address cells (`0x412c2c` flag pointer, `0x412b48` id-base,
-/// `0x412b68`, `0x415b48`, `0x409688` descriptor).
+/// Absolute-address cells (`0x00412c2c` flag pointer, `0x00412b48` id-base,
+/// `0x00412b68`, `0x00415b48`, `0x00409688` descriptor).
 ///
 /// ponytail: absolute-address cells as own-module statics, unify in
 /// `data.rs` once data layout proven.
@@ -147,7 +147,7 @@ pub static mut DAT_00412B68: usize = 0;
 pub static mut DAT_00415B48: usize = 0;
 pub static mut DAT_00409688: usize = 0;
 
-/// 2-byte trailer written after the message (`PUSH 0x4097ec`, len 2).
+/// 2-byte trailer written after the message (`PUSH 0x004097ec`, len 2).
 ///
 /// ponytail: payload bytes unverified (default zero); fill from `.rsrc`
 /// once data layout proven.

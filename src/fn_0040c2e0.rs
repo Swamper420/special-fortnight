@@ -1,4 +1,4 @@
-//! Original procedure `0x0040c2e0` (72 bytes, `0x40c2e0–0x40c327`).
+//! Original procedure `0x0040c2e0` (72 bytes, `0x0040c2e0–0x0040c327`).
 //! Evidence: `evidence/0040c2e0_fn_0040c2e0.md`.
 
 unsafe extern "C" fn default_convert(_path: *const u8) -> *const u8 {
@@ -35,14 +35,14 @@ pub static mut TABLE_004129E8: [u32; 256] = [0; 256];
 /// once table extent proven.
 pub static mut TABLE_004129F8: [u32; 256] = [0; 256];
 
-/// Target `0x404d24` (`FUN_00404d24`), `(param_2)`; returns the
+/// Target `0x00404d24` (`FUN_00404d24`), `(param_2)`; returns the
 /// `CreateFileW` filename (a DATA pointer).
 ///
 /// ponytail: hook standing in for done `fn_00404d24`, rewire to the real
 /// call once cross-module linkage proven.
 pub static mut HOOK_00404D24: unsafe extern "C" fn(*const u8) -> *const u8 = default_convert;
 
-/// Import `KERNEL32.DLL::CreateFileW` (`CALL 0x406658`), return discarded.
+/// Import `KERNEL32.DLL::CreateFileW` (`CALL 0x00406658`), return discarded.
 ///
 /// ponytail: hook standing in for the import (also keeps host tests
 /// linkable), rewire to raw `extern "system" CreateFileW` once

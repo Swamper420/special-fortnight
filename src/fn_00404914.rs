@@ -1,4 +1,4 @@
-//! Original procedure `0x00404914` (38 bytes, `0x404914–0x404939`).
+//! Original procedure `0x00404914` (38 bytes, `0x00404914–0x00404939`).
 //! Evidence: `evidence/00404914_fn_00404914.md`.
 
 /// NUL-terminated byte length: null→0, else 4-lane scan

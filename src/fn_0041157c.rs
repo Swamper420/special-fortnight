@@ -1,4 +1,4 @@
-//! Original procedure `0x0041157c` (119 bytes, `0x41157c–0x4115f2`).
+//! Original procedure `0x0041157c` (119 bytes, `0x0041157c–0x004115f2`).
 //! Entry-region one-shot static-init guard.
 //! Evidence: `evidence/0041157c_fn_0041157c.md`.
 
@@ -30,14 +30,14 @@ pub unsafe fn fn_0041157c() {
     if was != 0 {
         return;
     }
-    HOOK_004043D0(0x40ada8);
-    HOOK_00404414(0x40af20);
+    HOOK_004043D0(0x0040ada8);
+    HOOK_00404414(0x0040af20);
     if DAT_00415B45 != 0 {
-        HOOK_00404C98(0x41280c, 0x411608);
+        HOOK_00404C98(0x0041280c, 0x00411608);
     }
     HOOK_0040A00C();
     HOOK_0040A2B8();
-    HOOK_00406114(0x40aab4);
+    HOOK_00406114(0x0040aab4);
     HOOK_0040A358();
     HOOK_0040ABF8();
     HOOK_0040A5A8();

@@ -1,4 +1,4 @@
-//! Original procedure `0x004057bc` (276 bytes, `0x4057bc–0x4058cf`).
+//! Original procedure `0x004057bc` (276 bytes, `0x004057bc–0x004058cf`).
 //! Evidence: `evidence/004057bc_fn_004057bc.md`.
 
 unsafe extern "C" fn default_ab(_a: usize, _b: usize) {}
@@ -6,31 +6,31 @@ unsafe extern "C" fn default_a(_a: usize) {}
 unsafe extern "C" fn default_abc(_a: usize, _b: usize, _c: *mut u8) {}
 unsafe extern "C" fn default_tail(_a: u32) {}
 
-/// `0x404718` lane (tag `0x0a`), args `(p1, *p2)`, stride 4.
+/// `0x00404718` lane (tag `0x0a`), args `(p1, *p2)`, stride 4.
 ///
 /// ponytail: hook standing in for done `fn_00404718`, rewire to real
 /// call once cross-module test serialization exists.
 pub static mut HOOK_00404718: unsafe extern "C" fn(usize, usize) = default_ab;
 
-/// `0x404ac8` lane (tag `0x0b`), args `(p1, *p2)`, stride 4.
+/// `0x00404ac8` lane (tag `0x0b`), args `(p1, *p2)`, stride 4.
 ///
 /// ponytail: hook standing in for done `fn_00404ac8`, rewire to real
 /// call once cross-module test serialization exists.
 pub static mut HOOK_00404AC8: unsafe extern "C" fn(usize, usize) = default_ab;
 
-/// `0x404c98` lane (tag `0x12`), args `(p1, *p2)`, stride 4.
+/// `0x00404c98` lane (tag `0x12`), args `(p1, *p2)`, stride 4.
 ///
 /// ponytail: hook standing in for done `fn_00404c98`, rewire to real
 /// call once cross-module test serialization exists.
 pub static mut HOOK_00404C98: unsafe extern "C" fn(usize, usize) = default_ab;
 
-/// `0x405664` lane (tag `0x0c`), arg `(p1)`, stride `0x10`.
+/// `0x00405664` lane (tag `0x0c`), arg `(p1)`, stride `0x10`.
 ///
 /// ponytail: hook standing in for sibling `fn_00405664` (same work
 /// package), rewire to real call once modules are declared.
 pub static mut HOOK_00405664: unsafe extern "C" fn(usize) = default_a;
 
-/// `0x40567c` lane (tag `0x0e`), args `(p1, p2, p3)`, stride
+/// `0x0040567c` lane (tag `0x0e`), args `(p1, p2, p3)`, stride
 /// `*(p3 + byte(p3+1) + 2)`.
 ///
 /// ponytail: hook standing in for sibling `fn_0040567c` (same work
@@ -38,20 +38,20 @@ pub static mut HOOK_00405664: unsafe extern "C" fn(usize) = default_a;
 pub static mut HOOK_0040567C: unsafe extern "C" fn(usize, usize, *mut u8) =
     default_abc;
 
-/// `0x40628c` lane (tag `0x0f`), args `(p1, *p2)`, stride 4.
+/// `0x0040628c` lane (tag `0x0f`), args `(p1, *p2)`, stride 4.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_0040628c` once it exists.
 pub static mut HOOK_0040628C: unsafe extern "C" fn(usize, usize) = default_ab;
 
-/// `0x405b20` lane (tag `0x11`), args `(p1, *p2, p3)`, stride 4.
+/// `0x00405b20` lane (tag `0x11`), args `(p1, *p2, p3)`, stride 4.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_00405b20` once it exists.
 pub static mut HOOK_00405B20: unsafe extern "C" fn(usize, usize, *mut u8) =
     default_abc;
 
-/// Fail tail `0x402f60` (`FUN_00402f60`), reached with `AL=2` over the
+/// Fail tail `0x00402f60` (`FUN_00402f60`), reached with `AL=2` over the
 /// entry `param_1`.
 ///
 /// ponytail: hook standing in for done `fn_00402f60`, rewire to real

@@ -1,4 +1,4 @@
-//! Original procedure `0x004047ec` (25 bytes, `0x4047ec–0x404804`).
+//! Original procedure `0x004047ec` (25 bytes, `0x004047ec–0x00404804`).
 //! Evidence: `evidence/004047ec_fn_004047ec.md`.
 
 unsafe extern "C" fn default_m2w(
@@ -12,7 +12,7 @@ unsafe extern "C" fn default_m2w(
     0
 }
 
-/// Thunk `0x401150` (`KERNEL32.DLL::MultiByteToWideChar`).
+/// Thunk `0x00401150` (`KERNEL32.DLL::MultiByteToWideChar`).
 ///
 /// ponytail: hook standing in for the import thunk, rewire to
 /// `windows-sys` once import mapping proven.

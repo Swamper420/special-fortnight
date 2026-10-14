@@ -1,4 +1,4 @@
-//! Original procedure `0x004032ec` (258 bytes, `0x4032ec–0x4033ed`).
+//! Original procedure `0x004032ec` (258 bytes, `0x004032ec–0x004033ed`).
 //! Evidence: `evidence/004032ec_fn_004032ec.md`.
 
 /// Wide-char integer parse: skip spaces, optional sign, `$`/`0x`
@@ -11,13 +11,13 @@
 pub unsafe fn fn_004032ec(param_1: *const u16, param_2: *mut u32) -> u32 {
     unsafe {
         if param_1.is_null() {
-            // 0x4032f4→0x40337d→0x403388: ESI=0+2, (2-0)>>1.
+            // 0x004032f4→0x0040337d→0x00403388: ESI=0+2, (2-0)>>1.
             core::ptr::write_unaligned(param_2, 1);
             return 0;
         }
         let mut esi = param_1;
         let mut eax: u32 = 0;
-        // Space skip (0x403303): read, advance, loop while 0x20.
+        // Space skip (0x00403303): read, advance, loop while 0x20.
         let mut w: u16;
         loop {
             w = core::ptr::read_unaligned(esi);
@@ -26,7 +26,7 @@ pub unsafe fn fn_004032ec(param_1: *const u16, param_2: *mut u32) -> u32 {
                 break;
             }
         }
-        // Sign into CH (0x40330f–0x403395).
+        // Sign into CH (0x0040330f–0x00403395).
         let mut neg = false;
         if w == 0x2d {
             neg = true;
@@ -36,7 +36,7 @@ pub unsafe fn fn_004032ec(param_1: *const u16, param_2: *mut u32) -> u32 {
             w = core::ptr::read_unaligned(esi);
             esi = esi.wrapping_add(1);
         }
-        // Prefix dispatch (0x40331d): hex select, or decimal loop
+        // Prefix dispatch (0x0040331d): hex select, or decimal loop
         // entered with the already-read char in `w`.
         let hex: bool;
         if w == 0x24 || w == 0x78 || w == 0x58 {
@@ -47,7 +47,7 @@ pub unsafe fn fn_004032ec(param_1: *const u16, param_2: *mut u32) -> u32 {
             if w == 0x78 || w == 0x58 {
                 hex = true;
             } else if w == 0 {
-                // 0x403347→0x403373 end lane with EAX==0.
+                // 0x00403347→0x00403373 end lane with EAX==0.
                 if neg {
                     // NEG 0; JLE takes it.
                     core::ptr::write_unaligned(param_2, 0);
@@ -59,7 +59,7 @@ pub unsafe fn fn_004032ec(param_1: *const u16, param_2: *mut u32) -> u32 {
                 hex = false;
             }
         } else if w == 0 {
-            // 0x40334e→0x403388.
+            // 0x0040334e→0x00403388.
             let used = ((esi as usize).wrapping_sub(param_1 as usize) >> 1) as u32;
             core::ptr::write_unaligned(param_2, used);
             return eax;
@@ -67,11 +67,11 @@ pub unsafe fn fn_004032ec(param_1: *const u16, param_2: *mut u32) -> u32 {
             hex = false;
         }
         if hex {
-            // Hex lane (0x403397).
+            // Hex lane (0x00403397).
             w = core::ptr::read_unaligned(esi);
             esi = esi.wrapping_add(1);
             if w == 0 {
-                // 0x40337d: one more wchar past NUL, then error.
+                // 0x0040337d: one more wchar past NUL, then error.
                 esi = esi.wrapping_add(1);
                 let used =
                     ((esi as usize).wrapping_sub(param_1 as usize) >> 1) as u32;
@@ -106,14 +106,14 @@ pub unsafe fn fn_004032ec(param_1: *const u16, param_2: *mut u32) -> u32 {
                     break;
                 }
             }
-            // Hex end (0x4033dd): DEC CH; JNZ ok; else NEG then ok.
+            // Hex end (0x004033dd): DEC CH; JNZ ok; else NEG then ok.
             if neg {
                 eax = eax.wrapping_neg();
             }
             core::ptr::write_unaligned(param_2, 0);
             return eax;
         }
-        // Decimal loop (0x403353) starting at `w`.
+        // Decimal loop (0x00403353) starting at `w`.
         loop {
             let d = w.wrapping_sub(0x30);
             if d > 9 {
@@ -134,9 +134,9 @@ pub unsafe fn fn_004032ec(param_1: *const u16, param_2: *mut u32) -> u32 {
                 break;
             }
         }
-        // Decimal end (0x403373): DEC CH; JZ negate lane.
+        // Decimal end (0x00403373): DEC CH; JZ negate lane.
         if neg {
-            // 0x403382: NEG then JLE/JS; union is exactly r <= 0.
+            // 0x00403382: NEG then JLE/JS; union is exactly r <= 0.
             let r = (eax as i32).wrapping_neg();
             eax = r as u32;
             if r <= 0 {

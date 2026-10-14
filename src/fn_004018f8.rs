@@ -1,4 +1,4 @@
-//! Original procedure `0x004018f8` (882 bytes, `0x4018f8–0x401c7b`).
+//! Original procedure `0x004018f8` (882 bytes, `0x004018f8–0x00401c7b`).
 //! Evidence: `evidence/004018f8_fn_004018f8.md`.
 
 use core::ptr::null_mut;
@@ -24,7 +24,7 @@ pub static mut HOOK_BUCKET_ALLOC: unsafe extern "C" fn(u32, u32) -> *mut u32 =
     default_null;
 
 /// Huge lane (`param > 0x40a2c`, non-negative): tail continuation into
-/// `FUN_004016a4` (`JNS 0x4016a4`); dossier shows `VirtualAlloc`
+/// `FUN_004016a4` (`JNS 0x004016a4`); dossier shows `VirtualAlloc`
 /// paragraph with no in-body import call (cross-function artifact).
 ///
 /// ponytail: hook covers continuation, rewire to real `fn_004016a4`

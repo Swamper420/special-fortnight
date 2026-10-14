@@ -1,4 +1,4 @@
-//! Original procedure `0x00404b9c` (35 bytes, `0x404b9c–0x404bbe`).
+//! Original procedure `0x00404b9c` (35 bytes, `0x00404b9c–0x00404bbe`).
 //! Evidence: `evidence/00404b9c_fn_00404b9c.md`.
 
 use crate::fn_00404a64::{SYS_ALLOC_STRING_LEN_00401180, TAIL_00402F60};

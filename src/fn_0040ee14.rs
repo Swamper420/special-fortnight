@@ -1,4 +1,4 @@
-//! Original procedure `0x0040ee14` (84 bytes, `0x40ee14–0x40ee67`).
+//! Original procedure `0x0040ee14` (84 bytes, `0x0040ee14–0x0040ee67`).
 //! Evidence: `evidence/0040ee14_fn_0040ee14.md`.
 
 unsafe extern "C" fn default_find(_module: u32, _id: u32, _ty: u32) -> u32 {
@@ -19,7 +19,7 @@ unsafe extern "C" fn default_lock(_data: u32) -> *const u8 {
 
 unsafe extern "C" fn default_fatal() {}
 
-/// Thunk `0x406678` (`KERNEL32.DLL::FindResourceW`), stack args `(0, 0x2b67, 0xa)`.
+/// Thunk `0x00406678` (`KERNEL32.DLL::FindResourceW`), stack args `(0, 0x2b67, 0xa)`.
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" FindResourceW` once
@@ -27,7 +27,7 @@ unsafe extern "C" fn default_fatal() {}
 pub static mut FIND_RESOURCE_W_00406678: unsafe extern "C" fn(u32, u32, u32) -> u32 =
     default_find;
 
-/// Thunk `0x406844` (`KERNEL32.DLL::SizeofResource`), stack args `(0, hRes)`.
+/// Thunk `0x00406844` (`KERNEL32.DLL::SizeofResource`), stack args `(0, hRes)`.
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" SizeofResource` once
@@ -35,7 +35,7 @@ pub static mut FIND_RESOURCE_W_00406678: unsafe extern "C" fn(u32, u32, u32) -> 
 pub static mut SIZEOF_RESOURCE_00406844: unsafe extern "C" fn(u32, u32) -> u32 =
     default_sizeof;
 
-/// Thunk `0x4067e4` (`KERNEL32.DLL::LoadResource`), stack args `(0, hRes)`.
+/// Thunk `0x004067e4` (`KERNEL32.DLL::LoadResource`), stack args `(0, hRes)`.
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" LoadResource` once
@@ -43,7 +43,7 @@ pub static mut SIZEOF_RESOURCE_00406844: unsafe extern "C" fn(u32, u32) -> u32 =
 pub static mut LOAD_RESOURCE_004067e4: unsafe extern "C" fn(u32, u32) -> u32 =
     default_load;
 
-/// Thunk `0x4067ec` (`KERNEL32.DLL::LockResource`), stack arg `(hData)`.
+/// Thunk `0x004067ec` (`KERNEL32.DLL::LockResource`), stack arg `(hData)`.
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" LockResource` once
@@ -51,7 +51,7 @@ pub static mut LOAD_RESOURCE_004067e4: unsafe extern "C" fn(u32, u32) -> u32 =
 pub static mut LOCK_RESOURCE_004067ec: unsafe extern "C" fn(u32) -> *const u8 =
     default_lock;
 
-/// Target `0x40ec58`, called with no args on each guard failure; returns.
+/// Target `0x0040ec58`, called with no args on each guard failure; returns.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_0040ec58` once it exists.
@@ -59,7 +59,7 @@ pub static mut FATAL_0040ec58: unsafe extern "C" fn() = default_fatal;
 
 /// Resource lookup: `FindResourceW(0, 0x2b67, 0xa)`; size must equal
 /// `0x2c`; then `LoadResource` + `LockResource`. Each guard failure
-/// calls `0x40ec58` and falls through. No params, pointer in EAX.
+/// calls `0x0040ec58` and falls through. No params, pointer in EAX.
 pub unsafe fn fn_0040ee14() -> *const u8 {
     let res = FIND_RESOURCE_W_00406678(0, 0x2b67, 0xa);
     if res == 0 {

@@ -1,4 +1,4 @@
-//! Original procedure `0x00404aa4` (33 bytes, `0x404aa4–0x404ac4`).
+//! Original procedure `0x00404aa4` (33 bytes, `0x00404aa4–0x00404ac4`).
 //! Evidence: `evidence/00404aa4_fn_00404aa4.md`.
 
 use crate::fn_00404a7c::SYS_FREE_STRING_00401190;

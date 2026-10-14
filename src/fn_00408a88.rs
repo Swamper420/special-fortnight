@@ -1,4 +1,4 @@
-//! Original procedure `0x00408a88` (13 bytes, `0x408a88–0x408a94`).
+//! Original procedure `0x00408a88` (13 bytes, `0x00408a88–0x00408a94`).
 //! Evidence: `evidence/00408a88_fn_00408a88.md`.
 
 /// Sign dash: `if flag != 0 { *dst = 0x2d; dst += 1 word }`,

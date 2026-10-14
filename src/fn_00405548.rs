@@ -1,4 +1,4 @@
-//! Original procedure `0x00405548` (271 bytes, `0x405548–0x405656`).
+//! Original procedure `0x00405548` (271 bytes, `0x00405548–0x00405656`).
 //! Evidence: `evidence/00405548_fn_00405548.md`.
 
 use core::ptr::{null_mut, read_unaligned};
@@ -13,69 +13,69 @@ unsafe extern "C" fn default_fail(_arg: u32) -> *mut u8 {
     null_mut()
 }
 
-/// Target `0x4046c4` (`FUN_004046c4`), narrow `0x0a` lane.
+/// Target `0x004046c4` (`FUN_004046c4`), narrow `0x0a` lane.
 ///
 /// ponytail: hook standing in for done `fn_004046c4`, rewire to real
 /// call once cross-module test serialization exists.
 pub static mut HOOK_004046c4: unsafe extern "C" fn(*mut u8) = default_one;
 
-/// Target `0x4046e8` (`FUN_004046e8`), wide `0x0a` lane.
+/// Target `0x004046e8` (`FUN_004046e8`), wide `0x0a` lane.
 ///
 /// ponytail: hook standing in for done `fn_004046e8`, rewire to real
 /// call once cross-module test serialization exists.
 pub static mut HOOK_004046e8: unsafe extern "C" fn(*mut u8, u32) = default_two;
 
-/// Target `0x404a8c` (`FUN_00404a8c`), narrow `0x0b` lane.
+/// Target `0x00404a8c` (`FUN_00404a8c`), narrow `0x0b` lane.
 ///
 /// ponytail: hook standing in for done `fn_00404a8c`, rewire to real
 /// call once cross-module test serialization exists.
 pub static mut HOOK_00404a8c: unsafe extern "C" fn(*mut u8) = default_one;
 
-/// Target `0x404aa4` (`FUN_00404aa4`), wide `0x0b` lane.
+/// Target `0x00404aa4` (`FUN_00404aa4`), wide `0x0b` lane.
 ///
 /// ponytail: hook standing in for done `fn_00404aa4`, rewire to real
 /// call once cross-module test serialization exists.
 pub static mut HOOK_00404aa4: unsafe extern "C" fn(*mut u8, u32) = default_two;
 
-/// Target `0x404c88` (`thunk_FUN_004046c4`), narrow `0x12` lane.
+/// Target `0x00404c88` (`thunk_FUN_004046c4`), narrow `0x12` lane.
 ///
 /// ponytail: hook standing in for unreconstructed thunk; identity
 /// with `fn_004046c4` unproven, keep separate until proven.
 pub static mut HOOK_00404c88: unsafe extern "C" fn(*mut u8) = default_one;
 
-/// Target `0x404c90` (`thunk_FUN_004046e8`), wide `0x12` lane.
+/// Target `0x00404c90` (`thunk_FUN_004046e8`), wide `0x12` lane.
 ///
 /// ponytail: hook standing in for unreconstructed thunk; identity
 /// with `fn_004046e8` unproven, keep separate until proven.
 pub static mut HOOK_00404c90: unsafe extern "C" fn(*mut u8, u32) = default_two;
 
-/// Target `0x405530` (`FUN_00405530`), `0x0c` loop body.
+/// Target `0x00405530` (`FUN_00405530`), `0x0c` loop body.
 ///
 /// ponytail: hook standing in for same-batch `fn_00405530`, rewire to
 /// the real call once both modules are linked.
 pub static mut HOOK_00405530: unsafe extern "C" fn(*mut u8) = default_one;
 
-/// Target `0x4054f8` (`FUN_004054f8`), `0x0e` loop body (outer desc).
+/// Target `0x004054f8` (`FUN_004054f8`), `0x0e` loop body (outer desc).
 ///
 /// ponytail: hook standing in for same-batch `fn_004054f8`, rewire to
 /// the real call once both modules are linked.
 pub static mut HOOK_004054f8: unsafe extern "C" fn(*mut u8, *mut u8) =
     default_desc;
 
-/// Target `0x406274` (`FUN_00406274`), `0x0f` loop body.
+/// Target `0x00406274` (`FUN_00406274`), `0x0f` loop body.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire once
 /// it exists.
 pub static mut HOOK_00406274: unsafe extern "C" fn(*mut u8) = default_one;
 
-/// Target `0x405ae4` (`FUN_00405ae4`), `0x11` loop body.
+/// Target `0x00405ae4` (`FUN_00405ae4`), `0x11` loop body.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire once
 /// it exists.
 pub static mut HOOK_00405ae4: unsafe extern "C" fn(*mut u8, *mut u8) =
     default_desc;
 
-/// Tail target `0x402f60` (`FUN_00402f60`), default lane, reached with
+/// Tail target `0x00402f60` (`FUN_00402f60`), default lane, reached with
 /// `(base & ~0xff) | 2`; its result is the return.
 ///
 /// ponytail: hook standing in for done `fn_00402f60`, rewire to real

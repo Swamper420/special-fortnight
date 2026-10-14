@@ -1,4 +1,4 @@
-//! Original procedure `0x00404d30` (148 bytes, `0x404d30–0x404dc3`).
+//! Original procedure `0x00404d30` (148 bytes, `0x00404d30–0x00404dc3`).
 //! Evidence: `evidence/00404d30_fn_00404d30.md`.
 
 use crate::fn_004046c4::fn_004046c4;
@@ -16,7 +16,7 @@ unsafe extern "C" fn default_convert(
 
 unsafe extern "C" fn default_size(_slot: *mut u8, _n: u32) {}
 
-/// Target `0x4047ec` (`FUN_004047ec`): converts the counted source
+/// Target `0x004047ec` (`FUN_004047ec`): converts the counted source
 /// into the WCHAR dst (cap in WCHARs), returns the converted length
 /// (signed int in EAX; stack lane needs `> 0`, heap lane clamps
 /// `< 0` to 0).
@@ -26,7 +26,7 @@ unsafe extern "C" fn default_size(_slot: *mut u8, _n: u32) {}
 pub static mut HOOK_004047ec: unsafe extern "C" fn(*mut u16, u32, *const u8, u32, u32) -> i32 =
     default_convert;
 
-/// Target `0x404f00` (`FUN_00404f00`): sizes `*param_1`, first with
+/// Target `0x00404f00` (`FUN_00404f00`): sizes `*param_1`, first with
 /// `param_3+1`, then with the converted length.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to

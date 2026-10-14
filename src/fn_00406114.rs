@@ -1,17 +1,17 @@
-//! Original procedure `0x00406114` (31 bytes, `0x406114–0x406132`).
+//! Original procedure `0x00406114` (31 bytes, `0x00406114–0x00406132`).
 //! Evidence: `evidence/00406114_fn_00406114.md`.
 
 unsafe extern "C" fn default_alloc(_size: u32) -> usize {
     0
 }
 
-/// Allocator `FUN_00402e04` (`CALL 0x402e04` with `EAX=8`).
+/// Allocator `FUN_00402e04` (`CALL 0x00402e04` with `EAX=8`).
 ///
 /// ponytail: hook standing in for done `fn_00402e04`, rewire to the real
 /// call once cross-module linkage exists.
 pub static mut HOOK_FN_00402e04: unsafe extern "C" fn(u32) -> usize = default_alloc;
 
-/// List head at `0x412030` (`DAT_00412030`); null means empty.
+/// List head at `0x00412030` (`DAT_00412030`); null means empty.
 ///
 /// ponytail: absolute-address cell as hook global shared with
 /// `fn_00406134`/`fn_00406198`, upgrade to real image-relative data

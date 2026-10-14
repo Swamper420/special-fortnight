@@ -1,19 +1,19 @@
-//! Original procedure `0x0040a494` (89 bytes, `0x40a494–0x40a4ec`).
+//! Original procedure `0x0040a494` (89 bytes, `0x0040a494–0x0040a4ec`).
 //! Evidence: `evidence/0040a494_fn_0040a494.md`.
 
 unsafe extern "C" fn default_cpinfo(_codepage: u32, _info: *mut u8) -> u32 {
     0
 }
 
-/// Import `KERNEL32.DLL::GetCPInfo` (`CALL 0x4066b8`), called as
+/// Import `KERNEL32.DLL::GetCPInfo` (`CALL 0x004066b8`), called as
 /// `(0, info)`; return ignored on target (no `TEST` after the call).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
 pub static mut HOOK_GetCPInfo: unsafe extern "C" fn(u32, *mut u8) -> u32 = default_cpinfo;
 
-/// Lead-byte bitset at `0x4127ec`: 256 bits set via `BTS`, over the
-/// `0x40a588` table copy done by `fn_0040a4f0`.
+/// Lead-byte bitset at `0x004127ec`: 256 bits set via `BTS`, over the
+/// `0x0040a588` table copy done by `fn_0040a4f0`.
 ///
 /// ponytail: absolute-address cell modeled as mutable bytes, upgrade
 /// to real image-relative import once data layout proven.

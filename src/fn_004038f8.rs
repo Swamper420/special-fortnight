@@ -1,4 +1,4 @@
-//! Original procedure `0x004038f8` (39 bytes, `0x4038f8–0x40391e`).
+//! Original procedure `0x004038f8` (39 bytes, `0x004038f8–0x0040391e`).
 //! Evidence: `evidence/004038f8_fn_004038f8.md`.
 
 unsafe extern "C" fn default_mid(_a: u32, _b: u32) -> u32 {
@@ -7,14 +7,14 @@ unsafe extern "C" fn default_mid(_a: u32, _b: u32) -> u32 {
 
 unsafe extern "C" fn default_tail(_arg: u32) {}
 
-/// Target `0x4054f8` (`FUN_004054f8`), called with `(param_1, value)`
+/// Target `0x004054f8` (`FUN_004054f8`), called with `(param_1, value)`
 /// on the nonzero-value lane; return ignored by caller.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_004054f8` once it exists.
 pub static mut HOOK_004054f8: unsafe extern "C" fn(u32, u32) -> u32 = default_mid;
 
-/// Target `0x403a9c` (`FUN_00403a9c`), tail-called with `param_1`.
+/// Target `0x00403a9c` (`FUN_00403a9c`), tail-called with `param_1`.
 ///
 /// ponytail: hook standing in for DEFER callee, rewire if ever reconstructed.
 pub static mut HOOK_00403a9c: unsafe extern "C" fn(u32) = default_tail;

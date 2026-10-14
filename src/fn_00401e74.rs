@@ -1,4 +1,4 @@
-//! Original procedure `0x00401e74` (775 bytes, `0x401e74–0x402189`).
+//! Original procedure `0x00401e74` (775 bytes, `0x00401e74–0x00402189`).
 //! Evidence: `evidence/00401e74_fn_00401e74.md`.
 
 use core::ptr::null_mut;
@@ -13,33 +13,33 @@ unsafe extern "C" fn default_free(_ptr: *mut u32) -> i32 {
 
 unsafe extern "C" fn default_copy(_old: *mut u32, _new: *mut u32, _n: u32) {}
 
-/// Alloc target `0x4018f8` (`FUN_004018f8`), size in EAX.
+/// Alloc target `0x004018f8` (`FUN_004018f8`), size in EAX.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_004018f8` once it exists.
 pub static mut CALLEE_004018f8: unsafe extern "C" fn(u32) -> *mut u32 =
     default_alloc;
 
-/// Free target `0x401c7c` (`FUN_00401c7c`), pointer in EAX.
+/// Free target `0x00401c7c` (`FUN_00401c7c`), pointer in EAX.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_00401c7c` once it exists.
 pub static mut CALLEE_00401c7c: unsafe extern "C" fn(*mut u32) -> i32 =
     default_free;
 
-/// Small copy `0x4014bc` (`FUN_004014bc`), `(old, new, size)`.
+/// Small copy `0x004014bc` (`FUN_004014bc`), `(old, new, size)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee.
 pub static mut CALLEE_004014bc: unsafe extern "C" fn(*mut u32, *mut u32, u32) =
     default_copy;
 
-/// Fallback copy `0x40148c` (`FUN_0040148c`), `(old, new, size)`.
+/// Fallback copy `0x0040148c` (`FUN_0040148c`), `(old, new, size)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee.
 pub static mut CALLEE_0040148c: unsafe extern "C" fn(*mut u32, *mut u32, u32) =
     default_copy;
 
-/// Indirect grow-copy `CALL dword ptr [desc+0x1c]` at `0x401efb` with
+/// Indirect grow-copy `CALL dword ptr [desc+0x1c]` at `0x00401efb` with
 /// `(old, new, esize-4)`.
 ///
 /// ponytail: absolute-table indirect modeled as hook; bind once the
@@ -48,14 +48,14 @@ pub static mut HOOK_GROW_COPY: unsafe extern "C" fn(*mut u32, *mut u32, u32) =
     default_copy;
 
 /// Chunk lane (`hdr&5!=0, hdr&3==0`): tail continuation into
-/// `FUN_004017ac` (`JZ 0x4017ac`), no in-body code.
+/// `FUN_004017ac` (`JZ 0x004017ac`), no in-body code.
 ///
 /// ponytail: hook covers out-of-function continuation.
 pub static mut HOOK_CHUNK_REALLOC: unsafe extern "C" fn(*mut u32, u32, u32) -> *mut u32 =
     default_chunk;
 
-/// Heap split/grow lanes (`0x401f59`/`0x40203c` locked bodies +
-/// `0x40212d` fallback): bitmap/freelist surgery under `DAT_00413a34`.
+/// Heap split/grow lanes (`0x00401f59`/`0x0040203c` locked bodies +
+/// `0x0040212d` fallback): bitmap/freelist surgery under `DAT_00413a34`.
 ///
 /// ponytail: hook owns heap state; `(ptr, hdr, want, have)` cross the
 /// boundary. Rewire once data layout proven.

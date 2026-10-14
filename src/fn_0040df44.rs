@@ -1,9 +1,9 @@
-//! Original procedure `0x0040df44` (28 bytes, `0x40df44–0x40df5f`).
+//! Original procedure `0x0040df44` (28 bytes, `0x0040df44–0x0040df5f`).
 //! Evidence: `evidence/0040df44_fn_0040df44.md`.
 
 unsafe extern "C" fn default_init(_d: *mut u32, _s: u32) {}
 
-/// Target `0x404c98` (`FUN_00404c98`) slot init.
+/// Target `0x00404c98` (`FUN_00404c98`) slot init.
 ///
 /// ponytail: hook standing in for out-of-batch `fn_00404c98`.
 pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u32, u32) = default_init;

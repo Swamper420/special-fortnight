@@ -1,4 +1,4 @@
-//! Original procedure `0x0040ca08` (133 bytes, `0x40ca08–0x40ca8c`).
+//! Original procedure `0x0040ca08` (133 bytes, `0x0040ca08–0x0040ca8c`).
 //! Evidence: `evidence/0040ca08_fn_0040ca08.md`.
 
 unsafe extern "C" fn default_error(_b: *mut u8, _f: u8, _m: *mut u8) -> *mut u8 {
@@ -10,21 +10,21 @@ unsafe extern "C" fn default_crc(_b: *const u8, _l: u32) -> u32 {
     0
 }
 
-/// Error-link target `0x409824`, `(base, 1, msg)`; returns DATA pointer.
+/// Error-link target `0x00409824`, `(base, 1, msg)`; returns DATA pointer.
 ///
 /// ponytail: hook standing in for done `fn_00409824`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u8, u8, *mut u8) -> *mut u8 =
     default_error;
 
-/// Error-consume target `0x403f88`, `(obj)`.
+/// Error-consume target `0x00403f88`, `(obj)`.
 ///
 /// ponytail: hook standing in for done `fn_00403f88` (which takes
 /// the object as a `u32` lane on target); pointer-sized here so host
 /// pointers are never truncated, rewire once linkage proven.
 pub static mut HOOK_00403f88: unsafe extern "C" fn(*mut u8) = default_consume;
 
-/// Read target `0x40c1f8`, `(stream, buf, len)`.
+/// Read target `0x0040c1f8`, `(stream, buf, len)`.
 ///
 /// ponytail: hook standing in for done `fn_0040c1f8` (whose buffer
 /// lane is a `u32` on target); pointer-sized here so host pointers
@@ -32,7 +32,7 @@ pub static mut HOOK_00403f88: unsafe extern "C" fn(*mut u8) = default_consume;
 pub static mut HOOK_0040c1f8: unsafe extern "C" fn(*mut *const u8, *mut u8, u32) =
     default_read;
 
-/// CRC target `0x40c738`, `(buf, len)`.
+/// CRC target `0x0040c738`, `(buf, len)`.
 ///
 /// ponytail: hook standing in for done `fn_0040c738`, rewire to the
 /// real call once CRC-table setup proven.
@@ -45,7 +45,7 @@ pub static mut HOOK_0040c738: unsafe extern "C" fn(*const u8, u32) -> u32 = defa
 /// `data.rs` once data layout proven.
 pub static mut DAT_0040c4dc: *mut u8 = core::ptr::null_mut();
 
-/// Bytes observed at `0x40ca9c` (`"Compressed block is corrupted"`).
+/// Bytes observed at `0x0040ca9c` (`"Compressed block is corrupted"`).
 ///
 /// ponytail: bytes from the observed string table; fill from the image
 /// once data layout proven.

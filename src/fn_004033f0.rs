@@ -10,16 +10,16 @@ unsafe extern "C" fn default_target(_exp: i32, _st0: f64) -> f64 {
 ///
 /// ponytail: hook standing in for reconstructed `fn_004033f8`, rewire to
 /// `crate::fn_004033f8::fn_004033f8` once cross-module linkage proven.
-pub static mut HOOK_004033F0: unsafe extern "C" fn(i32, f64) -> f64 = default_target;
+pub static mut HOOK_004033F8: unsafe extern "C" fn(i32, f64) -> f64 = default_target;
 
-/// `JMP 0x0x004033f8` — tail-forward with identical lanes.
+/// `JMP 0x004033f8` — tail-forward with identical lanes.
 pub unsafe fn fn_004033f0(exp: i32, st0: f64) -> f64 {
-    HOOK_004033F0(exp, st0)
+    HOOK_004033F8(exp, st0)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_004033F0, fn_004033f0};
+    use super::{HOOK_004033F8, fn_004033f0};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static HITS: AtomicUsize = AtomicUsize::new(0);
@@ -33,7 +33,7 @@ mod tests {
 
     #[test]
     fn forwards_and_echoes() {
-        unsafe { HOOK_004033F0 = target };
+        unsafe { HOOK_004033F8 = target };
         let r = unsafe { fn_004033f0(-3, 1.5) };
         assert_eq!(r, 3.0);
         assert_eq!(HITS.load(Ordering::SeqCst), 1);

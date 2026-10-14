@@ -1,4 +1,4 @@
-//! Original procedure `0x00405ad8` (11 bytes, `0x405ad8–0x405ae2`).
+//! Original procedure `0x00405ad8` (11 bytes, `0x00405ad8–0x00405ae2`).
 //! Evidence: `evidence/00405ad8_fn_00405ad8.md`.
 
 /// Forward `(slot, desc, depth)` to `fn_00405940`, with the counts

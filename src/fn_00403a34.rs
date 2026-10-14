@@ -1,4 +1,4 @@
-//! Original procedure `0x00403a34` (6 bytes, `0x403a34–0x403a39`).
+//! Original procedure `0x00403a34` (6 bytes, `0x00403a34–0x00403a39`).
 //! Evidence: `evidence/00403a34_fn_00403a34.md`.
 
 /// Unchecked indirect dispatch: `call *(vtable-8)(param)`.

@@ -1,9 +1,9 @@
-//! Original procedure `0x0040df20` (33 bytes, `0x40df20–0x40df40`).
+//! Original procedure `0x0040df20` (33 bytes, `0x0040df20–0x0040df40`).
 //! Evidence: `evidence/0040df20_fn_0040df20.md`.
 
 unsafe extern "C" fn default_def0(_p1: u32, _p2: *mut u32, _p3: i32, _o: *mut u8) {}
 
-/// Target `0x40def0` (`FUN_0040def0`).
+/// Target `0x0040def0` (`FUN_0040def0`).
 ///
 /// ponytail: hook standing in for same-batch `fn_0040def0`.
 pub static mut HOOK_0040DEF0: unsafe extern "C" fn(u32, *mut u32, i32, *mut u8) = default_def0;

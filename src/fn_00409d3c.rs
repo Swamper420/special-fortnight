@@ -1,4 +1,4 @@
-//! Original procedure `0x00409d3c` (443 bytes, `0x409d3c–0x409ef6`).
+//! Original procedure `0x00409d3c` (443 bytes, `0x00409d3c–0x00409ef6`).
 //! Evidence: `evidence/00409d3c_fn_00409d3c.md`.
 
 unsafe extern "C" fn default_store(_key: *const u8, _slot: *mut u8) {}
@@ -28,14 +28,14 @@ unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
 unsafe extern "C" fn default_release_n(_slot: *mut u8, _n: u32) {}
 
-/// Key-resolve/store target `0x4063e4` (`FUN_004063e4`),
+/// Key-resolve/store target `0x004063e4` (`FUN_004063e4`),
 /// `(key, &slot)`.
 ///
 /// ponytail: hook standing in for done `fn_004063e4`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_004063E4: unsafe extern "C" fn(*const u8, *mut u8) = default_store;
 
-/// Import `KERNEL32.DLL::VirtualQuery` (`CALL 0x406864`),
+/// Import `KERNEL32.DLL::VirtualQuery` (`CALL 0x00406864`),
 /// `(addr, &mbi, 0x1c)`.
 ///
 /// ponytail: hook standing in for the import (also keeps host
@@ -44,7 +44,7 @@ pub static mut HOOK_004063E4: unsafe extern "C" fn(*const u8, *mut u8) = default
 pub static mut HOOK_VIRTUAL_QUERY_00406864: unsafe extern "C" fn(*mut u8, *mut u8, u32) -> u32 =
     default_query;
 
-/// Import `KERNEL32.DLL::GetModuleFileNameW` (`CALL 0x406710`),
+/// Import `KERNEL32.DLL::GetModuleFileNameW` (`CALL 0x00406710`),
 /// `(allocbase, wbuf, 0x105)`.
 ///
 /// ponytail: hook standing in for the import (also keeps host
@@ -53,19 +53,19 @@ pub static mut HOOK_VIRTUAL_QUERY_00406864: unsafe extern "C" fn(*mut u8, *mut u
 pub static mut HOOK_GET_MODULE_FILE_NAME_W_00406710:
     unsafe extern "C" fn(usize, *mut u16, u32) -> u32 = default_name;
 
-/// Target `0x404e50` (`FUN_00404e50`), `(&wide, wbuf, 0x105)`.
+/// Target `0x00404e50` (`FUN_00404e50`), `(&wide, wbuf, 0x105)`.
 ///
 /// ponytail: hook standing in for done `fn_00404e50`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_00404E50: unsafe extern "C" fn(*mut u8, *mut u16, u32) = default_widen;
 
-/// Target `0x408028` (`FUN_00408028`), `(wide, &conv)`.
+/// Target `0x00408028` (`FUN_00408028`), `(wide, &conv)`.
 ///
 /// ponytail: hook standing in for done `fn_00408028`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_00408028: unsafe extern "C" fn(*mut u8, *mut u8) = default_scan;
 
-/// Report target `0x409860` (`FUN_00409860`),
+/// Report target `0x00409860` (`FUN_00409860`),
 /// `(src, 1, key, count, &recs)`.
 ///
 /// ponytail: hook standing in for done `fn_00409860`, rewire to
@@ -74,44 +74,44 @@ pub static mut HOOK_00408028: unsafe extern "C" fn(*mut u8, *mut u8) = default_s
 pub static mut HOOK_00409860: unsafe extern "C" fn(*mut u8, u8, *mut u16, u32, usize) =
     default_report;
 
-/// Release target `0x4046c4` via thunk `0x404c88`, `(&slot)`.
+/// Release target `0x004046c4` via thunk `0x00404c88`, `(&slot)`.
 ///
 /// ponytail: hook standing in for the thunk target, rewire to
 /// done `fn_004046c4` once cross-module linkage proven.
 pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u8) = default_release;
 
-/// Batch release target `0x4046e8` via thunk `0x404c90`,
+/// Batch release target `0x004046e8` via thunk `0x00404c90`,
 /// `(&slot, 3)`.
 ///
 /// ponytail: hook standing in for the thunk target, rewire to
 /// done `fn_004046e8` once cross-module linkage proven.
 pub static mut HOOK_004046E8: unsafe extern "C" fn(*mut u8, u32) = default_release_n;
 
-/// Key slot `0x412c80` (flag==0 lane).
+/// Key slot `0x00412c80` (flag==0 lane).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412C80: usize = 0;
 
-/// Key slot `0x412c04` (flag!=0 lane).
+/// Key slot `0x00412c04` (flag!=0 lane).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412C04: usize = 0;
 
-/// Key slot `0x412c38` (rich lane).
+/// Key slot `0x00412c38` (rich lane).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412C38: usize = 0;
 
-/// Key slot `0x412c0c` (fallback lane).
+/// Key slot `0x00412c0c` (fallback lane).
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.
 pub static mut SLOT_00412C0C: usize = 0;
 
-/// Source cell `0x40758c`, value passed as the report first arg.
+/// Source cell `0x0040758c`, value passed as the report first arg.
 ///
 /// ponytail: absolute-address cell as mutable static, upgrade to
 /// real image-relative import once data layout proven.

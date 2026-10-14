@@ -1,4 +1,4 @@
-//! Original procedure `0x0040567c` (319 bytes, `0x40567c–0x4057ba`).
+//! Original procedure `0x0040567c` (319 bytes, `0x0040567c–0x004057ba`).
 //! Evidence: `evidence/0040567c_fn_0040567c.md`.
 
 unsafe extern "C" fn default_copy(_a: *mut u8, _b: *mut u8, _n: u32) {}
@@ -8,7 +8,7 @@ unsafe extern "C" fn default_abc(_a: usize, _b: usize, _c: *mut u8) {}
 unsafe extern "C" fn default_abcd(_a: usize, _b: usize, _c: *mut u8, _d: u32) {}
 unsafe extern "C" fn default_tail(_a: u32) {}
 
-/// Block copy `0x402fbc` (`FUN_00402fbc`), lanes
+/// Block copy `0x00402fbc` (`FUN_00402fbc`), lanes
 /// `(param_2+off, param_1+off, len)` per `EAX/EDX/ECX` observation.
 ///
 /// ponytail: hook standing in for done `fn_00402fbc`, rewire to real
@@ -16,31 +16,31 @@ unsafe extern "C" fn default_tail(_a: u32) {}
 pub static mut HOOK_00402FBC: unsafe extern "C" fn(*mut u8, *mut u8, u32) =
     default_copy;
 
-/// `0x404718` lane (tag `0x0a`), args `(p1+i3, *(p2+i3))`.
+/// `0x00404718` lane (tag `0x0a`), args `(p1+i3, *(p2+i3))`.
 ///
 /// ponytail: hook standing in for done `fn_00404718`, rewire to real
 /// call once cross-module test serialization exists.
 pub static mut HOOK_00404718: unsafe extern "C" fn(usize, usize) = default_ab;
 
-/// `0x404c98` lane (tag `0x12`), args `(p1+i3, *(p2+i3))`.
+/// `0x00404c98` lane (tag `0x12`), args `(p1+i3, *(p2+i3))`.
 ///
 /// ponytail: hook standing in for done `fn_00404c98`, rewire to real
 /// call once cross-module test serialization exists.
 pub static mut HOOK_00404C98: unsafe extern "C" fn(usize, usize) = default_ab;
 
-/// `0x404ac8` lane (tag `0x0b`), args `(p1+i3, *(p2+i3))`.
+/// `0x00404ac8` lane (tag `0x0b`), args `(p1+i3, *(p2+i3))`.
 ///
 /// ponytail: hook standing in for done `fn_00404ac8`, rewire to real
 /// call once cross-module test serialization exists.
 pub static mut HOOK_00404AC8: unsafe extern "C" fn(usize, usize) = default_ab;
 
-/// `0x405664` lane (tag `0x0c`), arg `(p1+i3)`.
+/// `0x00405664` lane (tag `0x0c`), arg `(p1+i3)`.
 ///
 /// ponytail: hook standing in for sibling `fn_00405664` (same work
 /// package), rewire to real call once modules are declared.
 pub static mut HOOK_00405664: unsafe extern "C" fn(usize) = default_a;
 
-/// `0x4057bc` lane (tag `0x0d`), args `(p1+i3, p2+i3, **(pc+u+10),
+/// `0x004057bc` lane (tag `0x0d`), args `(p1+i3, p2+i3, **(pc+u+10),
 /// *(pc+u+6))`; step is `*(pc+u+2)`.
 ///
 /// ponytail: hook standing in for sibling `fn_004057bc` (same work
@@ -48,20 +48,20 @@ pub static mut HOOK_00405664: unsafe extern "C" fn(usize) = default_a;
 pub static mut HOOK_004057BC: unsafe extern "C" fn(usize, usize, *mut u8, u32) =
     default_abcd;
 
-/// `0x40628c` lane (tag `0x0f`), args `(p1+i3, *(p2+i3))`.
+/// `0x0040628c` lane (tag `0x0f`), args `(p1+i3, *(p2+i3))`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_0040628c` once it exists.
 pub static mut HOOK_0040628C: unsafe extern "C" fn(usize, usize) = default_ab;
 
-/// `0x405b20` lane (tag `0x11`), args `(p1+i3, *(p2+i3), pc)`.
+/// `0x00405b20` lane (tag `0x11`), args `(p1+i3, *(p2+i3), pc)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_00405b20` once it exists.
 pub static mut HOOK_00405B20: unsafe extern "C" fn(usize, usize, *mut u8) =
     default_abc;
 
-/// Fail tail `0x402f60` (`FUN_00402f60`), reached with `AL=2` over `i3`.
+/// Fail tail `0x00402f60` (`FUN_00402f60`), reached with `AL=2` over `i3`.
 ///
 /// ponytail: hook standing in for done `fn_00402f60`, rewire to real
 /// two-lane call once cross-module test serialization exists.

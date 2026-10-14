@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b84c` (66 bytes, `0x40b84c–0x40b88d`).
+//! Original procedure `0x0040b84c` (66 bytes, `0x0040b84c–0x0040b88d`).
 //! Evidence: `evidence/0040b84c_fn_0040b84c.md`.
 
 use crate::fn_004046c4::fn_004046c4;
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_cmdline() -> *mut u16 {
     core::ptr::null_mut()
 }
 
-/// Import `KERNEL32.DLL::GetCommandLineW` (`CALL 0x4066c0`), no
+/// Import `KERNEL32.DLL::GetCommandLineW` (`CALL 0x004066c0`), no
 /// args, wide-string data-pointer result.
 ///
 /// ponytail: hook standing in for the import, rewire to a real

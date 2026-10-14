@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b334` (18 bytes, `0x40b334–0x40b345`).
+//! Original procedure `0x0040b334` (18 bytes, `0x0040b334–0x0040b345`).
 //! Evidence: `evidence/0040b334_fn_0040b334.md`.
 
 /// `param==0x5c || param==0x2f`. `param_1` arrives in AX per

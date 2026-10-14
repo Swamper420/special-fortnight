@@ -1,11 +1,11 @@
-//! Original procedure `0x00406728` (99 bytes, `0x406728–0x40678a`).
+//! Original procedure `0x00406728` (99 bytes, `0x00406728–0x0040678a`).
 //! Evidence: `evidence/00406728_fn_00406728.md`.
 
 use crate::fn_004046c4::fn_004046c4;
 use crate::fn_004048d4::fn_004048d4;
 use crate::fn_0040494c::fn_0040494c;
 
-/// Import `KERNEL32.DLL::GetProcAddress` (`CALL 0x406720` ×2).
+/// Import `KERNEL32.DLL::GetProcAddress` (`CALL 0x00406720` ×2).
 ///
 /// ponytail: hook standing in for the import, rewire to a real
 /// `windows-sys` binding once a Windows target binding exists.
@@ -16,7 +16,7 @@ unsafe extern "C" fn default_proc_address(_hmod: u32, _name: *const u8) -> usize
     0
 }
 
-/// Handler pushed at `0x406738` for the unwind window.
+/// Handler pushed at `0x00406738` for the unwind window.
 pub const HANDLER_0040678B: u32 = 0x0040678b;
 
 /// Inline SEH record: `prev/handler/ebp` at `+0/+4/+8`
@@ -28,7 +28,7 @@ pub struct SehRecord00406728 {
     pub ebp: u32,
 }
 
-/// EBP value stored into the record (`PUSH EBP` at `0x406737`).
+/// EBP value stored into the record (`PUSH EBP` at `0x00406737`).
 ///
 /// ponytail: static stands in for callee-saved EBP read (host frame
 /// pointer meaningless), rewire to inline asm once Windows-target

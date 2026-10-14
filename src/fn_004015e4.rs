@@ -1,4 +1,4 @@
-//! Original procedure `0x004015e4` (119 bytes, `0x4015e4–0x40165a`).
+//! Original procedure `0x004015e4` (119 bytes, `0x004015e4–0x0040165a`).
 //! Evidence: `evidence/004015e4_fn_004015e4.md`.
 
 unsafe extern "C" fn default_preseal() {}
@@ -12,13 +12,13 @@ unsafe extern "C" fn default_virtual_alloc(
     core::ptr::null_mut()
 }
 
-/// Pre-call `0x401578` (`FUN_00401578`).
+/// Pre-call `0x00401578` (`FUN_00401578`).
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to real
 /// `fn_00401578` once linkage decided.
 pub static mut CALL_00401578: unsafe extern "C" fn() = default_preseal;
 
-/// Import thunk `0x4011ec` (`KERNEL32.DLL::VirtualAlloc`).
+/// Import thunk `0x004011ec` (`KERNEL32.DLL::VirtualAlloc`).
 ///
 /// ponytail: hook standing in for OS import (also keeps host tests
 /// linkable), rewire to raw `extern "system" VirtualAlloc` once

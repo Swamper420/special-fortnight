@@ -1,4 +1,4 @@
-//! Original procedure `0x00408274` (26 bytes, `0x408274–0x40828d`).
+//! Original procedure `0x00408274` (26 bytes, `0x00408274–0x0040828d`).
 //! Evidence: `evidence/00408274_fn_00408274.md`.
 
 unsafe extern "C" fn default_00408540(
@@ -12,7 +12,7 @@ unsafe extern "C" fn default_00408540(
     0
 }
 
-/// Callee `0x408540` (`FUN_00408540`), called with all six params
+/// Callee `0x00408540` (`FUN_00408540`), called with all six params
 /// verbatim; `EAX` flows through untouched, so the hook result is
 /// the procedure result.
 ///
@@ -25,7 +25,7 @@ pub static mut HOOK_00408540: unsafe extern "C" fn(*mut u16, *mut u16, *mut u16,
 /// held by cross-module tests that reach it via `fn_00408274`).
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-/// Forward `(p1, p2, p3, p4, p5, p6)` to `0x408540`; return leftover
+/// Forward `(p1, p2, p3, p4, p5, p6)` to `0x00408540`; return leftover
 /// `EAX`. `EAX/EDX/ECX` plus three stack slots per Ghidra
 /// `__register` observation; `PUSH/POP EBX` spill and `RET 0xc`
 /// have no host-visible effect.

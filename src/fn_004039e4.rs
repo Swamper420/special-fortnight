@@ -1,4 +1,4 @@
-//! Original procedure `0x004039e4` (41 bytes, `0x4039e4–0x403a0c`).
+//! Original procedure `0x004039e4` (41 bytes, `0x004039e4–0x00403a0c`).
 //! Evidence: `evidence/004039e4_fn_004039e4.md`.
 
 /// SEH registration record built at the caller's reserved stack slots
@@ -11,21 +11,21 @@ pub struct SehRecord004039e4 {
     pub data: *const u8,
 }
 
-/// Head read from `FS:[0]` at `0x4039f4`, written back at `0x403a06`.
+/// Head read from `FS:[0]` at `0x004039f4`, written back at `0x00403a06`.
 ///
 /// ponytail: segment load modeled as hookable static (precedent
 /// `TEB_TLS_BASE_FS2C`), upgrade to real `FS:[0]` read once
 /// Windows-target inline asm proven.
 pub static mut SEH_HEAD_FS0: *mut u8 = core::ptr::null_mut();
 
-/// EBP value stored into `record+8` at `0x4039f9`.
+/// EBP value stored into `record+8` at `0x004039f9`.
 ///
 /// ponytail: static stands in for callee-saved EBP read (host frame
 /// pointer meaningless), rewire to inline asm once Windows-target
 /// linkage proven.
 pub static mut EBP_004039e4: u32 = 0;
 
-/// Handler immediate stored into `record+4` at `0x4039fc`.
+/// Handler immediate stored into `record+4` at `0x004039fc`.
 pub const HANDLER_00403A0D: u32 = 0x00403a0d;
 
 /// Test-only serialization for tests sharing SEH_HEAD/EBP globals (also

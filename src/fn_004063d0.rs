@@ -1,9 +1,9 @@
-//! Original procedure `0x004063d0` (18 bytes, `0x4063d0–0x4063e1`).
+//! Original procedure `0x004063d0` (18 bytes, `0x004063d0–0x004063e1`).
 //! Evidence: `evidence/004063d0_fn_004063d0.md`.
 
 unsafe extern "C" fn default_callee(_a: *const u8, _b: *mut u8) {}
 
-/// Target `0x40633c` (`FUN_0040633c`), called with unchanged
+/// Target `0x0040633c` (`FUN_0040633c`), called with unchanged
 /// `(param_1, param_2)`; register spills have no host-visible effect.
 ///
 /// ponytail: hook standing in for same-batch `fn_0040633c`, rewire

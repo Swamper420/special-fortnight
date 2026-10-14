@@ -1,4 +1,4 @@
-//! Original procedure `0x0040c854` (275 bytes, `0x40c854–0x40c966`).
+//! Original procedure `0x0040c854` (275 bytes, `0x0040c854–0x0040c966`).
 //! Evidence: `evidence/0040c854_fn_0040c854.md`.
 
 unsafe extern "C" fn default_link(p1: *mut u8, _p2: u8, _p3: *mut u8) -> *mut u8 {
@@ -20,7 +20,7 @@ unsafe extern "C" fn default_cmp(_a: *const u32, _b: *const u32) -> u32 {
     0
 }
 
-/// Link target `0x4039e4`, `(p1, p2, p3)`; returns the object lane.
+/// Link target `0x004039e4`, `(p1, p2, p3)`; returns the object lane.
 ///
 /// ponytail: hook standing in for done `fn_004039e4` (which links
 /// the record through owner `SEH_HEAD_FS0`), rewire to the real
@@ -29,45 +29,45 @@ unsafe extern "C" fn default_cmp(_a: *const u32, _b: *const u32) -> u32 {
 pub static mut HOOK_004039e4: unsafe extern "C" fn(*mut u8, u8, *mut u8) -> *mut u8 =
     default_link;
 
-/// Target `0x403864`, `(obj, 0, p3)`.
+/// Target `0x00403864`, `(obj, 0, p3)`.
 ///
 /// ponytail: hook standing in for done `fn_00403864`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00403864: unsafe extern "C" fn(*mut u8, u8, *mut u8) = default_void8;
 
-/// Target `0x403a3c`, `(obj)` on the saved-flag lane.
+/// Target `0x00403a3c`, `(obj)` on the saved-flag lane.
 ///
 /// ponytail: hook standing in for done `fn_00403a3c`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00403a3c: unsafe extern "C" fn(*mut u8) = default_release;
 
-/// Error-link target `0x409824`, `(base, 1, msg)`; returns DATA pointer.
+/// Error-link target `0x00409824`, `(base, 1, msg)`; returns DATA pointer.
 ///
 /// ponytail: hook standing in for done `fn_00409824`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u8, u8, *mut u8) -> *mut u8 =
     default_error;
 
-/// Error-consume target `0x403f88`, `(obj)`.
+/// Error-consume target `0x00403f88`, `(obj)`.
 ///
 /// ponytail: hook standing in for done `fn_00403f88` (which takes
 /// the object as a `u32` lane on target); pointer-sized here so host
 /// pointers are never truncated, rewire once linkage proven.
 pub static mut HOOK_00403f88: unsafe extern "C" fn(*mut u8) = default_consume;
 
-/// CRC target `0x40c738`, `(buf5, 5)`.
+/// CRC target `0x0040c738`, `(buf5, 5)`.
 ///
 /// ponytail: hook standing in for done `fn_0040c738`, rewire to the
 /// real call once CRC-table setup proven.
 pub static mut HOOK_0040c738: unsafe extern "C" fn(*const u8, u32) -> u32 = default_crc;
 
-/// Add target `0x40b2d4`, `(local_1c, local_11lo)`.
+/// Add target `0x0040b2d4`, `(local_1c, local_11lo)`.
 ///
 /// ponytail: hook standing in for done `fn_0040b2d4`, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_0040b2d4: unsafe extern "C" fn(*mut u32, u32) -> u32 = default_add;
 
-/// Compare target `0x40b2b4`, `(local_1c, local_24)`.
+/// Compare target `0x0040b2b4`, `(local_1c, local_24)`.
 ///
 /// ponytail: hook standing in for done `fn_0040b2b4`, rewire to the
 /// real call once cross-module linkage proven.
@@ -81,7 +81,7 @@ pub static mut HOOK_0040b2b4: unsafe extern "C" fn(*const u32, *const u32) -> u3
 /// `data.rs` once data layout proven.
 pub static mut DAT_0040c4dc: *mut u8 = core::ptr::null_mut();
 
-/// Bytes observed at `0x40c974` (`"Compressed block is corrupted"`).
+/// Bytes observed at `0x0040c974` (`"Compressed block is corrupted"`).
 ///
 /// ponytail: bytes from the observed string table; fill from the image
 /// once data layout proven.

@@ -1,9 +1,9 @@
-//! Original procedure `0x00404318` (72 bytes, `0x404318–0x40435f`).
+//! Original procedure `0x00404318` (72 bytes, `0x00404318–0x0040435f`).
 //! Evidence: `evidence/00404318_fn_00404318.md`.
 
 unsafe extern "C" fn default_resolve(_a: u32, _b: *mut *mut u8) {}
 
-/// First callee `0x4063e4` (`FUN_004063e4`): `(EAX=param_1, EDX=&local)`.
+/// First callee `0x004063e4` (`FUN_004063e4`): `(EAX=param_1, EDX=&local)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_004063e4` once it exists.
@@ -11,14 +11,14 @@ pub static mut HOOK_004063E4: unsafe extern "C" fn(u32, *mut *mut u8) = default_
 
 unsafe extern "C" fn default_attach(_a: *mut u8, _b: *mut u8, _c: u32) {}
 
-/// Second callee `0x404e94` (`FUN_00404e94`):
+/// Second callee `0x00404e94` (`FUN_00404e94`):
 /// `(EAX=param_2, EDX=local, ECX=0)`.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_00404e94` once it exists.
 pub static mut HOOK_00404E94: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_attach;
 
-/// Handler pushed at `0x404326` for the unwind window.
+/// Handler pushed at `0x00404326` for the unwind window.
 pub const HANDLER_00404360: u32 = 0x00404360;
 
 /// Inline SEH record: `prev/handler/ebp` at `+0/+4/+8`
@@ -30,7 +30,7 @@ pub struct SehRecord00404318 {
     pub ebp: u32,
 }
 
-/// EBP value stored into the record (`PUSH EBP` at `0x404325`).
+/// EBP value stored into the record (`PUSH EBP` at `0x00404325`).
 ///
 /// ponytail: static stands in for callee-saved EBP read (host frame
 /// pointer meaningless), rewire to inline asm once Windows-target
@@ -42,9 +42,9 @@ pub static mut EBP_00404318: u32 = 0;
 /// opaque passthrough value; `param_2` (EDX) an opaque handle. Head
 /// links through owner `crate::fn_004039e4::SEH_HEAD_FS0` (no duplicate
 /// cell); release is the reconstructed `fn_004046c4` (via thunk
-/// `0x404c88`), called after the SEH unlink per assembly.
+/// `0x00404c88`), called after the SEH unlink per assembly.
 ///
-/// ponytail: the `PUSH 0x404367` before the release call has no
+/// ponytail: the `PUSH 0x00404367` before the release call has no
 /// decompiler counterpart and no stack-arg reader in the callee;
 /// left unmodeled.
 pub unsafe fn fn_00404318(param_1: u32, param_2: *mut u8) {

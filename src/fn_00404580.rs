@@ -1,4 +1,4 @@
-//! Original procedure `0x00404580` (295 bytes, `0x404580–0x4046a6`).
+//! Original procedure `0x00404580` (295 bytes, `0x00404580–0x004046a6`).
 //! Evidence: `evidence/00404580_fn_00404580.md`.
 
 unsafe extern "C" fn default_ret0() -> u32 {
@@ -16,7 +16,7 @@ unsafe extern "C" fn default_void() {}
 unsafe extern "C" fn default_exit(_code: u32) {}
 
 /// Cell observed as `dword ptr [0x00412000]` (exit code; written by caller
-/// `FUN_004046ac`, read at `0x4045f2`/`0x404628`/`0x404688`).
+/// `FUN_004046ac`, read at `0x004045f2`/`0x00404628`/`0x00404688`).
 ///
 /// ponytail: absolute-address cell as hermetic own-module static, unify in
 /// `data.rs` once data layout proven.
@@ -28,7 +28,7 @@ pub static mut CELL_00412000: u32 = 0;
 /// `data.rs` once data layout proven.
 pub static mut CELL_00412004: u32 = 0;
 
-/// Opaque datum at `0x415b14`, passed by address to `41dc`/`44c4`.
+/// Opaque datum at `0x00415b14`, passed by address to `41dc`/`44c4`.
 ///
 /// ponytail: absolute-address cell as hermetic own-module static, unify in
 /// `data.rs` once data layout proven.
@@ -46,7 +46,7 @@ pub static mut CELL_00415B18: u32 = 0;
 /// `data.rs` once data layout proven.
 pub static mut CELL_00415B40: u32 = 0;
 
-/// 12-dword block at `0x415ae4` (`ESI`). Lanes from assembly offsets:
+/// 12-dword block at `0x00415ae4` (`ESI`). Lanes from assembly offsets:
 /// `[0]=+0x0` next (copy source), `[3]=+0xc`, `[4]=+0x10`,
 /// `[9]=+0x24` state callback, `[10]` low byte `=+0x28` state.
 ///
@@ -55,14 +55,14 @@ pub static mut CELL_00415B40: u32 = 0;
 pub static mut STRUCT_00415AE4: [u32; 12] = [0; 12];
 
 /// Slot observed as `dword ptr [0x00413048]`, take-clear dispatched while
-/// state is 0 (`0x4045d8–0x4045ea`).
+/// state is 0 (`0x004045d8–0x004045ea`).
 ///
 /// ponytail: absolute-address cell as nullable hook, upgrade to real
 /// image-relative import once data layout proven.
 pub static mut SLOT_00413048: Option<unsafe extern "C" fn()> = None;
 
 /// Slot observed as `dword ptr [0x0041302c]`, called once on the exit path
-/// (`0x404682`; observed code does not clear it).
+/// (`0x00404682`; observed code does not clear it).
 ///
 /// ponytail: absolute-address cell as nullable hook, upgrade to real
 /// image-relative import once data layout proven.
@@ -80,19 +80,19 @@ pub static mut HOOK_00404458: unsafe extern "C" fn() -> u32 = default_ret0;
 /// `fn_004044f0` once it exists.
 pub static mut HOOK_004044F0: unsafe extern "C" fn(u32) = default_sink_u32;
 
-/// `GetCurrentThreadId` import thunk (`0x401198`).
+/// `GetCurrentThreadId` import thunk (`0x00401198`).
 ///
 /// ponytail: hook standing in for the kernel32 import, wire to the real
 /// thunk on target.
 pub static mut HOOK_GETCURRENTTHREADID: unsafe extern "C" fn() -> u32 = default_ret0;
 
-/// `FUN_004041dc`, called with `0x415b14` then `ESI`.
+/// `FUN_004041dc`, called with `0x00415b14` then `ESI`.
 ///
 /// ponytail: hook standing in for reconstructed `fn_004041dc`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_004041DC: unsafe extern "C" fn(*mut u8) = default_sink_ptr;
 
-/// `FUN_004044c4`, called with `0x415b14` then `ESI` (state!=0 only).
+/// `FUN_004044c4`, called with `0x00415b14` then `ESI` (state!=0 only).
 ///
 /// ponytail: hook standing in for reconstructed `fn_004044c4`, rewire to
 /// the real call once cross-module linkage proven.
@@ -123,13 +123,13 @@ pub static mut HOOK_00404204: unsafe extern "C" fn() = default_void;
 /// `fn_00406204` once it exists.
 pub static mut HOOK_00406204: unsafe extern "C" fn(*mut u32) = default_sink_pu32;
 
-/// `FreeLibrary` import thunk (`0x4010f0`), called with the `+0x10` handle.
+/// `FreeLibrary` import thunk (`0x004010f0`), called with the `+0x10` handle.
 ///
 /// ponytail: hook standing in for the kernel32 import, wire to the real
 /// thunk on target.
 pub static mut HOOK_FREELIBRARY: unsafe extern "C" fn(u32) = default_sink_u32;
 
-/// `ExitProcess` import thunk (`0x4010d0`); original never returns.
+/// `ExitProcess` import thunk (`0x004010d0`); original never returns.
 ///
 /// ponytail: hook standing in for the kernel32 import (test hook records
 /// and returns; real wiring must diverge), wire to the real thunk on target.
@@ -141,7 +141,7 @@ unsafe fn state() -> u8 {
 }
 
 /// Main-loop driver: init gate → thread gate → callback drain → work loop,
-/// exits via `[0x41302c]` callback then `ExitProcess(exit_code)`.
+/// exits via `[0x0041302c]` callback then `ExitProcess(exit_code)`.
 /// Never returns in the original; host `return` after the exit hook is a
 /// test-only divergence (see evidence).
 pub unsafe fn fn_00404580() {
@@ -335,7 +335,7 @@ mod tests {
 
         // Thread-id mismatch: gate calls skipped, still exits.
         // (The work-loop `41dc` at the second call site still fires
-        // once — two sites observed: `0x4045c3` gate + `0x404659` loop.)
+        // once — two sites observed: `0x004045c3` gate + `0x00404659` loop.)
         let h41dc = H41DC.load(Ordering::SeqCst);
         let h44c4 = H44C4.load(Ordering::SeqCst);
         unsafe {

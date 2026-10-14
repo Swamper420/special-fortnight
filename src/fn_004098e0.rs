@@ -1,4 +1,4 @@
-//! Original procedure `0x004098e0` (58 bytes, `0x4098e0–0x409919`).
+//! Original procedure `0x004098e0` (58 bytes, `0x004098e0–0x00409919`).
 //! Evidence: `evidence/004098e0_fn_004098e0.md`.
 
 unsafe extern "C" fn default_link(_p1: *mut u8, _p2: u8, _p3: *const u8) -> *mut u8 {
@@ -9,7 +9,7 @@ unsafe extern "C" fn default_store(_key: *const u8, _slot: *mut u8) {}
 
 unsafe extern "C" fn default_release(_obj: *mut u8) {}
 
-/// Link target `0x4039e4` (`FUN_004039e4`), `(EAX, DL, ECX)` plus
+/// Link target `0x004039e4` (`FUN_004039e4`), `(EAX, DL, ECX)` plus
 /// the 16-byte SEH record at reserved slots; returns the EAX lane.
 ///
 /// ponytail: hook standing in for done `fn_004039e4`, rewire to
@@ -18,15 +18,15 @@ unsafe extern "C" fn default_release(_obj: *mut u8) {}
 pub static mut HOOK_004039e4: unsafe extern "C" fn(*mut u8, u8, *const u8) -> *mut u8 =
     default_link;
 
-/// Target `0x4063e4` (`FUN_004063e4`), `(param_3, obj+4)` — note
-/// the swapped order vs sibling `0x409824`
+/// Target `0x004063e4` (`FUN_004063e4`), `(param_3, obj+4)` — note
+/// the swapped order vs sibling `0x00409824`
 /// (`EAX=ESI`, `EDX=EDI+4`).
 ///
 /// ponytail: hook standing in for done `fn_004063e4`, rewire to
 /// the real call once cross-module linkage proven.
 pub static mut HOOK_004063e4: unsafe extern "C" fn(*const u8, *mut u8) = default_store;
 
-/// Target `0x403a3c` (`FUN_00403a3c`), `(obj)` on the saved-flag
+/// Target `0x00403a3c` (`FUN_00403a3c`), `(obj)` on the saved-flag
 /// lane.
 ///
 /// ponytail: hook standing in for done `fn_00403a3c`, rewire to

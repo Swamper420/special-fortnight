@@ -1,4 +1,4 @@
-//! Original procedure `0x00403894` (12 bytes, `0x403894–0x40389f`).
+//! Original procedure `0x00403894` (12 bytes, `0x00403894–0x0040389f`).
 //! Evidence: `evidence/00403894_fn_00403894.md`.
 
 /// Null-checked indirect dispatch: `call *(vtable-4)(param, 1)`.

@@ -1,4 +1,4 @@
-//! Original procedure `0x00405458` (83 bytes, `0x405458–0x4054aa`).
+//! Original procedure `0x00405458` (83 bytes, `0x00405458–0x004054aa`).
 //! Evidence: `evidence/00405458_fn_00405458.md`.
 
 use crate::fn_00402e20::fn_00402e20;
@@ -11,7 +11,7 @@ unsafe extern "C" fn default_alloc(_len: u32) -> *mut u8 {
     null_mut()
 }
 
-/// Target `0x404818` (`FUN_00404818`), called with the slot on the
+/// Target `0x00404818` (`FUN_00404818`), called with the slot on the
 /// non-`2` tag lane; result reloaded from `*slot`.
 ///
 /// ponytail: hook standing in for done `fn_00404818`, rewire to real
@@ -19,7 +19,7 @@ unsafe extern "C" fn default_alloc(_len: u32) -> *mut u8 {
 /// has no owner lock, so a direct call would race its writer test).
 pub static mut HOOK_00404818: unsafe extern "C" fn(*mut u8) = default_convert;
 
-/// Target `0x4054b4` (`FUN_004054b4`), called with `[obj-4]` length;
+/// Target `0x004054b4` (`FUN_004054b4`), called with `[obj-4]` length;
 /// result is the new data pointer, stored to `*slot`.
 ///
 /// ponytail: hook standing in for same-batch `fn_004054b4`, rewire to

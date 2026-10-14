@@ -1,9 +1,9 @@
-//! Original procedure `0x00405938` (6 bytes, `0x405938–0x40593d`).
+//! Original procedure `0x00405938` (6 bytes, `0x00405938–0x0040593d`).
 //! Evidence: `evidence/00405938_fn_00405938.md`.
 
 unsafe extern "C" fn default_callee(_a: *mut usize, _b: *const u8) { }
 
-/// Callee `0x405ae4` (`FUN_00405ae4`, 58 bytes, unreconstructed),
+/// Callee `0x00405ae4` (`FUN_00405ae4`, 58 bytes, unreconstructed),
 /// reached by bare `CALL` with `(EAX, EDX)` untouched.
 ///
 /// ponytail: hook standing in for the unreconstructed callee;
@@ -16,7 +16,7 @@ pub static mut HOOK_00405AE4: unsafe extern "C" fn(*mut usize, *const u8) =
 /// through this module).
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-/// Tail-forward `(slot, desc)` to `0x405ae4`; params arrive in
+/// Tail-forward `(slot, desc)` to `0x00405ae4`; params arrive in
 /// EAX/EDX per Ghidra `__register` observation.
 pub unsafe fn fn_00405938(param_1: *mut usize, param_2: *const u8) {
     HOOK_00405AE4(param_1, param_2);

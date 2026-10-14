@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b620` (10 bytes, `0x40b620–0x40b629`).
+//! Original procedure `0x0040b620` (10 bytes, `0x0040b620–0x0040b629`).
 //! Evidence: `evidence/0040b620_fn_0040b620.md`.
 
 /// `if p1 < p2 { p2 -= 2 }; return p2`. Unsigned compare (`JNC`

@@ -14,7 +14,7 @@ unsafe extern "C" fn default_dispatch(_o: *mut u8) {}
 
 /// ponytail: hook for same-batch `fn_0040e11c`.
 pub static mut HOOK_0040E11C: unsafe extern "C" fn(u8, *mut u8) -> bool = default_probe;
-/// Target `0x40b700` (`FUN_0040b700`).
+/// Target `0x0040b700` (`FUN_0040b700`).
 ///
 /// ponytail: hook standing in for out-of-batch `fn_0040b700`.
 pub static mut HOOK_0040B700: unsafe extern "C" fn(*mut u8) -> u8 = default_work;
@@ -34,7 +34,7 @@ pub unsafe fn fn_0040e1e0(param_1: u8, param_2: *mut u8) -> u8 {
     }
     let b = HOOK_0040B700(param_2);
     let _err: u32 = HOOK_GetLastError();
-    // ponytail: SEH frame (`0x40e236/3d`) not modeled — test-platform init detail.
+    // ponytail: SEH frame (`0x0040e236/3d`) not modeled — test-platform init detail.
     HOOK_0040E158(ctx.as_mut_ptr());
     // ponytail: pass-path EAX after void call indeterminate; stored byte is deterministic reading.
     b

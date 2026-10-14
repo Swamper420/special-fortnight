@@ -1,9 +1,9 @@
-//! Original procedure `0x00409810` (6 bytes, `0x409810–0x409815`).
+//! Original procedure `0x00409810` (6 bytes, `0x00409810–0x00409815`).
 //! Evidence: `evidence/00409810_fn_00409810.md`.
 
 unsafe extern "C" fn default_tail(_entry_eax: usize) {}
 
-/// Target `0x4097f0` (`FUN_004097f0`), entered by `JMP` with the popped
+/// Target `0x004097f0` (`FUN_004097f0`), entered by `JMP` with the popped
 /// `EAX` as its entry lane.
 ///
 /// ponytail: hook standing in for done `fn_004097f0`, rewire to the real

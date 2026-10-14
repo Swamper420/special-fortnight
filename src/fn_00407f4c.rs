@@ -1,4 +1,4 @@
-//! Original procedure `0x00407f4c` (204 bytes, `0x407f4c–0x408017`).
+//! Original procedure `0x00407f4c` (204 bytes, `0x00407f4c–0x00408017`).
 //! Evidence: `evidence/00407f4c_fn_00407f4c.md`.
 
 unsafe extern "C" fn default_pin(_v: *mut u8) {}
@@ -17,13 +17,13 @@ unsafe extern "C" fn default_find(_base: *const u8, _ch: u16) -> *const u8 {
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
-/// Pin `0x404c80` (`thunk_FUN_0040493c`), called with `param_2` on entry.
+/// Pin `0x00404c80` (`thunk_FUN_0040493c`), called with `param_2` on entry.
 ///
 /// ponytail: hook standing in for thunk target, rewire to done
 /// `fn_0040493c` once cross-module linkage proven.
 pub static mut HOOK_00404C80: unsafe extern "C" fn(*mut u8) = default_pin;
 
-/// Normalizer `0x404820` (`FUN_00404820`), called with `(&local_8, value)`
+/// Normalizer `0x00404820` (`FUN_00404820`), called with `(&local_8, value)`
 /// when the tag word at `[p-10]` is not 2.
 ///
 /// ponytail: hook mirroring the `(slot, value) -> ptr` shape, rewire to
@@ -31,20 +31,20 @@ pub static mut HOOK_00404C80: unsafe extern "C" fn(*mut u8) = default_pin;
 pub static mut HOOK_00404820: unsafe extern "C" fn(*mut u8, *mut u8) -> *mut u8 =
     default_norm;
 
-/// String base `0x404d24` (`FUN_00404d24`), called once with `param_1`.
+/// String base `0x00404d24` (`FUN_00404d24`), called once with `param_1`.
 ///
 /// ponytail: hook mirroring done `fn_00404d24`'s shape, rewire to the
 /// real call once cross-module linkage proven.
 pub static mut HOOK_00404D24: unsafe extern "C" fn(*const u8) -> *const u8 = default_str;
 
-/// Finder `0x4081d0` (`thunk_FUN_004081dd`), called with `(str, MOVZX ch)`.
+/// Finder `0x004081d0` (`thunk_FUN_004081dd`), called with `(str, MOVZX ch)`.
 ///
-/// ponytail: hook standing in for unreconstructed `0x4081dd`, rewire to
+/// ponytail: hook standing in for unreconstructed `0x004081dd`, rewire to
 /// real `fn_004081dd` once it exists.
 pub static mut HOOK_004081DD: unsafe extern "C" fn(*const u8, u16) -> *const u8 =
     default_find;
 
-/// Release `0x404c88` (`thunk_FUN_004046c4`), always run on `&local_8`.
+/// Release `0x00404c88` (`thunk_FUN_004046c4`), always run on `&local_8`.
 ///
 /// ponytail: hook standing in for thunk target, rewire to done
 /// `fn_004046c4` once cross-module linkage proven.

@@ -1,4 +1,4 @@
-//! Original procedure `0x0040b58c` (72 bytes, `0x40b58c–0x40b5d3`).
+//! Original procedure `0x0040b58c` (72 bytes, `0x0040b58c–0x0040b5d3`).
 //! Evidence: `evidence/0040b58c_fn_0040b58c.md`.
 
 unsafe extern "C" fn default_scan(_s: usize, _unit: u8) -> i32 {
@@ -9,14 +9,14 @@ unsafe extern "C" fn default_step(_s: usize, _idx: i32) -> i32 {
     1
 }
 
-/// Callee `0x40b4b4` (`FUN_0040b4b4`), called with `(p1, 1)`
+/// Callee `0x0040b4b4` (`FUN_0040b4b4`), called with `(p1, 1)`
 /// (`MOV DL,0x1`); returns the start index.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
 /// real `fn_0040b4b4` once it exists.
 pub static mut HOOK_0040B4B4: unsafe extern "C" fn(usize, u8) -> i32 = default_scan;
 
-/// Callee `0x40b32c` (`FUN_0040b32c`), called with `(p1, idx)` on
+/// Callee `0x0040b32c` (`FUN_0040b32c`), called with `(p1, idx)` on
 /// non-dot lanes (`MOV EDX,EBX`); returns the stride.
 ///
 /// ponytail: hook standing in for unreconstructed callee, rewire to
