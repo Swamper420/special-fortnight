@@ -46,7 +46,7 @@ convert a guess into code without labeling it as a guess in evidence.
 
 Every non-trivial function leaves one runnable check behind: a unit test of
 recovered behavior (input/output pairs from the original semantics) or an
-assembly-level comparison record in its evidence file. `cargo check
+assembly-level comparison record in its evidence file. `cargo build
 --target i686-pc-windows-gnu` must pass before any commit.
 
 Coverage claims come only from `rea build-reconstruction-obligation-ledger` /

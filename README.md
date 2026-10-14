@@ -20,10 +20,13 @@ agents/humans doing the work: [AGENTS.md](AGENTS.md).
 - [REA](https://github.com/morluto/rea) (`rea` 6.4.0) — analysis front end,
   registered as MCP server for the local agents. Ghidra 12.1.2 is the deep
   analysis provider (`GHIDRA_INSTALL_DIR=/opt/ghidra`).
-- Rust 1.99, target `i686-pc-windows-gnu` (installed).
-  `cargo check --target i686-pc-windows-gnu` works now. Linking a PE needs
-  `mingw-w64-gcc`, which is **not installed** (requires root:
-  `sudo pacman -S mingw-w64-gcc`).
+- Rust 1.99, target `i686-pc-windows-gnu` (installed), mingw-w64-gcc 16.2.0.
+  `cargo build --target i686-pc-windows-gnu` produces a PE32 exe.
+
+Portability note: the 1:1 phase targets Windows PE only, for parity with the
+original. Cross-platform support comes after decompilation, by isolating the
+Win32/Borland boundary — do not let platform abstractions leak into
+reconstructed functions before then.
 
 ## Layout
 
