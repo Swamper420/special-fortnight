@@ -15,9 +15,13 @@ pub static mut CALLEE_00404E6C: unsafe extern "C" fn(*mut u32, *mut u8) =
 /// never cached across it). `PUSH/POP EBX` spill is callee-saved
 /// preservation with no observable effect; unmodeled. `param_2` is pure
 /// EDX passthrough.
-pub unsafe fn fn_00404820(param_1: *mut u32, param_2: *mut u8) -> u32 {
+///
+/// ponytail: the return is the slot pointer, pointer-sized (4B EAX on
+/// target; an early `u32` revision truncated 64-bit host pointers —
+/// fixed at integrate). Revisit with image-relative data layout.
+pub unsafe fn fn_00404820(param_1: *mut u32, param_2: *mut u8) -> *mut u32 {
     CALLEE_00404E6C(param_1, param_2);
-    core::ptr::read_unaligned(param_1 as *const u32)
+    core::ptr::read_unaligned(param_1 as *const *mut u32)
 }
 
 #[cfg(test)]
@@ -48,6 +52,6 @@ mod tests {
         assert_eq!(HITS.load(Ordering::SeqCst), 1);
         assert_eq!(GOT_A.load(Ordering::SeqCst), cell_ptr as usize);
         assert_eq!(GOT_B.load(Ordering::SeqCst), arg2 as usize);
-        assert_eq!(ret, 7);
+        assert_eq!(ret, 7 as *mut u32);
     }
 }
