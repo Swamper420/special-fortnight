@@ -96,6 +96,8 @@ mod tests {
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     static ERR_HITS: AtomicUsize = AtomicUsize::new(0);
     static DIE_HITS: AtomicUsize = AtomicUsize::new(0);
     static READ_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -157,6 +159,7 @@ mod tests {
 
     #[test]
     fn refill_lanes() {
+        let _guard = LOCK.lock().unwrap();
         install();
         // Small lane: left=8 → -4 → n=4 → -4 → left=0.
         reset();
@@ -189,6 +192,7 @@ mod tests {
 
     #[test]
     fn crc_mismatch_fires() {
+        let _guard = LOCK.lock().unwrap();
         install();
         // CRC hook returns a fixed value; seed the slot with a
         // different one so the trailing fork fires.
