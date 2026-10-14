@@ -250,6 +250,16 @@ mod tests {
         FILL_HITS.fetch_add(1, Ordering::SeqCst);
     }
 
+    /// Real `fn_0040525c` lane hooks behind the copy: all no-op
+    /// (mirrors its defaults; keeps the test hermetic now that
+    /// other suites pin recording hooks there).
+    unsafe extern "C" fn spin(_p: *mut u8) {}
+    unsafe extern "C" fn snorm(_slot: *mut u8, _v: *mut u8) -> *mut u8 {
+        core::ptr::null_mut()
+    }
+    unsafe extern "C" fn scopy(_d: *mut u8, _x: *mut u8, _n: u32) {}
+    unsafe extern "C" fn srel(_slot: *mut u8) {}
+
     unsafe extern "C" fn rel1(_slot: *mut u8) {
         REL1_HITS.fetch_add(1, Ordering::SeqCst);
     }
@@ -276,9 +286,17 @@ mod tests {
     #[test]
     fn copy_and_gfilter_lanes() {
         // Foreign hooks (owners hold no lock): hold the common one first.
+        // Real `fn_0040525c` behind the copy (its hooks shared):
+        // hold its lock, pin hermetic no-ops.
         let _shared = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         let _own = TEST_LOCK.lock().unwrap();
+        let _slice = crate::fn_0040525c::TEST_LOCK.lock().unwrap();
         unsafe {
+            crate::fn_0040525c::HOOK_00404c80 = spin;
+            crate::fn_0040525c::HOOK_00404820 = snorm;
+            crate::fn_0040525c::HOOK_00404dd4 = scopy;
+            crate::fn_0040525c::HOOK_00404dc4 = scopy;
+            crate::fn_0040525c::HOOK_004046c4 = srel;
             HOOK_00404c80 = pin;
             HOOK_GetThreadLocale = gtl;
             crate::fn_00408eb4::HOOK_GetLocaleInfoW = gli;

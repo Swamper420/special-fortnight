@@ -5,8 +5,6 @@ unsafe extern "C" fn default_tag(_obj: usize) -> *mut u16 {
     core::ptr::null_mut()
 }
 
-unsafe extern "C" fn default_take(_a: *mut u8, _b: *mut u8, _c: *mut u8) {}
-
 /// Tag lookup `0x0040b5fc` (`FUN_0040b5fc`), called with the object
 /// address; returns the tag-word pointer (`short *`).
 ///
@@ -20,13 +18,9 @@ pub static mut HOOK_0040B5FC: unsafe extern "C" fn(usize) -> *mut u16 = default_
 /// `fn(u16) -> u32`).
 
 /// Target `0x00405058` (`FUN_00405058`), zero-tag lane with
-/// `(param_2, param_1, &DAT_0040b328)`.
-///
-/// ponytail: hook mirroring done `fn_00405058`'s shape, rewire to
-/// the real call once cross-module test serialization exists (its
-/// own test mutates its hook globals lockless).
-pub static mut HOOK_00405058: unsafe extern "C" fn(*mut u8, *mut u8, *mut u8) =
-    default_take;
+/// `(param_2, param_1, &DAT_0040b328)`: direct intra-reconstruction
+/// call (rewired; signatures verified `fn(*mut u8, *mut u8,
+/// *mut u8)`).
 
 /// Target `0x00404c98` (`FUN_00404c98`), null/tagged lane with
 /// `(param_2, param_1)`: direct intra-reconstruction call (rewired;
@@ -50,7 +44,7 @@ pub unsafe fn fn_0040b2e0(param_1: *mut u8, param_2: *mut u8) {
         let tagged: *mut u16 = HOOK_0040B5FC(param_1 as usize);
         let w: u16 = core::ptr::read_unaligned(tagged as *const u16);
         if (crate::fn_0040b334::fn_0040b334(w) & 0xff) == 0 {
-            HOOK_00405058(
+            crate::fn_00405058::fn_00405058(
                 param_2,
                 param_1,
                 core::ptr::addr_of_mut!(DAT_0040b328) as *mut u8,
@@ -63,15 +57,11 @@ pub unsafe fn fn_0040b2e0(param_1: *mut u8, param_2: *mut u8) {
 
 #[cfg(test)]
 mod tests {
-    use super::{DAT_0040b328, HOOK_00405058, HOOK_0040B5FC, fn_0040b2e0};
+    use super::{DAT_0040b328, HOOK_0040B5FC, fn_0040b2e0};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static TAG_HITS: AtomicUsize = AtomicUsize::new(0);
     static TAG_ARG: AtomicUsize = AtomicUsize::new(0);
-    static TAKE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static TAKE_A: AtomicUsize = AtomicUsize::new(0);
-    static TAKE_B: AtomicUsize = AtomicUsize::new(0);
-    static TAKE_C: AtomicUsize = AtomicUsize::new(0);
 
     static mut WORD: u16 = 0;
 
@@ -97,16 +87,8 @@ mod tests {
         core::ptr::addr_of_mut!(WORD)
     }
 
-    unsafe extern "C" fn take(a: *mut u8, b: *mut u8, c: *mut u8) {
-        TAKE_HITS.fetch_add(1, Ordering::SeqCst);
-        TAKE_A.store(a as usize, Ordering::SeqCst);
-        TAKE_B.store(b as usize, Ordering::SeqCst);
-        TAKE_C.store(c as usize, Ordering::SeqCst);
-    }
-
     fn clear() {
         TAG_HITS.store(0, Ordering::SeqCst);
-        TAKE_HITS.store(0, Ordering::SeqCst);
     }
 
     unsafe fn slot_of(p: *mut u8) -> *mut u8 {
@@ -116,11 +98,11 @@ mod tests {
     #[test]
     fn null_tagged_zero_tag_lanes() {
         // Real `fn_00404c98` behind the store lanes (null old → no
-        // dtor): hold the common owner lock.
+        // dtor) and real `fn_00405058` behind the zero-tag lane
+        // (its tails shared): hold the common owner lock.
         let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_0040B5FC = tag;
-            HOOK_00405058 = take;
         }
         let mut s = [0u8; 8];
         let p2 = s.as_mut_ptr();
@@ -128,7 +110,6 @@ mod tests {
         clear();
         unsafe { fn_0040b2e0(core::ptr::null_mut(), p2) };
         assert_eq!(TAG_HITS.load(Ordering::SeqCst), 0);
-        assert_eq!(TAKE_HITS.load(Ordering::SeqCst), 0);
         assert!(unsafe { slot_of(p2) }.is_null());
         // Tagged lane: real class(0x5c)==1, low byte nonzero →
         // real store(p2, obj) takes the headed object (rc 5→6).
@@ -138,20 +119,17 @@ mod tests {
         unsafe { fn_0040b2e0(p1, p2) };
         assert_eq!(TAG_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(TAG_ARG.load(Ordering::SeqCst), p1 as usize);
-        assert_eq!(TAKE_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(unsafe { slot_of(p2) }, p1);
         assert_eq!(unsafe { rc_of(p1) }, 6);
-        // Zero-tag lane: real class(0x41)==0 → take(p2, p1, &DAT),
-        // no store.
+        // Zero-tag lane: real class(0x41)==0 → real take(p2, p1,
+        // &DAT); the slot already holds p1, so its `p2==*p1` tail
+        // lane fires (default no-op): slot and rc unchanged.
         unsafe { WORD = 0x41 };
         clear();
         unsafe { fn_0040b2e0(p1, p2) };
-        assert_eq!(TAKE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(TAKE_A.load(Ordering::SeqCst), p2 as usize);
-        assert_eq!(TAKE_B.load(Ordering::SeqCst), p1 as usize);
-        assert_eq!(
-            TAKE_C.load(Ordering::SeqCst),
-            core::ptr::addr_of!(DAT_0040b328) as usize
-        );
+        assert_eq!(TAG_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(TAG_ARG.load(Ordering::SeqCst), p1 as usize);
+        assert_eq!(unsafe { slot_of(p2) }, p1);
+        assert_eq!(unsafe { rc_of(p1) }, 6);
     }
 }

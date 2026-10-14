@@ -15,6 +15,9 @@ pub static mut HOOK_DISPATCHMESSAGEW: unsafe extern "C" fn(*mut u8) = default_ms
 
 /// Message drain: `PeekMessageW(0,0,0,PM_REMOVE)` until empty,
 /// `TranslateMessage` + `DispatchMessageW` per message.
+/// Test-only serialization for tests sharing the lane hooks.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 pub unsafe fn fn_0040eb24() {
     // ponytail: 28-byte (0x1c) MSG slot; bytes forwarded, never read.
     let mut msg = [0u8; 28];
@@ -51,6 +54,7 @@ mod tests {
 
     #[test]
     fn drains_pending() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_PEEKMESSAGEW = peek;
             HOOK_TRANSLATEMESSAGE = tr;

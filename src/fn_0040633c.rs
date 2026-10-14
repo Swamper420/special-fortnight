@@ -1,8 +1,6 @@
 //! Original procedure `0x0040633c` (134 bytes, `0x0040633c–0x004063c1`).
 //! Evidence: `evidence/0040633c_fn_0040633c.md`.
 
-unsafe extern "C" fn default_pin(_slot: *mut u8, _src: *mut u8) {}
-
 unsafe extern "C" fn default_ensure(_slot: *mut *mut u8, _count: u32) {}
 
 /// Target `0x00404d24` (`FUN_00404d24`): rewired to
@@ -42,11 +40,8 @@ pub static mut HOOK_004062b8: unsafe extern "C" fn(*mut u16, u32, *const u8, i32
     default_convert;
 
 /// Target `0x00404cec` (`FUN_00404cec`), `(&local_8, null)` on the
-/// signed-`JLE` (`n<=0`) lane.
-///
-/// ponytail: hook standing in for done `fn_00404cec`, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_00404cec: unsafe extern "C" fn(*mut u8, *mut u8) = default_pin;
+/// signed-`JLE` (`n<=0`) lane: direct intra-reconstruction call
+/// (rewired; signatures verified `fn(*mut u8, *mut u8)`).
 
 /// Target `0x00404c88` (`thunk_FUN_004046c4`), always run on
 /// `&local_8` (SEH finally on target); return ignored, as at site.
@@ -77,7 +72,7 @@ pub unsafe fn fn_0040633c(param_1: *const u8, param_2: *mut u8) {
             lead as i32,
         );
         if (n as i32) <= 0 {
-            HOOK_00404cec(
+            crate::fn_00404cec::fn_00404cec(
                 &mut local_8 as *mut *mut u8 as *mut u8,
                 core::ptr::null_mut(),
             );
@@ -92,7 +87,7 @@ pub unsafe fn fn_0040633c(param_1: *const u8, param_2: *mut u8) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_004046c4, HOOK_00404cec, HOOK_00404f00, HOOK_004062b8,
+        HOOK_004046c4, HOOK_00404f00, HOOK_004062b8,
         fn_0040633c,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -105,7 +100,6 @@ mod tests {
     static CVT_SRC: AtomicUsize = AtomicUsize::new(0);
     static CVT_N: AtomicUsize = AtomicUsize::new(0);
     static CVT_RET: AtomicUsize = AtomicUsize::new(0);
-    static CEC_HITS: AtomicUsize = AtomicUsize::new(0);
     static REL_HITS: AtomicUsize = AtomicUsize::new(0);
 
     /// Headed store target for the real `fn_00404c98` lane: tag 2,
@@ -143,10 +137,6 @@ mod tests {
         CVT_RET.load(Ordering::SeqCst) as u32
     }
 
-    unsafe extern "C" fn cec(_slot: *mut u8, _src: *mut u8) {
-        CEC_HITS.fetch_add(1, Ordering::SeqCst);
-    }
-
     unsafe extern "C" fn release(_slot: *mut u8) {
         REL_HITS.fetch_add(1, Ordering::SeqCst);
     }
@@ -154,19 +144,20 @@ mod tests {
     fn reset() {
         ENS_HITS.store(0, Ordering::SeqCst);
         CVT_HITS.store(0, Ordering::SeqCst);
-        CEC_HITS.store(0, Ordering::SeqCst);
         REL_HITS.store(0, Ordering::SeqCst);
     }
 
     #[test]
     fn null_convert_zero_convert_positive_lanes() {
-        // Real `fn_00404c98` behind both pins (null old → no dtor):
-        // hold the common owner lock.
+        // Real `fn_00404c98` behind both pins (null old → no dtor)
+        // and real `fn_00404cec` behind the convert-zero lane (its
+        // dtor lane reaches done `fn_00402e20`): hold the common
+        // owner lock and the dtor lock.
         let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        let _callee = crate::fn_00402e20::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00404f00 = ensure;
             HOOK_004062b8 = convert;
-            HOOK_00404cec = cec;
             HOOK_004046c4 = release;
         }
         let mut slot = [0u8; 8];
@@ -181,7 +172,8 @@ mod tests {
         assert_eq!(unsafe { slot_val(param_2) }, 0);
         // Convert-zero lane: ensure(3), real 00404d24 passes local
         // through so convert sees the headed obj; convert(.,4,p1+1,3)=0
-        // -> cec. Real store takes obj (rc 5→6), slot reads it back.
+        // -> real cec(&local, null) releases the headed obj (rc 5→4)
+        // and nulls the slot, so the real store takes null.
         reset();
         let b3 = [3u8, 0x41];
         CVT_RET.store(0, Ordering::SeqCst);
@@ -197,9 +189,8 @@ mod tests {
             (b3.as_ptr() as usize).wrapping_add(1)
         );
         assert_eq!(CVT_N.load(Ordering::SeqCst), 3);
-        assert_eq!(CEC_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(unsafe { slot_val(param_2) }, obj0 as usize);
-        assert_eq!(unsafe { rc_of(obj0) }, 6);
+        assert_eq!(unsafe { slot_val(param_2) }, 0);
+        assert_eq!(unsafe { rc_of(obj0) }, 4);
         // Convert-positive lane: ensure(2), convert=5 -> ensure(4).
         reset();
         let b2 = [2u8, 0x42];
@@ -208,7 +199,6 @@ mod tests {
         unsafe { fn_0040633c(b2.as_ptr(), param_2) };
         assert_eq!(ENS_HITS.load(Ordering::SeqCst), 2);
         assert_eq!(ENS_N.load(Ordering::SeqCst), 4);
-        assert_eq!(CEC_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(unsafe { slot_val(param_2) }, obj1 as usize);
         assert_eq!(unsafe { rc_of(obj1) }, 6);
         assert_eq!(REL_HITS.load(Ordering::SeqCst), 1);

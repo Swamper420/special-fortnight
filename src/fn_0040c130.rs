@@ -1,8 +1,6 @@
 //! Original procedure `0x0040c130` (119 bytes, `0x0040c130–0x0040c1a6`).
 //! Evidence: `evidence/0040c130_fn_0040c130.md`.
 
-unsafe extern "C" fn default_bf84(_mode: u32, _slot: *mut u8) {}
-
 unsafe extern "C" fn default_report(
     _fmt: *const u16,
     _args: *const u32,
@@ -11,20 +9,14 @@ unsafe extern "C" fn default_report(
 ) {
 }
 
-unsafe extern "C" fn default_link(_base: *mut u8, _flag: u8, _obj: *mut u8) -> *mut u8 {
-    core::ptr::null_mut()
-}
-
 unsafe extern "C" fn default_consume(_obj: *mut u8) {}
 
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
 /// Target `0x0040bf84` (`FUN_0040bf84`), `(param_2, &local_8)`.
-/// Fills the pointer-sized slot; null means the error lane.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_0040bf84` once it exists.
-pub static mut HOOK_0040BF84: unsafe extern "C" fn(u32, *mut u8) = default_bf84;
+/// Fills the pointer-sized slot; null means the error lane: direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(u32, *mut u8)`).
 
 /// Target `0x004082d4` (`FUN_004082d4`), `(fmt, &local_10, 0, &local_8)`
 /// on the null-slot lane.
@@ -36,12 +28,9 @@ pub static mut HOOK_004082D4: unsafe extern "C" fn(*const u16, *const u32, u32, 
     default_report;
 
 /// Target `0x00409824` (`FUN_00409824`), `(base, 1, local_8)`;
-/// returns the object (a DATA pointer).
-///
-/// ponytail: hook standing in for done `fn_00409824`, rewire to the real
-/// call once cross-module linkage proven.
-pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u8, u8, *mut u8) -> *mut u8 =
-    default_link;
+/// returns the object (a DATA pointer): direct intra-reconstruction
+/// call (rewired; signatures verified `fn(*mut u8, u8, *mut u8)
+/// -> *mut u8`).
 
 /// Target `0x00403f88` (`FUN_00403f88`), `(obj)`.
 ///
@@ -79,7 +68,7 @@ pub static FMT_0040C1C0: [u16; 18] = [
 /// (host-incompatible). Returns void.
 pub unsafe fn fn_0040c130(_param_1: *const u8, param_2: u32) {
     let mut local_8: usize = 0;
-    HOOK_0040BF84(param_2, &mut local_8 as *mut usize as *mut u8);
+    crate::fn_0040bf84::fn_0040bf84(param_2, &mut local_8 as *mut usize as *mut u8);
     if local_8 == 0 {
         let local_10: u32 = param_2;
         // ponytail: observed `MOV byte [EBP-8],0` with no later read;
@@ -92,7 +81,7 @@ pub unsafe fn fn_0040c130(_param_1: *const u8, param_2: u32) {
             &mut local_8,
         );
     }
-    let pi = HOOK_00409824(DAT_0040C0C4 as *mut u8, 1, local_8 as *mut u8);
+    let pi = crate::fn_00409824::fn_00409824(DAT_0040C0C4 as *mut u8, 1, local_8 as *mut u8);
     core::ptr::write_unaligned(pi.wrapping_byte_add(0x18) as *mut u32, param_2);
     HOOK_00403F88(pi);
     HOOK_004046C4(&mut local_8 as *mut usize as *mut u8);
@@ -105,16 +94,20 @@ pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 #[cfg(test)]
 mod tests {
     use super::{
-        DAT_0040C0C4, FMT_0040C1C0, HOOK_00403F88, HOOK_004046C4, HOOK_004082D4, HOOK_00409824,
-        HOOK_0040BF84, fn_0040c130,
+        DAT_0040C0C4, FMT_0040C1C0, HOOK_00403F88, HOOK_004046C4, HOOK_004082D4, fn_0040c130,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static mut OBJ: [u32; 8] = [0; 8];
-    static mut FAKE: [u8; 4] = [0; 4];
     static BASE: [u8; 4] = [0; 4];
 
+    /// Headed pin target for the real `fn_00409824` lane: tag 2,
+    /// refcount reset per lane.
+    static mut HEAD_ARENA: [u8; 64] = [0; 64];
+
     static SLOT_VAL: AtomicUsize = AtomicUsize::new(0);
+    static REL9824_HITS: AtomicUsize = AtomicUsize::new(0);
+    static REL9824_ARG: AtomicUsize = AtomicUsize::new(0);
     static REPORT_HITS: AtomicUsize = AtomicUsize::new(0);
     static REPORT_FMT: AtomicUsize = AtomicUsize::new(0);
     static REPORT_VAL: AtomicUsize = AtomicUsize::new(0);
@@ -126,8 +119,21 @@ mod tests {
     static CONSUME_ARG: AtomicUsize = AtomicUsize::new(0);
     static RELEASE_HITS: AtomicUsize = AtomicUsize::new(0);
 
-    unsafe extern "C" fn bf84(_mode: u32, slot: *mut u8) {
-        *(slot as *mut usize) = SLOT_VAL.load(Ordering::SeqCst);
+    /// Real `fn_0040bf84` lane hooks: zero-count format (slot stays
+    /// whatever the store hook writes), store hook forwards SLOT_VAL.
+    unsafe extern "C" fn fmt0(
+        _f: u32,
+        _n: *const u8,
+        _id: u32,
+        _l: u32,
+        _b: *mut u16,
+        _s: u32,
+        _r: *const u8,
+    ) -> u32 {
+        0
+    }
+    unsafe extern "C" fn store_slot(slot: *mut u8, _src: *mut u8, _n: u32) {
+        core::ptr::write_unaligned(slot as *mut usize, SLOT_VAL.load(Ordering::SeqCst));
     }
 
     unsafe extern "C" fn report(fmt: *const u16, args: *const u32, zero: u32, _slot: *mut usize) {
@@ -137,12 +143,25 @@ mod tests {
         REPORT_ZERO.store(zero as usize, Ordering::SeqCst);
     }
 
+    /// Real `fn_00409824` lane hooks: link returns the OBJ buffer,
+    /// release records.
     unsafe extern "C" fn link(base: *mut u8, flag: u8, obj: *mut u8) -> *mut u8 {
         LINK_HITS.fetch_add(1, Ordering::SeqCst);
         LINK_BASE.store(base as usize, Ordering::SeqCst);
         LINK_FLAG.store(flag as usize, Ordering::SeqCst);
         LINK_OBJ.store(obj as usize, Ordering::SeqCst);
         core::ptr::addr_of_mut!(OBJ) as *mut u8
+    }
+    unsafe extern "C" fn rel9824(o: *mut u8) {
+        REL9824_HITS.fetch_add(1, Ordering::SeqCst);
+        REL9824_ARG.store(o as usize, Ordering::SeqCst);
+    }
+    unsafe fn headed() -> *mut u8 {
+        let base = core::ptr::addr_of_mut!(HEAD_ARENA) as *mut u8;
+        core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, 2);
+        core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, 5);
+        core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut u32, 0);
+        base.wrapping_byte_add(12)
     }
 
     unsafe extern "C" fn consume(obj: *mut u8) {
@@ -155,20 +174,29 @@ mod tests {
 
     #[test]
     fn error_and_ok_lanes() {
+        // Real `fn_0040bf84` behind the slot (its hooks shared) and
+        // real `fn_00409824` behind the link (its hooks + the common
+        // owner behind the pin): hold all three locks.
         let _guard = super::TEST_LOCK.lock().unwrap();
+        let _fmt = crate::fn_0040bf84::TEST_LOCK.lock().unwrap();
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
         unsafe {
-            HOOK_0040BF84 = bf84;
+            crate::fn_0040bf84::HOOK_FormatMessageW = fmt0;
+            crate::fn_0040bf84::HOOK_00404DD4 = store_slot;
+            crate::fn_00409824::HOOK_004039e4 = link;
+            crate::fn_00409824::HOOK_00403a3c = rel9824;
             HOOK_004082D4 = report;
-            HOOK_00409824 = link;
             HOOK_00403F88 = consume;
             HOOK_004046C4 = release;
             DAT_0040C0C4 = core::ptr::addr_of!(BASE) as *const u8 as usize;
         }
         let obj_ptr = unsafe { core::ptr::addr_of_mut!(OBJ) as *mut u8 as usize };
         // Error lane: slot stays null, report fires with (fmt, copy, 0).
+        unsafe { core::ptr::write_unaligned(obj_ptr.wrapping_add(4) as *mut usize, 0) };
         SLOT_VAL.store(0, Ordering::SeqCst);
         REPORT_HITS.store(0, Ordering::SeqCst);
         LINK_HITS.store(0, Ordering::SeqCst);
+        REL9824_HITS.store(0, Ordering::SeqCst);
         RELEASE_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040c130(core::ptr::null(), 0x26) };
         assert_eq!(REPORT_HITS.load(Ordering::SeqCst), 1);
@@ -187,15 +215,29 @@ mod tests {
         assert_eq!(LINK_OBJ.load(Ordering::SeqCst), 0);
         assert_eq!(unsafe { OBJ[6] }, 0x26);
         assert_eq!(CONSUME_ARG.load(Ordering::SeqCst), obj_ptr);
+        assert_eq!(REL9824_HITS.load(Ordering::SeqCst), 1);
+        assert_eq!(REL9824_ARG.load(Ordering::SeqCst), obj_ptr);
         assert_eq!(RELEASE_HITS.load(Ordering::SeqCst), 1);
-        // Ok lane: preset slot skips the report, link sees the object.
-        let fake = unsafe { core::ptr::addr_of_mut!(FAKE) as *mut u8 as usize };
-        SLOT_VAL.store(fake, Ordering::SeqCst);
+        // Ok lane: headed slot skips the report, link sees the object;
+        // the real pin takes it (rc 5→6).
+        let head = unsafe { headed() };
+        unsafe { core::ptr::write_unaligned(obj_ptr.wrapping_add(4) as *mut usize, 0) };
+        SLOT_VAL.store(head as usize, Ordering::SeqCst);
+        REL9824_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040c130(core::ptr::null(), 0x99) };
         assert_eq!(REPORT_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(LINK_HITS.load(Ordering::SeqCst), 2);
-        assert_eq!(LINK_OBJ.load(Ordering::SeqCst), fake);
+        assert_eq!(LINK_OBJ.load(Ordering::SeqCst), head as usize);
         assert_eq!(unsafe { OBJ[6] }, 0x99);
+        assert_eq!(
+            unsafe { core::ptr::read_unaligned(obj_ptr.wrapping_add(4) as *const usize) },
+            head as usize
+        );
+        assert_eq!(
+            unsafe { core::ptr::read_unaligned(head.wrapping_byte_offset(-8) as *const u32) },
+            6
+        );
+        assert_eq!(REL9824_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(RELEASE_HITS.load(Ordering::SeqCst), 2);
     }
 }

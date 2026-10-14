@@ -16,6 +16,10 @@ pub unsafe fn fn_0040df20(param_1: u32, param_2: u32, param_3: *mut u8) {
     HOOK_0040DEF0(param_1, &mut slot, 0, param_3);
 }
 
+/// Test-only serialization for tests sharing the `DEF0` hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{HOOK_0040DEF0, fn_0040df20};
@@ -33,6 +37,7 @@ mod tests {
 
     #[test]
     fn spill_and_zero_forward() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe { HOOK_0040DEF0 = def0 };
         unsafe { fn_0040df20(0x36, 0xDEAD, core::ptr::null_mut()) };
         assert_eq!(P1.load(Ordering::SeqCst), 0x36);

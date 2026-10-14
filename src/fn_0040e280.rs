@@ -42,6 +42,10 @@ pub unsafe fn fn_0040e280(mut param_1: u32, param_2: *mut u32) {
     // ponytail: SEH frame (`0x0040e2e8/ef`) not modeled — test-platform init detail.
 }
 
+/// Test-only serialization for tests sharing the lane hooks/DAT.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,6 +74,7 @@ mod tests {
 
     #[test]
     fn five_chunks_lsb_first() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00404C98 = init;
             HOOK_00404E04 = conv;

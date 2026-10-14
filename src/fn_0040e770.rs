@@ -10,7 +10,6 @@ unsafe extern "C" fn default_d(_a: u32, _b: *const u8, _c: u32, _d: *mut u8) {}
 unsafe extern "C" fn default_n824(_a: *const u8, _b: u8, _c: *mut u8) -> u32 {
     0
 }
-unsafe extern "C" fn default_u32_arg(_a: u32) {}
 unsafe extern "C" fn default_void(_p: *mut u8) {}
 unsafe extern "C" fn default_rel(_p: *mut u8, _n: u32) {}
 
@@ -26,14 +25,17 @@ pub static mut HOOK_0040BF84: unsafe extern "C" fn(u32, *mut u32) = default_b84;
 pub static mut HOOK_0040DEF0: unsafe extern "C" fn(u32, *const u8, u32, *mut u8) = default_d;
 /// Target `0x00409824 (table, 1, obj)`.
 pub static mut HOOK_00409824: unsafe extern "C" fn(*const u8, u8, *mut u8) -> u32 = default_n824;
-/// Target `0x00403f88 (show/fail)`.
-pub static mut HOOK_00403F88: unsafe extern "C" fn(u32) = default_u32_arg;
+/// Target `0x00403f88 (show/fail)`: direct intra-reconstruction call
+/// (rewired; signatures verified `fn(u32)`).
 /// Target `0x00404c90` thunk (release local, 2).
 pub static mut HOOK_00404C90: unsafe extern "C" fn(*mut u8, u32) = default_rel;
 /// Target `0x00404c88` thunk (release obj).
 pub static mut HOOK_00404C88: unsafe extern "C" fn(*mut u8) = default_void;
 
 /// Fatal-error reporter (`param_1` EAX lane; caller passes `0x6a`).
+/// Test-only serialization for tests sharing the lane hooks/DAT.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 pub unsafe fn fn_0040e770(param_1: u32) {
     let err = HOOK_GETLASTERROR();
     // ponytail: `MOVZX BL` mask exact.
@@ -50,7 +52,7 @@ pub unsafe fn fn_0040e770(param_1: u32) {
     let packed: u32 = (detail & 0xff00) | 0x68;
     HOOK_0040DEF0(packed, entry, 2, &mut obj as *mut *mut u8 as *mut u8);
     let shown = HOOK_00409824(core::ptr::null(), 1, obj);
-    HOOK_00403F88(shown);
+    crate::fn_00403f88::fn_00403f88(shown);
     HOOK_00404C90(&mut detail as *mut u32 as *mut u8, 2);
     HOOK_00404C88(&mut obj as *mut *mut u8 as *mut u8);
     let _ = default_void;
@@ -78,24 +80,35 @@ mod tests {
         assert_eq!(ORDER.fetch_add(1, Ordering::SeqCst), 3);
         7
     }
-    unsafe extern "C" fn f88(a: u32) {
-        assert_eq!(ORDER.fetch_add(1, Ordering::SeqCst), 4);
-        assert_eq!(a, 7);
-    }
 
     #[test]
     fn order_and_table_mask() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
+        // Real `fn_00403f88` behind the show lane (nonzero show skips
+        // the alloc lane; null raise slot skips raise; tail default
+        // no-op): hold its lock set, pin the raise slot.
+        let _b8 = crate::fn_004046b8::TEST_LOCK.lock().unwrap();
+        let _ac = crate::fn_004046ac::TEST_LOCK.lock().unwrap();
+        let _loop = crate::fn_00404580::TEST_LOCK.lock().unwrap();
+        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        let (old_hook, old_tail);
+        unsafe {
+            old_hook = crate::fn_00403f88::HOOK_0041301C;
+            old_tail = crate::fn_00403f88::TAIL_00413014;
+            crate::fn_00403f88::HOOK_0041301C = None;
+        }
         unsafe {
             DAT_00412C08 = ROW.as_ptr() as *const *const u8;
             HOOK_00407EE8 = e88;
             HOOK_0040BF84 = b84;
             HOOK_0040DEF0 = d;
             HOOK_00409824 = n824;
-            HOOK_00403F88 = f88;
             ORDER.store(0, Ordering::SeqCst);
             fn_0040e770(0x101);
-            assert_eq!(ORDER.load(Ordering::SeqCst), 5);
+            assert_eq!(ORDER.load(Ordering::SeqCst), 4);
             let _ = GOT_IDX.load(Ordering::SeqCst);
+            crate::fn_00403f88::HOOK_0041301C = old_hook;
+            crate::fn_00403f88::TAIL_00413014 = old_tail;
         }
     }
 }

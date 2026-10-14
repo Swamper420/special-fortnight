@@ -39,6 +39,10 @@ pub unsafe fn fn_0040cff4(param_1: *mut u8) {
     }
 }
 
+/// Test-only serialization for tests sharing the lane hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{HOOK_0040CFB4, fn_0040cff4};
@@ -54,6 +58,7 @@ mod tests {
 
     #[test]
     fn folds_five_bytes() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe { HOOK_0040CFB4 = next };
         N.store(0, Ordering::SeqCst);
         let mut rec = [0u8; 0x20];

@@ -7,12 +7,10 @@ unsafe extern "C" fn default_take(_d: *mut u32, _s: u32) {}
 unsafe extern "C" fn default_stat(_s: u32, _o: *mut i32) -> u32 {
     0
 }
-unsafe extern "C" fn default_msg(_id: u32, _v: u32, _o: *mut u8) {}
 unsafe extern "C" fn default_mkmsg(_e: *mut u32, _f: u8, _s: u32) -> *mut u32 {
     core::ptr::null_mut()
 }
 unsafe extern "C" fn default_fatal(_m: *mut u32) {}
-unsafe extern "C" fn default_name(_id: u32, _d: *mut u32) {}
 unsafe extern "C" fn default_alloc(_d: *mut u32, _n: u32) {}
 unsafe extern "C" fn default_gate(_f: u8, _s: u32) -> u8 {
     0
@@ -30,18 +28,15 @@ pub static mut HOOK_00404CEC: unsafe extern "C" fn(*mut u32, u32) = default_take
 /// call (rewired; signatures verified `fn(u32) -> u32`).
 /// ponytail: hook for `fn_0040b62c`.
 pub static mut HOOK_0040B62C: unsafe extern "C" fn(u32, *mut i32) -> u32 = default_stat;
-/// Target `0x0040df20` cycle-fatal message.
-///
-/// ponytail: hook standing in for same-batch `fn_0040df20`.
-pub static mut HOOK_0040DF20: unsafe extern "C" fn(u32, u32, *mut u8) = default_msg;
+/// Target `0x0040df20` cycle-fatal message: direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(u32, u32, *mut u8)`).
 /// ponytail: hook for `fn_00409824`.
 pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u32, u8, u32) -> *mut u32 = default_mkmsg;
 /// ponytail: hook for `fn_00403f88`.
 pub static mut HOOK_00403F88: unsafe extern "C" fn(*mut u32) = default_fatal;
-/// Target `0x0040e280` name encoder.
-///
-/// ponytail: hook standing in for same-batch `fn_0040e280`.
-pub static mut HOOK_0040E280: unsafe extern "C" fn(u32, *mut u32) = default_name;
+/// Target `0x0040e280` name encoder: direct intra-reconstruction
+/// call (rewired; signatures verified `fn(u32, *mut u32)`).
 /// ponytail: hook for `fn_0040513c`.
 pub static mut HOOK_0040513C: unsafe extern "C" fn(*mut u32, u32) = default_alloc;
 /// Target `0x0040e1e0` gate.
@@ -75,12 +70,12 @@ pub unsafe fn fn_0040e2f8(param_1: u8, param_2: *mut u8, param_3: u32, param_4: 
             // ponytail: `CONCAT31(st>>8, 0x4c)` id shape preserved.
             let id = (st & 0xffffff00) | 0x4c;
             let mut tok: u32 = 0;
-            HOOK_0040DF20(id, v as u32, (&mut tok as *mut u32) as *mut u8);
+            crate::fn_0040df20::fn_0040df20(id, v as u32, (&mut tok as *mut u32) as *mut u8);
             let m = HOOK_00409824(&mut 0u32, 1, tok);
             HOOK_00403F88(m);
         }
         let mut name: u32 = 0;
-        HOOK_0040E280(ctr, &mut name);
+        crate::fn_0040e280::fn_0040e280(ctr, &mut name);
         let _saved = param_3;
         let mut tok: u32 = 0;
         HOOK_0040513C(&mut tok, 4);
@@ -106,11 +101,6 @@ mod tests {
     static GATE: AtomicUsize = AtomicUsize::new(0);
     static FATALS: AtomicUsize = AtomicUsize::new(0);
     static STORED: AtomicUsize = AtomicUsize::new(0);
-    static NAMES: AtomicUsize = AtomicUsize::new(0);
-
-    unsafe extern "C" fn name(_id: u32, _d: *mut u32) {
-        NAMES.fetch_add(1, Ordering::SeqCst);
-    }
     unsafe extern "C" fn alloc(d: *mut u32, _n: u32) {
         *d = 0x61;
     }
@@ -127,7 +117,6 @@ mod tests {
 
     fn reset() {
         unsafe {
-            HOOK_0040E280 = name;
             HOOK_0040513C = alloc;
             HOOK_0040E1E0 = gate;
             HOOK_00404C98 = store;
@@ -140,15 +129,17 @@ mod tests {
         // Real `fn_004030e4` behind the seed (seed cell shared):
         // hold the owner lock; seed 0 → seed 1 → (0x2000000*1)>>32
         // == 0, so ctr=1, gate 0 breaks after one name call.
+        // Real `fn_0040e280` behind the name (default hooks: init,
+        // conv, append, free all no-op, so `name` stays 0): hold its
+        // lock.
         let _seed = crate::fn_004030e4::TEST_LOCK.lock().unwrap();
+        let _name = crate::fn_0040e280::TEST_LOCK.lock().unwrap();
         unsafe { crate::fn_004030e4::CELL_00412008 = 0 };
         reset();
         GATE.store(0, Ordering::SeqCst);
-        NAMES.store(0, Ordering::SeqCst);
         FATALS.store(0, Ordering::SeqCst);
         let mut out = 0u32;
         unsafe { fn_0040e2f8(0, core::ptr::null_mut(), 0, &mut out) };
-        assert_eq!(NAMES.load(Ordering::SeqCst), 1);
         assert_eq!(FATALS.load(Ordering::SeqCst), 0);
         assert_eq!(STORED.load(Ordering::SeqCst), 0); // tmp from null mkname hook
     }

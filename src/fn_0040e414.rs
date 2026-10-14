@@ -12,7 +12,6 @@ unsafe extern "C" fn default_mkdir(_p: *mut u16) -> i32 {
 unsafe extern "C" fn default_lasterror() -> u32 {
     0
 }
-unsafe extern "C" fn default_msg(_id: u32, _v: u32, _o: *mut u8) {}
 unsafe extern "C" fn default_fmt(_e: u32) {}
 unsafe extern "C" fn default_fmt2(_e: u32, _o: *mut u32) {}
 unsafe extern "C" fn default_def0(_id: u32, _v: u32, _n: i32, _o: *mut u8) {}
@@ -39,10 +38,8 @@ pub static mut HOOK_CreateDirectoryW: unsafe extern "C" fn(*mut u16) -> i32 = de
 ///
 /// ponytail: hook standing in for the raw import call at the original site.
 pub static mut HOOK_GetLastError: unsafe extern "C" fn() -> u32 = default_lasterror;
-/// Target `0x0040df20` message.
-///
-/// ponytail: hook standing in for same-batch `fn_0040df20`.
-pub static mut HOOK_0040DF20: unsafe extern "C" fn(u32, u32, *mut u8) = default_msg;
+/// Target `0x0040df20` message: direct intra-reconstruction call
+/// (rewired; signatures verified `fn(u32, u32, *mut u8)`).
 /// ponytail: hook for `fn_00407ee8`.
 pub static mut HOOK_00407EE8: unsafe extern "C" fn(u32) = default_fmt;
 /// ponytail: hook for `fn_0040bf84`.
@@ -78,7 +75,7 @@ pub unsafe fn fn_0040e414(param_1: *mut u32) {
             continue;
         }
         let mut m1 = [0u8; 8];
-        HOOK_0040DF20(0x36, work, m1.as_mut_ptr());
+        crate::fn_0040df20::fn_0040df20(0x36, work, m1.as_mut_ptr());
         HOOK_00407EE8(err);
         let mut m2: u32 = 0;
         HOOK_0040BF84(err, &mut m2);
@@ -123,6 +120,9 @@ mod tests {
 
     #[test]
     fn retry_paths() {
+        // Real `fn_0040df20` behind the message lane (its `DEF0`
+        // hook shared): hold its lock.
+        let _msg = crate::fn_0040df20::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_CreateDirectoryW = mkdir;
             HOOK_GetLastError = lasterror;

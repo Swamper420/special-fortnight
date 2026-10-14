@@ -44,6 +44,10 @@ pub static mut DAT_0040c4dc: *mut u8 = core::ptr::null_mut();
 /// once data layout proven.
 pub static MSG_0040cb84: [u8; 31] = *b"Compressed block is corrupted\x00\x00";
 
+/// Test-only serialization for tests sharing the lane hooks.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 /// Sink fork: `slot=[obj+4]`; null slot drains via `cad8` and
 /// raises the corrupt-error pair on a short drain, else the
 /// `[*slot+4](slot,dst,len)` vtable call. `param_1` EAX / `param_2`
@@ -129,6 +133,7 @@ mod tests {
 
     #[test]
     fn sink_forks() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         install();
         let mut dst = [0u8; 8];
         let d = dst.as_mut_ptr();

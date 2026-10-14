@@ -64,6 +64,10 @@ pub unsafe fn fn_0040bf84(param_1: u32, param_2: *mut u8) {
     HOOK_00404DD4(param_2, buf.as_mut_ptr() as *mut u8, count);
 }
 
+/// Test-only serialization for tests sharing the lane hooks.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{HOOK_00404DD4, HOOK_FormatMessageW, fn_0040bf84};
@@ -133,7 +137,7 @@ mod tests {
 
     #[test]
     fn format_strip_store_lanes() {
-        // Own hooks only: no foreign globals, no TEST_LOCK.
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_FormatMessageW = fmt;
             HOOK_00404DD4 = d;

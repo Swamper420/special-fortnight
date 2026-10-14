@@ -114,7 +114,9 @@ mod tests {
     static READ_RET: AtomicUsize = AtomicUsize::new(0);
 
     // Fail codes observed through the real `fn_0040cc3c`: it forwards
-    // `[code, 0]` to its format hook and the format result to die.
+    // `[code, 0]` to its format hook and the format result to the real
+    // die (pinned to its null-raise lane here), so record at the format
+    // hook — same code, same call count.
     unsafe extern "C" fn fmt_fail(
         _p1: usize,
         _p2: u8,
@@ -122,10 +124,9 @@ mod tests {
         _p4: u32,
         blk: *mut u8,
     ) -> u32 {
-        core::ptr::read_unaligned(blk as *const u32)
-    }
-    unsafe extern "C" fn die_fail(c: u32) {
+        let c = core::ptr::read_unaligned(blk as *const u32);
         FAIL.store(c as usize, Ordering::SeqCst);
+        c
     }
     unsafe extern "C" fn fill(_s: *mut u8, _n: u32, _v: u8) {}
     unsafe extern "C" fn parse(
@@ -169,9 +170,19 @@ mod tests {
 
     #[test]
     fn lanes() {
+        // Real `fn_00403f88` behind the fail reporter (nonzero codes
+        // skip its alloc lane): hold its lock set, pin the null raise
+        // slot.
+        let _b8 = crate::fn_004046b8::TEST_LOCK.lock().unwrap();
+        let _ac = crate::fn_004046ac::TEST_LOCK.lock().unwrap();
+        let _loop = crate::fn_00404580::TEST_LOCK.lock().unwrap();
+        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        let (old_hook, old_tail);
         unsafe {
+            old_hook = crate::fn_00403f88::HOOK_0041301C;
+            old_tail = crate::fn_00403f88::TAIL_00413014;
+            crate::fn_00403f88::HOOK_0041301C = None;
             crate::fn_0040cc3c::HOOK_00409860 = fmt_fail;
-            crate::fn_0040cc3c::HOOK_00403F88 = die_fail;
             HOOK_00403250 = fill;
             HOOK_0040D9D8 = parse;
             crate::fn_0040cdcc::HOOK_VirtualFree = vfree;
@@ -219,5 +230,9 @@ mod tests {
         assert_eq!(FAIL.load(Ordering::SeqCst), 3);
         assert_eq!(FREE.load(Ordering::SeqCst), 1);
         assert_eq!(ALLOC.load(Ordering::SeqCst), 1);
+        unsafe {
+            crate::fn_00403f88::HOOK_0041301C = old_hook;
+            crate::fn_00403f88::TAIL_00413014 = old_tail;
+        }
     }
 }

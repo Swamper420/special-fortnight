@@ -39,7 +39,9 @@ mod tests {
         *d = 0x5a;
     }
     // Observed through the real `fn_0040ccdc`: it forwards a block
-    // `[local, 0x11]` to its format hook and the format result to die.
+    // `[local, 0x11]` to its format hook and the format result to the
+    // real die (pinned to its null-raise lane here), so record at the
+    // format hook — same value, same call count.
     unsafe extern "C" fn fmt(
         _a: usize,
         _b: u8,
@@ -49,10 +51,8 @@ mod tests {
     ) -> u32 {
         assert_eq!(core::ptr::read_unaligned(blk as *const u32), 0x5a);
         assert_eq!(core::ptr::read_unaligned((blk as usize).wrapping_add(4) as *const u8), 0x11);
+        SEEN.store(0x5a, Ordering::SeqCst);
         0x5a
-    }
-    unsafe extern "C" fn die(c: u32) {
-        SEEN.store(c as usize, Ordering::SeqCst);
     }
     unsafe extern "C" fn release(s: *mut u8) {
         REL.store(core::ptr::read_unaligned(s as *const u32) as usize, Ordering::SeqCst);
@@ -60,15 +60,28 @@ mod tests {
 
     #[test]
     fn convert_report_release_chain() {
+        // Real `fn_00403f88` behind the report (nonzero result skips
+        // its alloc lane): hold its lock set, pin the null raise slot.
+        let _b8 = crate::fn_004046b8::TEST_LOCK.lock().unwrap();
+        let _ac = crate::fn_004046ac::TEST_LOCK.lock().unwrap();
+        let _loop = crate::fn_00404580::TEST_LOCK.lock().unwrap();
+        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        let (old_hook, old_tail);
         unsafe {
+            old_hook = crate::fn_00403f88::HOOK_0041301C;
+            old_tail = crate::fn_00403f88::TAIL_00413014;
+            crate::fn_00403f88::HOOK_0041301C = None;
             HOOK_004082D4 = convert;
             HOOK_004046C4 = release;
             crate::fn_0040ccdc::HOOK_00409860 = fmt;
-            crate::fn_0040ccdc::HOOK_00403F88 = die;
         }
         let mut buf = [0u16; 2];
         unsafe { fn_0040cd3c(buf.as_mut_ptr(), 7, 8) };
         assert_eq!(SEEN.load(Ordering::SeqCst), 0x5a);
         assert_eq!(REL.load(Ordering::SeqCst), 0x5a);
+        unsafe {
+            crate::fn_00403f88::HOOK_0041301C = old_hook;
+            crate::fn_00403f88::TAIL_00413014 = old_tail;
+        }
     }
 }

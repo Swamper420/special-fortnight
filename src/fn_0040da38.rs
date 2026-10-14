@@ -1,7 +1,6 @@
 //! Original procedure `0x0040da38` (255 bytes, `0x0040da38–0x0040db36`).
 //! Evidence: `evidence/0040da38_fn_0040da38.md`.
 
-unsafe extern "C" fn default_read(_s: *mut u8, _d: *mut u8, _n: u32) {}
 unsafe extern "C" fn default_alloc(_s: *mut u32, _n: i32) {}
 unsafe extern "C" fn default_alloc0(_s: *mut u32, _n: u32, _z: u32) {}
 unsafe extern "C" fn default_store(_d: *mut u32, _s: u32) {}
@@ -11,10 +10,9 @@ unsafe extern "C" fn default_thunk(_s: *mut u32) -> *mut u8 {
 }
 unsafe extern "C" fn default_free(_s: *mut u32) {}
 
-/// Reader `0x0040cb34(EAX,EDX,ECX)`; all five sites.
-///
-/// ponytail: hook for out-of-batch `fn_0040cb34`.
-pub static mut HOOK_0040CB34: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_read;
+/// Reader `0x0040cb34(EAX,EDX,ECX)`; all five sites: direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, *mut u8, u32)`).
 /// ponytail: hook for `fn_00404f00`.
 pub static mut HOOK_00404F00: unsafe extern "C" fn(*mut u32, i32) = default_alloc;
 /// ponytail: hook for `fn_00404c98`.
@@ -46,7 +44,7 @@ pub unsafe fn fn_0040da38(
         let mut n = param_5;
         loop {
             let mut len: u32 = 0;
-            HOOK_0040CB34(param_1, (&mut len as *mut u32) as *mut u8, 4);
+            crate::fn_0040cb34::fn_0040cb34(param_1, (&mut len as *mut u32) as *mut u8, 4);
             // ponytail: `SAR 1; JNS / ADC 0` — halve rounding toward +inf for odds.
             let mut half = (len as i32) >> 1;
             if half < 0 {
@@ -56,7 +54,7 @@ pub unsafe fn fn_0040da38(
             HOOK_00404F00(&mut s, half);
             if len != 0 {
                 let p = HOOK_004054AC(&mut s);
-                HOOK_0040CB34(param_1, p, len);
+                crate::fn_0040cb34::fn_0040cb34(param_1, p, len);
             }
             HOOK_00404C98(dst, s);
             dst = dst.wrapping_byte_add(4);
@@ -70,12 +68,12 @@ pub unsafe fn fn_0040da38(
         let mut n = param_4;
         loop {
             let mut len: u32 = 0;
-            HOOK_0040CB34(param_1, (&mut len as *mut u32) as *mut u8, 4);
+            crate::fn_0040cb34::fn_0040cb34(param_1, (&mut len as *mut u32) as *mut u8, 4);
             let mut s: u32 = 0;
             HOOK_004049C4(&mut s, len, 0);
             if len != 0 {
                 let p = HOOK_004049BC(&mut s);
-                HOOK_0040CB34(param_1, p, len);
+                crate::fn_0040cb34::fn_0040cb34(param_1, p, len);
             }
             HOOK_00404718(dst, s);
             dst = dst.wrapping_byte_add(4);
@@ -86,7 +84,7 @@ pub unsafe fn fn_0040da38(
         }
     }
     let tail = (param_3 as u32).wrapping_sub((param_5.wrapping_add(param_4) as u32).wrapping_mul(4));
-    HOOK_0040CB34(param_1, dst as *mut u8, tail);
+    crate::fn_0040cb34::fn_0040cb34(param_1, dst as *mut u8, tail);
     let mut c: u32 = 0;
     let mut b: u32 = 0;
     HOOK_004046C4(&mut c);
@@ -103,14 +101,16 @@ mod tests {
     static FREES: AtomicUsize = AtomicUsize::new(0);
     static LEN: AtomicUsize = AtomicUsize::new(0);
 
-    unsafe extern "C" fn read(_s: *mut u8, d: *mut u8, n: u32) {
-        if n == 4 && (d as usize) != 0 {
-            // length-word reads only when target is our stack slot; tail read passes dst ptr.
-            // Distinguish by recording all; test asserts counts.
-        }
+    /// Real `fn_0040cb34` drain hook: null slot drains the requested
+    /// count (length words stay 0, so no inner read and the error
+    /// pair never fires).
+    unsafe extern "C" fn drain(_o: *mut u8, _d: *mut u8, _l: u32) -> u32 {
         READS.fetch_add(1, Ordering::SeqCst);
-        let _ = LEN.load(Ordering::SeqCst);
+        LEN.load(Ordering::SeqCst) as u32
     }
+
+    /// Null-slot object for the real `fn_0040cb34` (`+4` slot null).
+    static mut OBJ_BUF: [u8; 12] = [0; 12];
     unsafe extern "C" fn alloc(s: *mut u32, _n: i32) {
         *s = 0x77;
     }
@@ -127,8 +127,11 @@ mod tests {
     #[test]
     fn zero_counts_tail_only() {
         let _lock = LOCK.lock().unwrap();
+        // Real `fn_0040cb34` behind the reads (its drain hook
+        // shared): hold its lock, pin the full-count drain.
+        let _cb = crate::fn_0040cb34::TEST_LOCK.lock().unwrap();
         unsafe {
-            HOOK_0040CB34 = read;
+            crate::fn_0040cb34::HOOK_0040cad8 = drain;
             HOOK_00404F00 = alloc;
             HOOK_00404C98 = store;
             HOOK_004049C4 = super::default_alloc0;
@@ -139,9 +142,10 @@ mod tests {
         READS.store(0, Ordering::SeqCst);
         STORES.store(0, Ordering::SeqCst);
         FREES.store(0, Ordering::SeqCst);
-        LEN.store(0, Ordering::SeqCst);
+        LEN.store(16, Ordering::SeqCst);
         let mut dst = [0u32; 2];
-        unsafe { fn_0040da38(core::ptr::null_mut(), dst.as_mut_ptr(), 16, 0, 0) };
+        let obj = unsafe { core::ptr::addr_of_mut!(OBJ_BUF) as *mut u8 };
+        unsafe { fn_0040da38(obj, dst.as_mut_ptr(), 16, 0, 0) };
         assert_eq!(READS.load(Ordering::SeqCst), 1); // tail only
         assert_eq!(STORES.load(Ordering::SeqCst), 0);
         assert_eq!(FREES.load(Ordering::SeqCst), 2);
@@ -150,8 +154,11 @@ mod tests {
     #[test]
     fn one_zero_len_item() {
         let _lock = LOCK.lock().unwrap();
+        // Real `fn_0040cb34` behind the reads (its drain hook
+        // shared): hold its lock, pin the full-count drain.
+        let _cb = crate::fn_0040cb34::TEST_LOCK.lock().unwrap();
         unsafe {
-            HOOK_0040CB34 = read;
+            crate::fn_0040cb34::HOOK_0040cad8 = drain;
             HOOK_00404F00 = alloc;
             HOOK_00404C98 = store;
             HOOK_004046C4 = free;
@@ -160,9 +167,11 @@ mod tests {
         READS.store(0, Ordering::SeqCst);
         STORES.store(0, Ordering::SeqCst);
         FREES.store(0, Ordering::SeqCst);
+        LEN.store(4, Ordering::SeqCst);
         let mut dst = [0u32; 2];
-        // Length word stays 0 (read hook leaves it) → no inner read, one store + tail.
-        unsafe { fn_0040da38(core::ptr::null_mut(), dst.as_mut_ptr(), 8, 0, 1) };
+        // Length word stays 0 (drain leaves it) → no inner read, one store + tail.
+        let obj = unsafe { core::ptr::addr_of_mut!(OBJ_BUF) as *mut u8 };
+        unsafe { fn_0040da38(obj, dst.as_mut_ptr(), 8, 0, 1) };
         assert_eq!(READS.load(Ordering::SeqCst), 2); // len + tail
         assert_eq!(STORES.load(Ordering::SeqCst), 1);
         assert_eq!(dst[0], 0x77);

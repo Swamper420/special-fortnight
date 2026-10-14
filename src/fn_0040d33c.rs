@@ -22,7 +22,6 @@ unsafe extern "C" fn default_dist2(_p: *mut u16, _n: i32, _r: *mut u8) -> u32 {
 unsafe extern "C" fn default_direct(_r: *mut u8, _a: i32, _b: i32) -> u32 {
     0
 }
-unsafe extern "C" fn default_initrange(_r: *mut u8) {}
 
 /// `FUN_0040d094` bit-prob decode (`×6` sites).
 /// ponytail: hook standing in for out-of-batch `fn_0040d094`.
@@ -39,8 +38,8 @@ pub static mut HOOK_0040D11C: unsafe extern "C" fn(*mut u16, u32, *mut u8) -> u3
 pub static mut HOOK_0040D160: unsafe extern "C" fn(*mut u16, i32, *mut u8) -> u32 = default_dist2;
 /// `FUN_0040d034` direct-bits decode. ponytail: hook for out-of-batch callee.
 pub static mut HOOK_0040D034: unsafe extern "C" fn(*mut u8, i32, i32) -> u32 = default_direct;
-/// `FUN_0040cff4` range init. ponytail: hook for out-of-batch callee.
-pub static mut HOOK_0040CFF4: unsafe extern "C" fn(*mut u8) = default_initrange;
+/// `FUN_0040cff4` range init: direct intra-reconstruction call
+/// (rewired; signatures verified `fn(*mut u8)`).
 
 /// LZMA main decode loop.
 /// `param_1` EAX state struct / `param_2` EDX in-cursor blob / `param_3` ECX out base /
@@ -318,7 +317,7 @@ pub unsafe fn fn_0040d33c(
     if dict_size != 0 {
         core::ptr::write_unaligned(dict.wrapping_byte_add(dict_size.wrapping_sub(1) as usize), 0);
     }
-    HOOK_0040CFF4(rc_base);
+    crate::fn_0040cff4::fn_0040cff4(rc_base);
     len = 0;
     goto_flush(out_n, param_1, param_3, param_4, param_5, probs, pos_mask, lit_mask, lit_ctx, &mut rep0, &mut rep1, &mut rep2, &mut rep3, &mut len, &mut pos, &mut dict_remain, &mut dict, dict_size, &mut dict_pos, &mut state, rc_base, &mut rc, &mut last)
 }
@@ -502,6 +501,9 @@ mod tests {
     #[test]
     fn len_minus_one_returns_zero() {
         let _lock = LOCK.lock().unwrap();
+        // Real `fn_0040cff4` behind the range-init lane (its `CFB4`
+        // hook shared): hold its lock.
+        let _init = crate::fn_0040cff4::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_0040D094 = bit;
             HOOK_0040D1A4 = lit;
@@ -520,6 +522,9 @@ mod tests {
     #[test]
     fn literal_emit_one() {
         let _lock = LOCK.lock().unwrap();
+        // Real `fn_0040cff4` behind the range-init lane (its `CFB4`
+        // hook shared): hold its lock.
+        let _init = crate::fn_0040cff4::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_0040D094 = bit;
             HOOK_0040D1A4 = lit;

@@ -1,8 +1,6 @@
 //! Original procedure `0x00409bb4` (156 bytes, `0x00409bb4–0x00409c4f`).
 //! Evidence: `evidence/00409bb4_fn_00409bb4.md`.
 
-unsafe extern "C" fn default_pin(_slot: *mut u8, _src: *mut u8) {}
-
 unsafe extern "C" fn default_fill(_cell: *mut u8, _slot: *mut u8) {}
 
 unsafe extern "C" fn default_call(
@@ -17,11 +15,8 @@ unsafe extern "C" fn default_call(
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
 /// Target `0x00404cec` (`FUN_00404cec`), `(&local_8, param_1)` on the
-/// non-null lane.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to
-/// real call once cross-module linkage proven.
-pub static mut HOOK_00404CEC: unsafe extern "C" fn(*mut u8, *mut u8) = default_pin;
+/// non-null lane: direct intra-reconstruction call (rewired;
+/// signatures verified `fn(*mut u8, *mut u8)`).
 
 /// Target `0x004063e4` (`FUN_004063e4`), `(cell, &slot)` at both sites:
 /// `([0x00412c20], &local_8)` on the null lane,
@@ -92,7 +87,7 @@ pub unsafe fn fn_00409bb4(param_1: *mut u8, param_2: u32, param_3: u32) {
     if param_1.is_null() {
         HOOK_004063E4(PTR_00412C20, &mut local_8 as *mut usize as *mut u8);
     } else {
-        HOOK_00404CEC(&mut local_8 as *mut usize as *mut u8, param_1);
+        crate::fn_00404cec::fn_00404cec(&mut local_8 as *mut usize as *mut u8, param_1);
     }
     let mut args = CallArgs {
         slot: local_8,
@@ -120,12 +115,14 @@ pub unsafe fn fn_00409bb4(param_1: *mut u8, param_2: u32, param_3: u32) {
 #[cfg(test)]
 mod tests {
     use super::{
-        HOOK_004046C4, HOOK_00404CEC, HOOK_004063E4, HOOK_00409860, PTR_004077B8,
+        HOOK_004046C4, HOOK_004063E4, HOOK_00409860, PTR_004077B8,
         PTR_00412C20, PTR_00412C40, fn_00409bb4,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    static PIN_HITS: AtomicUsize = AtomicUsize::new(0);
+    /// Headed pin source for the real `fn_00404cec` lane: tag 2,
+    /// refcount reset per lane.
+    static mut HEAD_ARENA: [u8; 64] = [0; 64];
     static FILL_HITS: AtomicUsize = AtomicUsize::new(0);
     static FILL_FIRST: AtomicUsize = AtomicUsize::new(0);
     static CALL_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -141,15 +138,21 @@ mod tests {
     static REL_FIRST: AtomicUsize = AtomicUsize::new(0);
     static REL_SECOND: AtomicUsize = AtomicUsize::new(0);
 
-    static mut SRC: u8 = 0;
     static mut CELL_A: u8 = 0;
     static mut CELL_B: u8 = 0;
     static mut OBJ: u8 = 0;
     static mut EXTRA_OBJ: u8 = 0;
 
-    unsafe extern "C" fn pin(slot: *mut u8, _src: *mut u8) {
-        PIN_HITS.fetch_add(1, Ordering::SeqCst);
-        core::ptr::write_unaligned(slot as *mut usize, 0xA000);
+    unsafe fn headed() -> *mut u8 {
+        let base = core::ptr::addr_of_mut!(HEAD_ARENA) as *mut u8;
+        core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, 2);
+        core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, 5);
+        core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut u32, 0);
+        base.wrapping_byte_add(12)
+    }
+
+    unsafe fn rc_of(p: *mut u8) -> u32 {
+        core::ptr::read_unaligned(p.wrapping_byte_offset(-8) as *const u32)
     }
 
     unsafe extern "C" fn fill(cell: *mut u8, slot: *mut u8) {
@@ -211,7 +214,6 @@ mod tests {
     }
 
     fn reset() {
-        PIN_HITS.store(0, Ordering::SeqCst);
         FILL_HITS.store(0, Ordering::SeqCst);
         CALL_HITS.store(0, Ordering::SeqCst);
         REL_HITS.store(0, Ordering::SeqCst);
@@ -219,8 +221,12 @@ mod tests {
 
     #[test]
     fn null_and_nonnull_lanes() {
+        // Real `fn_00404cec` behind the non-null lane (its dtor lane
+        // reaches done `fn_00402e20`): hold the common owner lock and
+        // the dtor lock.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        let _callee = crate::fn_00402e20::TEST_LOCK.lock().unwrap();
         unsafe {
-            HOOK_00404CEC = pin;
             HOOK_004063E4 = fill;
             HOOK_00409860 = call;
             HOOK_004046C4 = release;
@@ -228,10 +234,12 @@ mod tests {
             PTR_00412C40 = core::ptr::addr_of_mut!(CELL_B);
             PTR_004077B8 = core::ptr::addr_of_mut!(OBJ);
         }
-        // Non-null lane: 4cec seeds the slot, no null-lane fill.
+        // Non-null lane: real 4cec takes the headed source (rc
+        // 5→6), no null-lane fill.
         reset();
-        unsafe { fn_00409bb4(core::ptr::addr_of_mut!(SRC), 0x3141, 0x5926) };
-        assert_eq!(PIN_HITS.load(Ordering::SeqCst), 1);
+        let src = unsafe { headed() };
+        unsafe { fn_00409bb4(src, 0x3141, 0x5926) };
+        assert_eq!(unsafe { rc_of(src) }, 6);
         assert_eq!(FILL_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(CALL_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(
@@ -244,7 +252,7 @@ mod tests {
             unsafe { core::ptr::addr_of_mut!(EXTRA_OBJ) } as usize
         );
         assert_eq!(CALL_COUNT.load(Ordering::SeqCst), 2);
-        assert_eq!(GOT_SLOT.load(Ordering::SeqCst), 0xA000);
+        assert_eq!(GOT_SLOT.load(Ordering::SeqCst), src as usize);
         assert_eq!(GOT_V1.load(Ordering::SeqCst), 0x3141);
         assert_eq!(GOT_V2.load(Ordering::SeqCst), 0x5926);
         assert_eq!(GOT_TAGS.load(Ordering::SeqCst), 0x11);
@@ -258,7 +266,6 @@ mod tests {
         // Null lane: 63e4 seeds the slot with the null-lane cell.
         reset();
         unsafe { fn_00409bb4(core::ptr::null_mut(), 0x1111, 0x2222) };
-        assert_eq!(PIN_HITS.load(Ordering::SeqCst), 0);
         assert_eq!(FILL_HITS.load(Ordering::SeqCst), 2);
         assert_eq!(
             FILL_FIRST.load(Ordering::SeqCst),

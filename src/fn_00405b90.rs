@@ -51,6 +51,10 @@ pub unsafe fn fn_00405b90(param_1: *mut u8) -> usize {
     HOOK_00405b48(node)
 }
 
+/// Test-only serialization for tests sharing the node-list cell.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{DAT_0041202c, HOOK_00405b48, fn_00405b90};
@@ -78,6 +82,7 @@ mod tests {
 
     #[test]
     fn walk_match_miss() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00405b48 = resolve;
         }

@@ -9,8 +9,6 @@ unsafe extern "C" fn default_at(_obj: *mut u8, _addr: *mut u8) -> *mut u16 {
     core::ptr::null_mut()
 }
 
-unsafe extern "C" fn default_slice(_obj: *mut u8, _one: i32, _n: i32, _dest: *mut u8) {}
-
 /// Scanner `0x0040b3cc` (`FUN_0040b3cc`), `(obj, 1)`.
 /// Only the low byte of EDX is forced to 1 (`MOV DL,1`).
 ///
@@ -33,11 +31,9 @@ pub static mut HOOK_0040b620: unsafe extern "C" fn(*mut u8, *mut u8) -> *mut u16
 /// intra-reconstruction call (rewired; signatures verified
 /// `fn(*mut u8, *mut u8)`).
 
-/// Slicer `0x0040525c` (`FUN_0040525c`), `(obj, 1, n, dest)`.
-///
-/// ponytail: hook mirroring done `fn_0040525c`'s shape, rewire
-/// to the real call once cross-module linkage proven.
-pub static mut HOOK_0040525c: unsafe extern "C" fn(*mut u8, i32, i32, *mut u8) = default_slice;
+/// Slicer `0x0040525c` (`FUN_0040525c`), `(obj, 1, n, dest)`:
+/// direct intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, i32, i32, *mut u8)`).
 
 /// Scan `param_1` from the searched start down while the class
 /// test holds, then store (length unchanged) or slice (shrunk).
@@ -70,24 +66,32 @@ pub unsafe fn fn_0040b62c(param_1: *mut u8, param_2: *mut u8) {
     if len == n {
         crate::fn_00404c98::fn_00404c98(param_2, param_1);
     } else {
-        HOOK_0040525c(param_1, 1, n, param_2);
+        crate::fn_0040525c::fn_0040525c(param_1, 1, n, param_2);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{HOOK_0040525c, HOOK_0040b3cc, HOOK_0040b620, fn_0040b62c};
+    use super::{HOOK_0040b3cc, HOOK_0040b620, fn_0040b62c};
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static WIDE_D: AtomicUsize = AtomicUsize::new(0);
+    static WIDE_S: AtomicUsize = AtomicUsize::new(0);
+    static WIDE_N: AtomicUsize = AtomicUsize::new(0);
+
+    /// Real `fn_0040525c` wide-copy lane hook: records only (the
+    /// shrink dest is a live slot, never overwritten here).
+    unsafe extern "C" fn wide(d: *mut u8, x: *mut u8, n: u32) {
+        WIDE_D.store(d as usize, Ordering::SeqCst);
+        WIDE_S.store(x as usize, Ordering::SeqCst);
+        WIDE_N.store(n as usize, Ordering::SeqCst);
+    }
 
     static SCAN_HITS: AtomicUsize = AtomicUsize::new(0);
     static SCAN_ONE: AtomicUsize = AtomicUsize::new(0);
     static SCAN_RET: AtomicUsize = AtomicUsize::new(0);
     static AT_ADDR: AtomicUsize = AtomicUsize::new(0);
     static AT_SEQ: AtomicUsize = AtomicUsize::new(0);
-    static SLICE_HITS: AtomicUsize = AtomicUsize::new(0);
-    static SLICE_B: AtomicUsize = AtomicUsize::new(0);
-    static SLICE_C: AtomicUsize = AtomicUsize::new(0);
-    static SLICE_D: AtomicUsize = AtomicUsize::new(0);
 
     static mut PROBE: u16 = 0x41;
     static mut SLASH: u16 = 0x5c;
@@ -110,13 +114,6 @@ mod tests {
         }
     }
 
-    unsafe extern "C" fn slice(_o: *mut u8, b: i32, c: i32, d: *mut u8) {
-        SLICE_HITS.fetch_add(1, Ordering::SeqCst);
-        SLICE_B.store(b as usize, Ordering::SeqCst);
-        SLICE_C.store(c as usize, Ordering::SeqCst);
-        SLICE_D.store(d as usize, Ordering::SeqCst);
-    }
-
     /// Header arena: obj = base+12; tag 2 at base+2 (`obj-10`),
     /// refcount at base+4 (`obj-8`), length at base+8 (`obj-4`).
     unsafe fn hdr(arena: &mut [u32; 4], len: u32) -> *mut u8 {
@@ -134,12 +131,15 @@ mod tests {
     #[test]
     fn scan_store_slice_lanes() {
         // Real `fn_00404c98` behind the store lane (null old → no
-        // dtor): hold the common owner lock.
+        // dtor) and real `fn_0040525c` behind the shrink lane (its
+        // hooks all default no-ops here, so the dest slot is
+        // untouched): hold the common owner lock and its lock.
         let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        let _slice = crate::fn_0040525c::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_0040b3cc = scan;
             HOOK_0040b620 = at;
-            HOOK_0040525c = slice;
+            crate::fn_0040525c::HOOK_00404dd4 = wide;
         }
         let mut dest: *mut u8 = core::ptr::null_mut();
         let dest_ptr = &mut dest as *mut *mut u8 as *mut u8;
@@ -147,11 +147,9 @@ mod tests {
         // Null lane: scan(?,1), no loop, real store(dest, null)
         // no-op (dest stays null).
         SCAN_RET.store(5, Ordering::SeqCst);
-        SLICE_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040b62c(core::ptr::null_mut(), dest_ptr) };
         assert_eq!(SCAN_ONE.load(Ordering::SeqCst), 1);
         assert!(dest.is_null());
-        assert_eq!(SLICE_HITS.load(Ordering::SeqCst), 0);
 
         // Equal lane: len 3, scan→0, real class(0x41)==0 releases
         // at once → break at n=3 → 3==3 → real store lane;
@@ -160,22 +158,20 @@ mod tests {
         let obj = unsafe { hdr(&mut a_eq, 3) };
         SCAN_RET.store(0, Ordering::SeqCst);
         AT_SEQ.store(1, Ordering::SeqCst);
-        SLICE_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040b62c(obj, dest_ptr) };
         assert_eq!(AT_ADDR.load(Ordering::SeqCst), (obj as usize).wrapping_add(6));
         assert_eq!(dest, obj);
         assert_eq!(unsafe { rc_of(obj) }, 6);
-        assert_eq!(SLICE_HITS.load(Ordering::SeqCst), 0);
 
         // Shrink lane: first at-call serves 0x5c (real class holds,
-        // n 3→2) then 0x41 (releases) → break at 2 → 3!=2 →
-        // slice(obj,1,2,dest).
+        // n 3→2) then 0x41 (releases) → break at 2 → 3!=2 → real
+        // slice(obj,1,2,dest): start 1-1 = 0, n = min(2, 3) = 2 →
+        // wide(dest, obj, 2); dest keeps the stored obj.
         AT_SEQ.store(0, Ordering::SeqCst);
-        SLICE_HITS.store(0, Ordering::SeqCst);
         unsafe { fn_0040b62c(obj, dest_ptr) };
-        assert_eq!(SLICE_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(SLICE_B.load(Ordering::SeqCst), 1);
-        assert_eq!(SLICE_C.load(Ordering::SeqCst), 2);
-        assert_eq!(SLICE_D.load(Ordering::SeqCst), dest_ptr as usize);
+        assert_eq!(WIDE_D.load(Ordering::SeqCst), dest_ptr as usize);
+        assert_eq!(WIDE_S.load(Ordering::SeqCst), obj as usize);
+        assert_eq!(WIDE_N.load(Ordering::SeqCst), 2);
+        assert_eq!(dest, obj);
     }
 }

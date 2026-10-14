@@ -78,6 +78,8 @@ Decompiler artifacts present; not source.
 - Assembly comparison: Rust keeps `local_c/local_8=0x11 / str / DL=1 / [DAT] / 9860 / 3f88` order.
 - Unit test: block-byte `0x11` check plus forwarding. `cargo test fn_0040ccdc`.
 
+- Rewire (wave 7): `HOOK_00403F88` → `crate::fn_00403f88::fn_00403f88` (signatures verified `fn(u32)`); stub deleted; test drives the real die (nonzero result skips alloc, null raise slot) under its lock set.
+
 ## Unknowns:
 
 - Observation: only difference from `0x0040cc3c` is tag byte (`0x11` vs `0`), table cell (`0x0040c550/0x0040c5a8`), format string.

@@ -97,6 +97,10 @@ pub unsafe fn fn_0040525c(param_1: *mut u8, param_2: i32, param_3: i32, dest: *m
     HOOK_004046c4(&mut local_8 as *mut *mut u8 as *mut u8);
 }
 
+/// Test-only serialization for tests sharing the lane hooks.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[cfg(test)]
 mod tests {
     use super::{HOOK_004046c4, HOOK_00404820, HOOK_00404c80, HOOK_00404dc4, HOOK_00404dd4, fn_0040525c};
@@ -150,6 +154,7 @@ mod tests {
 
     #[test]
     fn slice_lanes() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00404c80 = pin;
             HOOK_00404820 = norm;

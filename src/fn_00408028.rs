@@ -5,8 +5,6 @@ unsafe extern "C" fn default_scan(_base: *mut u8, _s: *mut u8) -> i32 {
     0
 }
 
-unsafe extern "C" fn default_emit(_d: *mut u8, _start: i32, _n: i32, _dst: *mut u8) {}
-
 /// Scanner `0x00407f4c` (`FUN_00407f4c`), called with `(&DAT_00408060,
 /// param_1)`; its EAX residue is taken as `i32` per this caller's
 /// observation (the callee's own dossier reports `void`; see evidence).
@@ -17,12 +15,9 @@ pub static mut HOOK_00407F4C: unsafe extern "C" fn(*mut u8, *mut u8) -> i32 =
     default_scan;
 
 /// Emitter `0x0040525c` (`FUN_0040525c`), called with
-/// `(param_1, res+1, 0x7fffffff, param_2)`.
-///
-/// ponytail: hook mirroring done `fn_0040525c`'s shape, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_0040525C: unsafe extern "C" fn(*mut u8, i32, i32, *mut u8) =
-    default_emit;
+/// `(param_1, res+1, 0x7fffffff, param_2)`: direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, i32, i32, *mut u8)`).
 
 /// Cell observed as `DAT_00408060`, address-taken as the scanner base arg.
 ///
@@ -40,21 +35,24 @@ pub unsafe fn fn_00408028(param_1: *mut u8, param_2: *mut u8) {
         core::ptr::addr_of_mut!(DAT_00408060) as *mut u8,
         param_1,
     );
-    HOOK_0040525C(param_1, r.wrapping_add(1), 0x7fffffff, param_2);
+    crate::fn_0040525c::fn_0040525c(param_1, r.wrapping_add(1), 0x7fffffff, param_2);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{DAT_00408060, HOOK_0040525C, HOOK_00407F4C, fn_00408028};
+    use super::{DAT_00408060, HOOK_00407F4C, fn_00408028};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static SCAN_RET: AtomicUsize = AtomicUsize::new(0);
     static SCAN_BASE: AtomicUsize = AtomicUsize::new(0);
     static SCAN_S: AtomicUsize = AtomicUsize::new(0);
-    static EMIT_D: AtomicUsize = AtomicUsize::new(0);
-    static EMIT_START: AtomicUsize = AtomicUsize::new(0);
-    static EMIT_N: AtomicUsize = AtomicUsize::new(0);
-    static EMIT_DST: AtomicUsize = AtomicUsize::new(0);
+    static WIDE_D: AtomicUsize = AtomicUsize::new(0);
+    static WIDE_S: AtomicUsize = AtomicUsize::new(0);
+    static WIDE_N: AtomicUsize = AtomicUsize::new(0);
+
+    /// Headed emit source for the real `fn_0040525c`: tag 2,
+    /// length 8, payload `0xC0..`.
+    static mut SRC_ARENA: [u8; 64] = [0; 64];
 
     unsafe extern "C" fn scan(base: *mut u8, s: *mut u8) -> i32 {
         SCAN_BASE.store(base as usize, Ordering::SeqCst);
@@ -62,41 +60,56 @@ mod tests {
         SCAN_RET.load(Ordering::SeqCst) as i32
     }
 
-    unsafe extern "C" fn emit(d: *mut u8, start: i32, n: i32, dst: *mut u8) {
-        EMIT_D.store(d as usize, Ordering::SeqCst);
-        EMIT_START.store(start as usize, Ordering::SeqCst);
-        EMIT_N.store(n as usize, Ordering::SeqCst);
-        EMIT_DST.store(dst as usize, Ordering::SeqCst);
+    /// Real `fn_0040525c` wide-copy lane hook: copies and records.
+    unsafe extern "C" fn wide(d: *mut u8, x: *mut u8, n: u32) {
+        WIDE_D.store(d as usize, Ordering::SeqCst);
+        WIDE_S.store(x as usize, Ordering::SeqCst);
+        WIDE_N.store(n as usize, Ordering::SeqCst);
+        core::ptr::copy_nonoverlapping(x, d, n as usize);
+    }
+
+    unsafe fn headed() -> *mut u8 {
+        let base = core::ptr::addr_of_mut!(SRC_ARENA) as *mut u8;
+        core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, 2);
+        core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, 1);
+        core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut u32, 8);
+        for i in 0..16 {
+            core::ptr::write_unaligned(base.wrapping_byte_add(12 + i), (0xC0 + i) as u8);
+        }
+        base.wrapping_byte_add(12)
     }
 
     #[test]
     fn scan_then_emit_lanes() {
-        // Own hooks/cell only: no foreign globals, no TEST_LOCK.
+        // Real `fn_0040525c` behind the emit (its hooks shared):
+        // hold its lock, pin the wide copy.
+        let _slice = crate::fn_0040525c::TEST_LOCK.lock().unwrap();
         unsafe {
             HOOK_00407F4C = scan;
-            HOOK_0040525C = emit;
+            crate::fn_0040525c::HOOK_00404dd4 = wide;
         }
-        let mut a = 0u8;
-        let mut b = 0u8;
-        let p1 = &mut a as *mut u8;
-        let p2 = &mut b as *mut u8;
+        let p1 = unsafe { headed() };
+        let mut dst = [0u8; 8];
+        let p2 = dst.as_mut_ptr();
         let dat = core::ptr::addr_of!(DAT_00408060) as usize;
 
-        // Mid-range: scan 5 → start 6, max 0x7fffffff.
+        // Mid-range: scan 5 → start 6-1 = 5, n =
+        // min(0x7fffffff, 8-5) = 3 → wide(dst, p1+2*5, 3).
         SCAN_RET.store(5, Ordering::SeqCst);
         unsafe { fn_00408028(p1, p2) };
         assert_eq!(SCAN_BASE.load(Ordering::SeqCst), dat);
         assert_eq!(SCAN_S.load(Ordering::SeqCst), p1 as usize);
-        assert_eq!(EMIT_D.load(Ordering::SeqCst), p1 as usize);
-        assert_eq!(EMIT_START.load(Ordering::SeqCst), 6);
-        assert_eq!(EMIT_N.load(Ordering::SeqCst), 0x7fffffff);
-        assert_eq!(EMIT_DST.load(Ordering::SeqCst), p2 as usize);
+        assert_eq!(WIDE_D.load(Ordering::SeqCst), p2 as usize);
+        assert_eq!(WIDE_S.load(Ordering::SeqCst), (p1 as usize).wrapping_add(10));
+        assert_eq!(WIDE_N.load(Ordering::SeqCst), 3);
+        assert_eq!(&dst[..3], &[0xCA, 0xCB, 0xCC]);
 
-        // LEA wrap edge: scan -1 → start 0.
+        // LEA wrap edge: scan -1 → start 0, n = min(0x7fffffff, 8)
+        // = 8 → wide(dst, p1, 8).
         SCAN_RET.store(0xffff_ffff, Ordering::SeqCst);
         unsafe { fn_00408028(p1, p2) };
-        assert_eq!(EMIT_START.load(Ordering::SeqCst), 0);
-        assert_eq!(EMIT_N.load(Ordering::SeqCst), 0x7fffffff);
-        assert_eq!(EMIT_DST.load(Ordering::SeqCst), p2 as usize);
+        assert_eq!(WIDE_S.load(Ordering::SeqCst), p1 as usize);
+        assert_eq!(WIDE_N.load(Ordering::SeqCst), 8);
+        assert_eq!(&dst, &[0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7]);
     }
 }

@@ -36,6 +36,10 @@ mod tests {
     static mut OBJ: [u32; 8] = [0; 8];
     static BASE: [u8; 4] = [0; 4];
 
+    /// Headed pin target for the real `fn_00409824` lane: tag 2,
+    /// refcount reset per lane.
+    static mut HEAD_ARENA: [u8; 64] = [0; 64];
+
     unsafe extern "C" fn indirect(
         _o: *mut *const u8,
         _p2: u32,
@@ -44,15 +48,38 @@ mod tests {
         RET.load(Ordering::SeqCst) as i32
     }
 
-    unsafe extern "C" fn bf84(_mode: u32, slot: *mut u8) {
+    /// Real `fn_0040bf84` lane hooks: zero-count format, store hook
+    /// forwards SLOT_VAL (and counts the call).
+    unsafe extern "C" fn fmt0(
+        _f: u32,
+        _n: *const u8,
+        _id: u32,
+        _l: u32,
+        _b: *mut u16,
+        _s: u32,
+        _r: *const u8,
+    ) -> u32 {
         HOOK_HITS.fetch_add(1, Ordering::SeqCst);
-        *(slot as *mut usize) = SLOT_VAL.load(Ordering::SeqCst);
+        0
+    }
+    unsafe extern "C" fn store_slot(slot: *mut u8, _src: *mut u8, _n: u32) {
+        core::ptr::write_unaligned(slot as *mut usize, SLOT_VAL.load(Ordering::SeqCst));
     }
 
     unsafe extern "C" fn link(_base: *mut u8, _flag: u8, obj: *mut u8) -> *mut u8 {
         LINK_HITS.fetch_add(1, Ordering::SeqCst);
         LINK_OBJ.store(obj as usize, Ordering::SeqCst);
         core::ptr::addr_of_mut!(OBJ) as *mut u8
+    }
+
+    unsafe extern "C" fn rel9824(_o: *mut u8) {}
+
+    unsafe fn headed() -> *mut u8 {
+        let base = core::ptr::addr_of_mut!(HEAD_ARENA) as *mut u8;
+        core::ptr::write_unaligned(base.wrapping_byte_add(2) as *mut u16, 2);
+        core::ptr::write_unaligned(base.wrapping_byte_add(4) as *mut u32, 5);
+        core::ptr::write_unaligned(base.wrapping_byte_add(8) as *mut u32, 0);
+        base.wrapping_byte_add(12)
     }
 
     unsafe extern "C" fn consume(_obj: *mut u8) {}
@@ -62,23 +89,35 @@ mod tests {
     #[test]
     fn mismatch_reports_once_with_0x26() {
         // Real `fn_0040c130` under its lock; preset slot skips the
-        // report lane, link sees the object.
+        // report lane, link sees the object. Real `fn_0040bf84` and
+        // `fn_00409824` behind it: hold their locks, pin their hooks.
         let _guard = crate::fn_0040c130::TEST_LOCK.lock().unwrap();
-        let (old_bf, old_rp, old_lk, old_cs, old_rl, old_dat);
+        let _fmt = crate::fn_0040bf84::TEST_LOCK.lock().unwrap();
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        let (old_bf84_fmt, old_bf84_dd, old_lk, old_rel, old_rp, old_cs, old_rl, old_dat);
         unsafe {
-            old_bf = crate::fn_0040c130::HOOK_0040BF84;
+            old_bf84_fmt = crate::fn_0040bf84::HOOK_FormatMessageW;
+            old_bf84_dd = crate::fn_0040bf84::HOOK_00404DD4;
+            old_lk = crate::fn_00409824::HOOK_004039e4;
+            old_rel = crate::fn_00409824::HOOK_00403a3c;
             old_rp = crate::fn_0040c130::HOOK_004082D4;
-            old_lk = crate::fn_0040c130::HOOK_00409824;
             old_cs = crate::fn_0040c130::HOOK_00403F88;
             old_rl = crate::fn_0040c130::HOOK_004046C4;
             old_dat = crate::fn_0040c130::DAT_0040C0C4;
-            crate::fn_0040c130::HOOK_0040BF84 = bf84;
+            crate::fn_0040bf84::HOOK_FormatMessageW = fmt0;
+            crate::fn_0040bf84::HOOK_00404DD4 = store_slot;
+            crate::fn_00409824::HOOK_004039e4 = link;
+            crate::fn_00409824::HOOK_00403a3c = rel9824;
             crate::fn_0040c130::HOOK_004082D4 = report;
-            crate::fn_0040c130::HOOK_00409824 = link;
             crate::fn_0040c130::HOOK_00403F88 = consume;
             crate::fn_0040c130::HOOK_004046C4 = release;
             crate::fn_0040c130::DAT_0040C0C4 = core::ptr::addr_of!(BASE) as *const u8 as usize;
-            SLOT_VAL.store(core::ptr::addr_of_mut!(OBJ) as *mut u8 as usize, Ordering::SeqCst);
+            core::ptr::write_unaligned(
+                (core::ptr::addr_of_mut!(OBJ) as *mut u8).wrapping_add(4) as *mut usize,
+                0,
+            );
+            SLOT_VAL.store(headed() as usize, Ordering::SeqCst);
+            LINK_OBJ.store(0, Ordering::SeqCst);
         }
         let target = indirect as *const core::ffi::c_void;
         let mut vtbl = [0u8; 16];
@@ -101,15 +140,14 @@ mod tests {
         unsafe { fn_0040c1f8(obj_ptr, 0x1234, 7) };
         assert_eq!(HOOK_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(LINK_HITS.load(Ordering::SeqCst), 1);
-        assert_eq!(
-            LINK_OBJ.load(Ordering::SeqCst),
-            core::ptr::addr_of_mut!(OBJ) as *mut u8 as usize
-        );
+        assert_eq!(LINK_OBJ.load(Ordering::SeqCst), SLOT_VAL.load(Ordering::SeqCst));
         assert_eq!(unsafe { OBJ[6] }, 0x26);
         unsafe {
-            crate::fn_0040c130::HOOK_0040BF84 = old_bf;
+            crate::fn_0040bf84::HOOK_FormatMessageW = old_bf84_fmt;
+            crate::fn_0040bf84::HOOK_00404DD4 = old_bf84_dd;
+            crate::fn_00409824::HOOK_004039e4 = old_lk;
+            crate::fn_00409824::HOOK_00403a3c = old_rel;
             crate::fn_0040c130::HOOK_004082D4 = old_rp;
-            crate::fn_0040c130::HOOK_00409824 = old_lk;
             crate::fn_0040c130::HOOK_00403F88 = old_cs;
             crate::fn_0040c130::HOOK_004046C4 = old_rl;
             crate::fn_0040c130::DAT_0040C0C4 = old_dat;

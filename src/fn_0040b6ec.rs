@@ -17,6 +17,9 @@ pub static mut HOOK_0040b698: unsafe extern "C" fn(*mut u8) -> u32 = default_pro
 /// (r&~0xff)|1`. `param_1` arrives in EAX per Ghidra
 /// `__register` observation. Mask verified by hand against
 /// `TEST AL,0x10` / `MOV AL,1`.
+/// Test-only serialization for tests sharing the probe hook.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 pub unsafe fn fn_0040b6ec(param_1: *mut u8) -> u32 {
     let r = HOOK_0040b698(param_1);
     if r == 0xffff_ffff {
@@ -43,6 +46,7 @@ mod tests {
 
     #[test]
     fn flag_lanes() {
+        let _guard = super::TEST_LOCK.lock().unwrap();
         unsafe { HOOK_0040b698 = probe };
         let obj = 0x5678 as *mut u8;
         for (ret, want) in [

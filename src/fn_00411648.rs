@@ -8,7 +8,6 @@ unsafe extern "C" fn default_mod(_s: u32) -> u32 {
 unsafe extern "C" fn default_resolve(_h: u32) -> u32 {
     0
 }
-unsafe extern "C" fn default_ptr(_p: *mut u8) {}
 unsafe extern "C" fn default_pair(_a: *mut u8, _b: *mut u8) {}
 unsafe extern "C" fn default_pu32(_p: *mut u8, _n: u32) {}
 unsafe extern "C" fn default_bf84(_a: u32, _b: *mut u32) {}
@@ -27,7 +26,8 @@ pub static mut HOOK_GETMODULEHANDLEW: unsafe extern "C" fn(u32) -> u32 = default
 /// Target `0x00406728` import resolver.
 pub static mut HOOK_00406728: unsafe extern "C" fn(u32) -> u32 = default_resolve;
 /// Remaining gated targets.
-pub static mut HOOK_0040B9D0: unsafe extern "C" fn(*mut u8) = default_ptr;
+/// `0x0040b9d0`: direct intra-reconstruction call (rewired;
+/// signatures verified `fn(*mut u8)`).
 pub static mut HOOK_0040B2E0: unsafe extern "C" fn(*mut u8, *mut u8) = default_pair;
 pub static mut HOOK_00404F98: unsafe extern "C" fn(*mut u8, u32) = default_pu32;
 pub static mut HOOK_0040AC84: unsafe extern "C" fn(*mut u8, u32) = default_pu32;
@@ -51,7 +51,7 @@ pub unsafe fn fn_00411648() {
         } else {
             1
         };
-        HOOK_0040B9D0(local.as_mut_ptr());
+        crate::fn_0040b9d0::fn_0040b9d0(local.as_mut_ptr());
         HOOK_0040B2E0(local.as_mut_ptr(), local.as_mut_ptr().wrapping_byte_add(4));
         HOOK_00404F98(local.as_mut_ptr().wrapping_byte_add(4), 0x004117c4);
         HOOK_0040AC84(local.as_mut_ptr().wrapping_byte_add(4), 0x8000);
@@ -79,8 +79,21 @@ mod tests {
         RELEASES.fetch_add(1, Ordering::SeqCst);
     }
 
+    /// Real `fn_0040b9d0` import hook: empty system dir (buffer stays
+    /// zeroed, so the `fn_00408218` lane stores a null slot).
+    unsafe extern "C" fn sysdir(_buf: *mut u16, _n: u32) -> u32 {
+        0
+    }
+
     #[test]
     fn gate_and_always_release() {
+        // Real `fn_0040b9d0` behind the gate (its import hook + the
+        // shared `fn_00404dd4` hooks): hold the common owner lock,
+        // pin the empty dir.
+        let _owner = crate::fn_004046c4::TEST_LOCK.lock().unwrap();
+        unsafe {
+            crate::fn_0040b9d0::HOOK_GetSystemDirectoryW = sysdir;
+        }
         unsafe {
             HOOK_00406728 = resolve;
             HOOK_00404C90 = release;

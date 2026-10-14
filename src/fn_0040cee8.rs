@@ -78,7 +78,10 @@ mod tests {
         *o = OUT.load(Ordering::SeqCst) as u32;
         RET.load(Ordering::SeqCst) as i32
     }
-    // Fail codes observed through the real `fn_0040cc3c`.
+    // Fail codes observed through the real `fn_0040cc3c`: it forwards
+    // `[code, 0]` to its format hook and the format result to the real
+    // die (pinned to its null-raise lane here), so record at the format
+    // hook — same code, same call count.
     unsafe extern "C" fn fmt_fail(
         _p1: usize,
         _p2: u8,
@@ -86,10 +89,9 @@ mod tests {
         _p4: u32,
         blk: *mut u8,
     ) -> u32 {
-        core::ptr::read_unaligned(blk as *const u32)
-    }
-    unsafe extern "C" fn die_fail(c: u32) {
+        let c = core::ptr::read_unaligned(blk as *const u32);
         FAIL.store(c as usize, Ordering::SeqCst);
+        c
     }
     // Reports observed through the real `fn_0040cd3c`'s convert hook.
     unsafe extern "C" fn convert_cap(_a: *mut u16, b: u32, _c: u32, d: *mut u32) {
@@ -97,6 +99,9 @@ mod tests {
         *d = b;
     }
     // Benign tail for the real `fn_0040ccdc` reached via `cd3c`.
+    // Benign tail for the real `fn_0040ccdc` reached via `cd3c`:
+    // nonzero result keeps the real die off its alloc lane; the raise
+    // slot stays null so nothing else fires.
     unsafe extern "C" fn fmt_nop(
         _a: usize,
         _b: u8,
@@ -104,9 +109,8 @@ mod tests {
         _d: u32,
         _blk: *mut u8,
     ) -> u32 {
-        0
+        9
     }
-    unsafe extern "C" fn die_nop(_c: u32) {}
     // Setup observed through the real `fn_0040ce24`'s parse/emit hooks.
     unsafe extern "C" fn read5(_a: u32, _b: *mut u8, _c: u32) -> i32 {
         5
@@ -154,13 +158,21 @@ mod tests {
 
     #[test]
     fn decode_lanes() {
+        // Real `fn_00403f88` behind both reporters (nonzero codes skip
+        // its alloc lane): hold its lock set, pin the null raise slot.
+        let _b8 = crate::fn_004046b8::TEST_LOCK.lock().unwrap();
+        let _ac = crate::fn_004046ac::TEST_LOCK.lock().unwrap();
+        let _loop = crate::fn_00404580::TEST_LOCK.lock().unwrap();
+        let _tls = crate::fn_00406588::TEST_LOCK.lock().unwrap();
+        let (old_hook, old_tail);
         unsafe {
+            old_hook = crate::fn_00403f88::HOOK_0041301C;
+            old_tail = crate::fn_00403f88::TAIL_00413014;
+            crate::fn_00403f88::HOOK_0041301C = None;
             HOOK_0040D33C = decode;
             crate::fn_0040cc3c::HOOK_00409860 = fmt_fail;
-            crate::fn_0040cc3c::HOOK_00403F88 = die_fail;
             crate::fn_0040cd3c::HOOK_004082D4 = convert_cap;
             crate::fn_0040ccdc::HOOK_00409860 = fmt_nop;
-            crate::fn_0040ccdc::HOOK_00403F88 = die_nop;
             crate::fn_0040ce24::HOOK_0040D9D8 = parse24;
             crate::fn_0040ce24::HOOK_0040DA28 = emit24;
             DAT_0040CF78 = 0xeee;
@@ -200,5 +212,9 @@ mod tests {
         unsafe { fn_0040cee8(r.as_mut_ptr(), 0x11, 9) };
         assert_eq!(REP.load(Ordering::SeqCst), 2);
         assert_eq!(FAIL.load(Ordering::SeqCst), 0);
+        unsafe {
+            crate::fn_00403f88::HOOK_0041301C = old_hook;
+            crate::fn_00403f88::TAIL_00413014 = old_tail;
+        }
     }
 }
