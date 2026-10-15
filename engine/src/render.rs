@@ -209,4 +209,79 @@ mod tests {
         assert_eq!(wireframe(&mut buf2, w, h, &[strip_batch(&pts)], &cam), n);
         assert_eq!(buf, buf2);
     }
+
+    /// End-to-end landing b68 width strip, headless
+    /// (`evidence/00434390_emit_args.md` §3 b68:
+    /// `dda60(0,w0*0.5)`, 3x `ddae0`, `ddf10`, `dd970`):
+    /// `Landing::anchors` → `StripCursor` emits → `strip_batch` +
+    /// `wireframe` pixels. Generated dhill-equivalent fixture (same
+    /// values as `mesh.rs` `landing_anchors_endpoints`); asserts
+    /// emitted X strictly increases and the polyline lights pixels.
+    #[test]
+    fn landing_b68_strip_renders_headless() {
+        use crate::mesh::{EmitAction, EmitErr, Landing, StripCursor};
+        // Generated fixture: dhill profile values (mirror landing test).
+        let mut m = std::collections::HashMap::new();
+        for (k, v) in [
+            ("a0", 10.0), ("ak", 44.0), ("hk", 65.0), ("nk", 1.0),
+            ("rl", 120.0), ("l1", 8.0), ("l2", 12.0), ("rs", 60.0),
+            ("lb", 5.0), ("hr", 3.0), ("nr", 40.0), ("ar", 35.0),
+            ("w0", 6.0), ("wk", 6.5), ("wb", 7.0),
+        ] {
+            m.insert(k.to_string(), v);
+        }
+        let la = Landing::from_map(&m).unwrap();
+        let a = la.anchors(true);
+        // b68 wiring (§3): dda60(0, w0*0.5); ddae0(nk, wk*0.5);
+        // ddae0(L4x, wb*0.5); ddae0(N11-wb*0.5, wb*0.5);
+        // ddf10(N11, 0, N11-wb*0.5, 0) → cursor (N11, 0).
+        let (w0h, wkh, wbh) = (la.w0 * 0.5, la.wk * 0.5, la.wb * 0.5);
+        let open = (0.0f32, w0h);
+        let p1 = (la.nk, wkh);
+        let p2 = (a.l4x, wbh);
+        let p3 = (a.n11 - wbh, wbh);
+        let end = (a.n11, 0.0);
+        // b68 order must be X-monotone or the game throws (Decrease).
+        assert!(
+            open.0 < p1.0 && p1.0 < p2.0 && p2.0 < p3.0 && p3.0 < end.0,
+            "open={open:?} p1={p1:?} p2={p2:?} p3={p3:?} end={end:?}"
+        );
+        let mut s = StripCursor::open(open.0, open.1);
+        let mut pts = vec![open];
+        for &(x, y) in &[p1, p2, p3, end] {
+            assert_eq!(s.push(x, y), Ok(EmitAction::Emit));
+            pts.push((s.x, s.y));
+        }
+        // Equal-X drops silently (no cursor/count move).
+        let c = s.count;
+        assert_eq!(s.push(end.0, 99.0), Ok(EmitAction::IgnoreEqual));
+        assert_eq!((s.x, s.count), (end.0, c));
+        // Decrease throws; seal ends the strip like `dd970`.
+        assert_eq!(s.push(end.0 - 1.0, 0.0), Err(EmitErr::Decrease));
+        s.seal();
+        assert_eq!(s.push(1.0, 0.0), Err(EmitErr::Closed));
+        // Render: frame the strip, draw, require lit + screen-X monotone.
+        let (lox, hix) = (pts[0].0, pts[4].0);
+        let (mut loy, mut hiy) = (f32::INFINITY, f32::NEG_INFINITY);
+        for &(_, y) in &pts {
+            loy = loy.min(y);
+            hiy = hiy.max(y);
+        }
+        let cam = Cam { scale: 3.0, cx: (lox + hix) / 2.0, cy: (loy + hiy) / 2.0 };
+        let (w, h) = (220, 140);
+        let batch = strip_batch(&pts);
+        let mut buf = vec![0u8; (w * h) as usize];
+        let n = wireframe(&mut buf, w, h, &[batch], &cam);
+        assert!(n > 100, "lit={n}");
+        let sx: Vec<i32> = pts
+            .iter()
+            .map(|&(x, y)| {
+                project(&Vertex { x, y, z: 0.0, u: 0.0, v: 0.0 }, &cam, w, h).0
+            })
+            .collect();
+        assert!(sx.windows(2).all(|p| p[0] < p[1]), "sx={sx:?}");
+        let mut buf2 = vec![0u8; (w * h) as usize];
+        assert_eq!(wireframe(&mut buf2, w, h, &[strip_batch(&pts)], &cam), n);
+        assert_eq!(buf, buf2);
+    }
 }
