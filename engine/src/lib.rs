@@ -7,6 +7,7 @@
 pub mod assets;
 pub mod decrypt;
 pub mod fn_00443030;
+pub mod fn_004432a0;
 pub mod fn_00435740;
 pub mod fn_004357a0;
 pub mod fn_00457110;
