@@ -7,3 +7,6 @@ publish = false
 [dependencies]
 # Big-int for the RSA step of file decryption (pure Rust, no C deps).
 num-bigint = "0.4"
+# PNG-to-pixel decode of Resource.001 textures (pure Rust; manual
+# inflate+unfilter would be far more code for zero gain).
+png = "0.17"

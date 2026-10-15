@@ -65,7 +65,8 @@ spec, then parser. Fixtures stay generated-only.
    + `model.rs`: 145 entries, judgetower 18 batches/72v/36f).
    Textures verified: 101/101 embedded PNGs have valid magic +
    IHDR CRC post-decrypt. Audio verified: 21/21 OGGs have valid
-   magic. PNG-to-pixel decode + 3D presentation still open.
+   magic. PNG-to-pixel decode DONE 2026-10-15 (`engine/src/png.rs`,
+   101/101 to RGBA8, live-asserted); 3D presentation still open.
 4. Registry settings → portable config file mapping (res, adapter,
    language). Check: Setup-produced values load unchanged.
 - Exit: every format has spec + round-trip test; viewer milestone done.

@@ -11,5 +11,6 @@ pub mod lang;
 pub mod manifest;
 pub mod mesh;
 pub mod model;
+pub mod png;
 pub mod render;
 pub mod xml;
