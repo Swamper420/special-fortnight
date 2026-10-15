@@ -18,10 +18,103 @@
 //!
 //! OPEN (not guessed): inrun/landing/terrain meshes live in
 //! SEPARATE local frames (closest cross-mesh anchors 29m apart —
-//! composition transform in `FUN_00436620` unmapped); full emit
-//! topology → polyline (arg slots mapped, strip encoding open);
+//! composition transform in `FUN_00436620` unmapped);
 //! `[0x61b880]`=pi assumed from `pi,pi/2,3pi/2` usage (file: 0.0).
+//! Emit topology → polyline MAPPED (`evidence/004ddae0_emit_check.md`):
+//! `dda60` opens (empty strip), `ddae0` appends linear `y(x)`
+//! segments (`442fb0` slope/intercept), `ddf10/ddcb0` append curve
+//! nodes + sampled steps, `dd970` seals (`+0x30`); `ddae0` throws
+//! on `x < cursor` (NaN too, x87 C0) and drops `x == cursor`.
 //! Do NOT fabricate track geometry from anchors alone.
+
+/// Outcome of one `004ddae0` guard sequence, transcribed op-for-op
+/// from `0x4ddafe`-`0x4ddb73` (flag → decrease → equal).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EmitAction {
+    /// x advanced: append segment, `count.wrapping_add(1)`, cursor=x.
+    Emit,
+    /// x == cursor (`TEST AH,0x40`): silent no-op.
+    IgnoreEqual,
+}
+
+/// `004ddae0` throw sites (`"Invalid data exception"`, `0x6067a8`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum EmitErr {
+    /// `[ECX+0x30] != 0` (strip sealed by `004dd970`).
+    Closed,
+    /// `x < cursor` via x87 C0 (`0x4ddb2e-0x4ddb62`); unordered
+    /// (NaN) also sets C0, so NaN throws here, before equality.
+    Decrease,
+}
+
+/// Transcribed `004ddae0` guards in asm branch order.
+/// Widths: flag byte, f32 compare, i32 count handled by caller.
+pub fn emit_check(closed: bool, cursor_x: f32, x: f32) -> Result<EmitAction, EmitErr> {
+    if closed {
+        return Err(EmitErr::Closed);
+    }
+    // C0 set on less-than OR unordered: NaN reads as decrease.
+    if x.is_nan() || x < cursor_x {
+        return Err(EmitErr::Decrease);
+    }
+    if x == cursor_x {
+        return Ok(EmitAction::IgnoreEqual);
+    }
+    Ok(EmitAction::Emit)
+}
+
+/// Transcribed `004dda60` guards: sealed → throw; non-empty
+/// (`[ECX+0x0c] != 0`) → throw; else open at (x, y).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MovetoErr {
+    Closed,
+    NonEmpty,
+}
+
+pub fn moveto_check(closed: bool, count: i32) -> Result<(), MovetoErr> {
+    if closed {
+        return Err(MovetoErr::Closed);
+    }
+    if count != 0 {
+        return Err(MovetoErr::NonEmpty);
+    }
+    Ok(())
+}
+
+/// Minimal strip cursor: `[ECX+0x20]=x`, `[ECX+0x24]=y`,
+/// `[ECX+0x2c]=x`, count `[ECX+0x0c]` (`INC` wraps),
+/// seal flag `[ECX+0x30]` (`004dd970` sets 1).
+#[derive(Debug, Clone, Copy)]
+pub struct StripCursor {
+    pub x: f32,
+    pub y: f32,
+    pub count: i32,
+    pub closed: bool,
+}
+
+impl StripCursor {
+    pub fn open(x: f32, y: f32) -> Self {
+        StripCursor { x, y, count: 0, closed: false }
+    }
+
+    /// One `004ddae0` step: guards in order, then cursor advance.
+    /// `00442fb0` slope/intercept construction lives in the
+    /// appended node (layout open); only cursor/count modeled.
+    pub fn push(&mut self, x: f32, y: f32) -> Result<EmitAction, EmitErr> {
+        let a = emit_check(self.closed, self.x, x)?;
+        if a == EmitAction::Emit {
+            self.x = x;
+            self.y = y;
+            self.count = self.count.wrapping_add(1);
+        }
+        Ok(a)
+    }
+
+    /// `004dd970`: `[ECX+0x30] = 1`.
+    pub fn seal(&mut self) {
+        self.closed = true;
+    }
+}
 
 use std::f32::consts::PI;
 
@@ -132,5 +225,34 @@ mod tests {
                 assert!(x.abs() < 5000.0 && y.abs() < 5000.0);
             }
         }
+    }
+
+    /// ONE check for the emit-guard transcription
+    /// (`evidence/004ddae0_emit_check.md`): branch order
+    /// closed → decrease (incl. NaN, x87 C0) → equal-drop → emit;
+    /// `moveto` sealed/non-empty throws; count wraps like `INC`.
+    #[test]
+    fn emit_guards_in_asm_order() {
+        assert_eq!(emit_check(true, 0.0, 1.0), Err(EmitErr::Closed));
+        assert_eq!(emit_check(false, 1.0, 0.5), Err(EmitErr::Decrease));
+        assert_eq!(emit_check(false, 1.0, f32::NAN), Err(EmitErr::Decrease));
+        assert_eq!(emit_check(false, 1.0, 1.0), Ok(EmitAction::IgnoreEqual));
+        assert_eq!(emit_check(false, 1.0, 2.0), Ok(EmitAction::Emit));
+        assert_eq!(moveto_check(true, 0), Err(MovetoErr::Closed));
+        assert_eq!(moveto_check(false, 1), Err(MovetoErr::NonEmpty));
+        assert_eq!(moveto_check(false, 0), Ok(()));
+        // Generated strip: monotone emits advance, equal drops,
+        // decrease + post-seal throw; count wraps at i32::MAX.
+        let mut s = StripCursor::open(-60.0, 40.0);
+        assert_eq!(s.push(-50.0, 41.0), Ok(EmitAction::Emit));
+        assert_eq!((s.x, s.count), (-50.0, 1));
+        assert_eq!(s.push(-50.0, 42.0), Ok(EmitAction::IgnoreEqual));
+        assert_eq!((s.x, s.count), (-50.0, 1));
+        assert_eq!(s.push(-60.0, 0.0), Err(EmitErr::Decrease));
+        s.count = i32::MAX;
+        assert_eq!(s.push(-40.0, 0.0), Ok(EmitAction::Emit));
+        assert_eq!(s.count, i32::MIN);
+        s.seal();
+        assert_eq!(s.push(0.0, 0.0), Err(EmitErr::Closed));
     }
 }
