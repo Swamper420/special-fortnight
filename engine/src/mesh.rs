@@ -5,9 +5,9 @@
 //! keys `at as ar ak a0` via `×pi×(1/180)` (`[0x5ce060]=1/180`,
 //! `[0x61b880]` reads as pi; file value 0.0, set at runtime).
 //! One ESP-shift (`PUSH ECX` at `0x43416b`) re-bases all later
-//! slots; a pointer slot reads as float ≈ 1e-26 (harmless, +0).
-//! Anchors (Hill01, radians): P0(−4.5,2.5) P1(9.1,44.6)
-//! P2(−25.7,8.8) P3(−55.9,38.1); moveTo(P3.x−lz, P3.y).
+//! slots.
+//! Anchors (Hill01, radians): P0(−4.5,2.5) P1(4.6,51.7)
+//! P2(−30.3,15.9) P3(−60.4,45.1); moveTo(P3.x−lz, P3.y).
 //! Emits are X-monotone polylines (`004ddae0` throws on decrease).
 //!
 //! Landing builder `FUN_00434390` (ev_2a3f9799...): arcs from
@@ -154,8 +154,7 @@ impl Inrun {
 
     /// Chained anchor points, transcribed op-for-op from
     /// `0x434161`-`0x434209` with ESP-shift tracking (a `PUSH ECX`
-    /// at `0x43416b` shifts all later `[ESP+X]` by −4; pointer slot
-    /// `S-0x28` reads heap-address-as-float ≈ 1e-26, treated as 0).
+    /// at `0x43416b` shifts all later `[ESP+X]` by −4).
     /// Returns `(P0, P1, P2, P3)` with P3 the final inrun anchor.
     pub fn anchors(&self, deg2rad: bool) -> [(f32, f32); 4] {
         let cvt = |d: f32| if deg2rad { d * PI / 180.0 } else { d };
@@ -163,10 +162,10 @@ impl Inrun {
         let pi = PI;
         // P0 = (cos(pi−at)*lt, sin(pi−at)*lt + ht)
         let p0 = ((pi - at).cos() * self.lt, (pi - at).sin() * self.lt + self.ht);
-        // P1 = (cos(pi/2−at)*rc + ~0, sin(pi/2−at)*rc + P0.x)
+        // P1 = (cos(pi/2−at)*rc + P0.x, sin(pi/2−at)*rc + P0.y)
         let p1 = (
-            (pi * 0.5 - at).cos() * self.rc,
-            (pi * 0.5 - at).sin() * self.rc + p0.0,
+            (pi * 0.5 - at).cos() * self.rc + p0.0,
+            (pi * 0.5 - at).sin() * self.rc + p0.1,
         );
         // P2 = P1 + (cos(1.5pi−as)*rc, sin(1.5pi−as)*rc)
         let p2 = (
