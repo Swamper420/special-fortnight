@@ -17,8 +17,11 @@
 //! 61-row heightfield + cosine noise (base `FUN_00434ff0` open).
 //!
 //! OPEN (not guessed): inrun/landing/terrain meshes live in
-//! SEPARATE local frames (closest cross-mesh anchors 29m apart —
-//! composition transform in `FUN_00436620` unmapped);
+//! SEPARATE local frames (closest cross-mesh anchors 29m apart).
+//! `FUN_00436620` applies NO placement transform (dispatcher only:
+//! version gate, then inrun → dhill → terrain builders in order on
+//! the SAME hill object; `evidence/00436620_composition.md`);
+//! relative frame placement stays unmapped (caller/render side).
 //! `[0x61b880]`=pi assumed from `pi,pi/2,3pi/2` usage (file: 0.0).
 //! Emit topology → polyline MAPPED (`evidence/004ddae0_emit_check.md`):
 //! `dda60` opens (empty strip), `ddae0` appends linear `y(x)`
@@ -194,6 +197,50 @@ impl Inrun {
     }
 }
 
+/// Takeoff markers (`FUN_00538660` + stores in `FUN_00434020`;
+/// evidence `evidence/00538660_takeoff_markers.md`).
+///
+/// `538660(this, a, b, c)`: `[this]=a; [this+4]=b; [this+8]=c`
+/// (thiscall `ECX`, `RET 0xc`; no branches, callees, strings).
+/// Marker math (`0x4342ae`-`0x43437e` op order, x87 extended
+/// intermediates ≈ `f64`, `FSTP float` rounds each stored slot):
+/// `sn=f32(sin(-as))`, `cs=f32(cos(-as))`,
+/// `m1=(cs*lg+P3.x, ((sn*lg)+K1)+P3.y, tag)`,
+/// `t=lg+STEP` once (`FLD ST0` reuse),
+/// `m2=((t*cs)+P3.x, (((t*sn)+K2)+P3.y), tag)`.
+/// `K1/K2/STEP` are exact file bits (`[0x608ae4]/[0x608ae8]/`
+/// `[0x5ce048]`), not decimal shorthand. `as` arrives in
+/// radians (caller converts); `tag` = opaque `param_9` word
+/// (integer `PUSH`, `MOV` copies — never float).
+/// `[ESI+0x25c]=0` (`EBP`), `[ESI+0x280]=-as` (exact `FCHS`),
+/// `[ESI+0x284]=P3.x` (bit copy).
+pub const TAKEOFF_K1: f32 = f32::from_bits(0x3E99999A);
+pub const TAKEOFF_K2: f32 = f32::from_bits(0x3F170A3D);
+pub const TAKEOFF_STEP: f32 = f32::from_bits(0x3D99999A);
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TakeoffMarkers {
+    pub m1: (f32, f32, u32),
+    pub m2: (f32, f32, u32),
+    pub flag: u32,
+    pub neg_as: f32,
+    pub p3x_copy: f32,
+}
+
+pub fn takeoff_markers(lg: f32, as_rad: f32, p3x: f32, p3y: f32, tag: u32) -> TakeoffMarkers {
+    // FSIN/FCOS in extended, FSTP-round to f32 per stored slot.
+    let sn = ((-as_rad) as f64).sin() as f32;
+    let cs = ((-as_rad) as f64).cos() as f32;
+    // y1 = ((sn*lg)+K1)+P3.y; x1 = (cs*lg)+P3.x.
+    let m1x = ((cs as f64) * (lg as f64) + (p3x as f64)) as f32;
+    let m1y = (((sn as f64) * (lg as f64) + (TAKEOFF_K1 as f64)) + (p3y as f64)) as f32;
+    // t = lg+STEP once, then y2 = (((t*sn)+K2)+P3.y), x2 = (t*cs)+P3.x.
+    let t = (lg as f64) + (TAKEOFF_STEP as f64);
+    let m2x = (t * (cs as f64) + (p3x as f64)) as f32;
+    let m2y = ((t * (sn as f64) + (TAKEOFF_K2 as f64)) + (p3y as f64)) as f32;
+    TakeoffMarkers { m1: (m1x, m1y, tag), m2: (m2x, m2y, tag), flag: 0, neg_as: -as_rad, p3x_copy: p3x }
+}
+
 /// Terrain base `FUN_00434ff0` (evidence `evidence/00434ff0_terrain_base.md`).
 ///
 /// `thr/off/x0` = `[this+0x260/+0x264/+0x98]`; `lo/hi` = `[obj60+0x28/+0x2c]`
@@ -255,6 +302,21 @@ impl TerrainBase {
             max2(h as f32, 0.0)
         }
     }
+}
+
+/// Hill-mesh dispatch `FUN_00436620` (`evidence/00436620_composition.md`).
+///
+/// Observed: version gate, then `inrun → dhill → terrain` builders run
+/// in order on the SAME hill object (`MOV ECX,EDI` at
+/// `0x436c09/0x437434/0x437700`); no placement transform between them.
+/// Relative frame placement stays unmapped — this records order + sharing.
+pub const COMPOSE_ORDER: [&str; 3] = ["inrun", "dhill", "terrain"];
+
+/// Run the three builders in observed order on one shared object.
+pub fn compose<H>(hill: &mut H, mut inrun: impl FnMut(&mut H), mut dhill: impl FnMut(&mut H), mut terrain: impl FnMut(&mut H)) {
+    inrun(hill);
+    dhill(hill);
+    terrain(hill);
 }
 
 #[cfg(test)]
@@ -346,6 +408,53 @@ mod tests {
         assert_eq!(clamp3(2.0, 5.0, f32::NAN), 2.0);
         assert_eq!(max2(1.0, f32::NAN), 1.0);
         assert!(t(10.0, 0.0, 0.0).eval(|c| c, f32::NAN, 1.0).is_nan());
+    }
+
+    /// ONE check for `FUN_00436620` dispatch
+    /// (`evidence/00436620_composition.md`, generated stubs — no
+    /// original bytes): builders run inrun → dhill → terrain on one
+    /// shared object; no transform modeled because none observed.
+    #[test]
+    fn composition_dispatch_order_shared_object() {
+        use std::cell::RefCell;
+        let seen: RefCell<Vec<(&str, usize)>> = RefCell::new(Vec::new());
+        let mut hill = 0u32;
+        compose(
+            &mut hill,
+            |h| seen.borrow_mut().push(("inrun", h as *mut u32 as usize)),
+            |h| seen.borrow_mut().push(("dhill", h as *mut u32 as usize)),
+            |h| seen.borrow_mut().push(("terrain", h as *mut u32 as usize)),
+        );
+        let seen = seen.borrow();
+        assert_eq!(COMPOSE_ORDER, ["inrun", "dhill", "terrain"]);
+        assert_eq!(
+            seen.iter().map(|(n, _)| *n).collect::<Vec<_>>(),
+            COMPOSE_ORDER
+        );
+        assert_eq!(seen[0].1, seen[1].1);
+        assert_eq!(seen[1].1, seen[2].1);
+    }
+
+    /// ONE check for takeoff markers (`evidence/00538660_takeoff_markers.md`,
+    /// generated fixture — no original bytes): tag/flag/neg/p3x bit-exact;
+    /// as=0 degenerates to (lg+P3.x, K+P3.y) rows spaced by STEP/(K2-K1);
+    /// nonzero angle finite with STEP*cos spacing.
+    #[test]
+    fn takeoff_marker_rows() {
+        let m = takeoff_markers(10.0, 0.0, 100.0, 40.0, 0xDEAD_BEEF);
+        assert_eq!(m.flag, 0);
+        assert_eq!((m.m1.2, m.m2.2), (0xDEAD_BEEF, 0xDEAD_BEEF));
+        assert_eq!(m.neg_as.to_bits(), (-0.0f32).to_bits());
+        assert_eq!(m.p3x_copy.to_bits(), 100.0f32.to_bits());
+        assert!((m.m1.0 - 110.0).abs() < 1e-4);
+        assert!((m.m1.1 - (TAKEOFF_K1 + 40.0)).abs() < 1e-4);
+        assert!((m.m2.0 - m.m1.0 - TAKEOFF_STEP).abs() < 1e-3);
+        assert!((m.m2.1 - m.m1.1 - (TAKEOFF_K2 - TAKEOFF_K1)).abs() < 1e-3);
+        let n = takeoff_markers(20.0, 0.61, -55.9, 38.1, 7);
+        for v in [n.m1.0, n.m1.1, n.m2.0, n.m2.1] {
+            assert!(v.is_finite());
+        }
+        assert!(((n.m2.0 - n.m1.0) as f64 - 0.075 * (-0.61f64).cos()).abs() < 1e-3);
     }
 
     #[test]
