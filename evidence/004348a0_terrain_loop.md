@@ -74,3 +74,29 @@ for row in 0..61 {                                       // local_31c < [this+0x
 - Callers: `FUN_00436620` (`0x437702`, composition dispatcher).
 - Callee
 ...[truncated 1583 chars]
+
+## U3 wiring closure — max/min-arg order (2026-10-16, no new Evidence IDs)
+
+Wired from evidence, no REA call: `evidence/00435740_strip_minmax.md` §3
+maps the reader-internal arg order authoritatively from asm (stack at
+`CALL 00468340/00468360` is `[second=b50][first=b60]`), so the `004348a0`
+call-site order is not ambiguous for the combine itself.
+
+- `FUN_00435740` = `min2(a = lo_b50, b = lo_b60)` (checked `strip_lo` /
+  `FUN_004de320` pair + `min2` / `FUN_00468340`); NaN either side → b
+  (b60-side lo value).
+- `FUN_00435770` = `max2(a = hi_b50, b = hi_b60)` (checked `strip_hi` /
+  `FUN_004de350` pair + `max2` / `FUN_00468360`); NaN either side → a
+  (b50-side: NaN `hi_b50` survives, NaN `hi_b60` falls back to `hi_b50`).
+  (Dossier §4 summary line says "NaN → b60-side" for max; its cited asm +
+  `max2` mapping give a-side. Transcription follows the asm.)
+- Transcribed as `engine/src/mesh.rs` `strip_lo_min` / `strip_hi_max`,
+  reusing `crate::fn_004de320::{strip_lo, strip_hi, StripRange}`,
+  `crate::fn_00435740::min2`, `crate::mesh::max2` — no duplication.
+  Covered by the extended `terrain_loop_core` test (generated fixtures).
+
+Still open (not this wave): sin-weight wiring (`FSIN param_6/param_7`,
+`468360(param_2)`, `468340(1−param_2)`, `468310(lo,hi)` tail into
+`v = f18*noise + f16`), RNG tables, vector growth, exact `004348a0`
+call-site addresses of the 2+1 reader sites (strip-minmax dossier U2),
+downstream use of the min/max results.

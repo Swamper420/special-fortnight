@@ -307,8 +307,11 @@ impl TerrainBase {
 
 /// Terrain heightfield loop `FUN_004348a0`
 /// (`evidence/004348a0_terrain_loop.md`). Only the asm-certain parts:
-/// grid bounds, per-vertex coords, cosine noise, guard predicates.
-/// Max/min-arg wiring, sin weights, RNG tables, vector growth: open (U3-U5).
+/// grid bounds, per-vertex coords, cosine noise, guard predicates, plus
+/// strip lo-min / hi-max wiring (`FUN_00435740`/`00435770` as called from
+/// the loop: `min2(lo_b50, lo_b60)` / `max2(hi_b50, hi_b60)`, arg order
+/// from asm staging per `evidence/00435740_strip_minmax.md` §3).
+/// Sin weights, RNG tables, vector growth: still open.
 pub const TERRAIN_ROWS: u32 = 61; // `MOV [EBP+0x84],0x3d` (outer bound)
 
 /// Per-vertex coords (`0x434b51`-`0x434b8f`, asm order): `FILD` col/row
@@ -351,6 +354,37 @@ pub fn terrain_noise(
         acc += (t2 + t2 + ph_b[k] as f64).cos() * amp_b[k] as f64;
     }
     acc as f32
+}
+
+/// `FUN_00435740` as called from `FUN_004348a0` (terrain builder):
+/// `min2(a = lo_b50, b = lo_b60)` — first getter stages b60, second call
+/// reads b50, stack at `CALL 00468340` is `[second=b50][first=b60]`
+/// (`evidence/00435740_strip_minmax.md` §3). Reuses the checked `strip_lo`
+/// getter (`FUN_004de320`) + `min2` (`FUN_00468340`); NaN either side → b60.
+pub fn strip_lo_min(
+    b50: &crate::fn_004de320::StripRange,
+    b60: &crate::fn_004de320::StripRange,
+) -> f32 {
+    crate::fn_00435740::min2(
+        crate::fn_004de320::strip_lo(b50),
+        crate::fn_004de320::strip_lo(b60),
+    )
+}
+
+/// `FUN_00435770` twin: `max2(a = hi_b50, b = hi_b60)` via the checked
+/// `strip_hi` getter (`FUN_004de350`) + `max2` (`FUN_00468360`);
+/// NaN either side → a (b50-side: NaN `hi_b50` survives as NaN, NaN
+/// `hi_b60` falls back to `hi_b50`). Note the strip-minmax dossier §4
+/// summary line says "NaN → b60-side" for max — the asm + `max2` mapping
+/// it cites give a-side; this transcription follows the asm.
+pub fn strip_hi_max(
+    b50: &crate::fn_004de320::StripRange,
+    b60: &crate::fn_004de320::StripRange,
+) -> f32 {
+    max2(
+        crate::fn_004de320::strip_hi(b50),
+        crate::fn_004de320::strip_hi(b60),
+    )
 }
 
 /// Hill-mesh dispatch `FUN_00436620` (`evidence/00436620_composition.md`).
@@ -528,6 +562,21 @@ mod tests {
         assert!(!terrain_adjust_enter(1.0, 1.0));
         assert!(terrain_adjust_enter(f32::NAN, 1.0));
         assert!(terrain_adjust_enter(1.0, f32::NAN));
+        // U3 wiring closed (evidence/00435740_strip_minmax.md §3):
+        // 00435740 = min(lo_b50, lo_b60), 00435770 = max(hi_b50, hi_b60);
+        // NaN either side -> b60-side value.
+        use crate::fn_004de320::StripRange;
+        let b50 = StripRange { lo: 12.5, hi: 44.0, present: true };
+        let b60 = StripRange { lo: -3.25, hi: 47.75, present: true };
+        assert_eq!(strip_lo_min(&b50, &b60), -3.25);
+        assert_eq!(strip_hi_max(&b50, &b60), 47.75);
+        let n = StripRange { lo: f32::NAN, hi: f32::NAN, present: true };
+        assert_eq!(strip_lo_min(&n, &b60), -3.25);
+        assert!(strip_lo_min(&b50, &n).is_nan());
+        // max2 NaN either side -> a (b50-side): NaN hi_b50 survives as NaN,
+        // NaN hi_b60 falls back to hi_b50.
+        assert!(strip_hi_max(&n, &b60).is_nan());
+        assert_eq!(strip_hi_max(&b50, &n), 44.0);
     }
 
     #[test]
