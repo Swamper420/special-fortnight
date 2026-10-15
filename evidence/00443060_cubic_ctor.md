@@ -416,3 +416,50 @@ asm stack traffic op-by-op (not against the decompiler parens); then
 transcribe `FUN_00443060` whole (with `00443280`/`00443290` as part of
 the same unit or immediately after) as one isomorphic module + one test.
 Do NOT transcribe `+12`-only or helpers-only fragments ahead of that.
+
+## 8. U1 closure (this sweep; appended, §§1-7 unchanged)
+
+New REA pull (this session): `ev_7586412437aff92bb99e643bcc00fafe5364e1c3416f260ccb4df49309670ff2`
+(`read_function_instructions FUN_00443060`, 158 insns, same inner
+`DSJ3.exe` SHA `3619dcbd...`): 8× `CALL 0x443280` (cube) + 4×
+`CALL 0x443290` (square) — exactly the pseudocode's per-slot usage
+(c3:1 cube; c2:1 square + 1 cube; c1:1 square + 3 cubes;
+c0:2 squares + 3 cubes); 4× `FDIVR` (one reversed divide per slot,
+denominator `cube(h)` each); 3× `FSUBR` (one in each of the
+`c2/c1/c0` numerators; `c3` has none); ordered `FSTP` stores to
+`[ESI+0xC/0x10/0x14/0x18]`; `3.0f`×2 / `6.0f`×2 const refs land in the
+`c2` (`3.0f`) / `c1` (`6.0f`) numerators as the pseudocode shows.
+Re-pulled pseudocode is byte-identical (`ev_dcd6fffe...` unchanged).
+
+Closed forms derived symbolically (Hermite `t=(x-x0)/H`, `H=x1-x0=-h`,
+expanded to absolute-`x` power basis; `a3=2(y0-y1)+(m0+m1)H`,
+`a2=3(y1-y0)-(2m0+m1)H`):
+`c3=(2y1+(m0+m1)h-2y0)/h^3`,
+`c2=(((3y0-3y1-x1·m0)+x1·m1)x0+((2m0+m1)x1+3y0-3y1)x1-x0²(m0+2m1))/h^3`,
+`c1=(x0³m1+(x0²(2m0+m1)x1-x1³m0)-((m0+2m1)x1+6y0-6y1)x0x1)/h^3`,
+`c0=(((y1-x1·m1)x0³+(x1·m0+3y0)x1²x0+((m1-m0)x1-3y1)x0²x1)-x1³y0)/h^3`.
+Each matches the §2 pseudocode numerator term-by-term (hand expansion
+checked for `c2`/`c1`; all four checked numerically in `f64` against
+the Hermite expansion on 5 random knot pairs — max abs diff
+`4.1e-14` — plus endpoint value/slope reproduction at both knots).
+The `c2` term `(2m0+m1)x1²` matches the Hermite expansion ONLY with
+`param_5=m0` (slope at `x0`), `param_6=m1` (slope at `x1`) — the §7
+`m0↔m1` ambiguity is resolved (swapped assignment mismatches on
+distinct slopes). U1 CLOSED.
+
+Transcribed: `engine/src/fn_00443060.rs`
+(`pub mod fn_00443060` in `lib.rs`, alphabetical; `mesh.rs` untouched)
+as coeff core `fn_00443060(x0,y0,m0,x1,y1,m1) -> (c3,c2,c1,c0)` with
+pseudocode-parenthesized numerators, `f64` intermediates (nearest
+portable stand-in for single-rounded 80-bit `ST0`; last-ulp caveat in
+module docs), isomorphic `h==0||NaN → (0,0,0,y0)` arm
+(`h == 0.0 || h.is_nan()` — C3-equal-or-unordered equivalent, `-0.0`
+included). Base call `0x442f30` and element write-back (vtable,
+`lo`/`hi`, slot stores) stay out — separate procedure units /
+`mesh.rs` integration. One test `cubic_ctor_hermite`: xform endpoint
+value/slope reproduction (3 knot sets, ≤1e-5) + exact degenerate
+`h==0`, `-0.0`, NaN arms. `cargo test -p dsj3-engine`: 42 passed,
+0 failed.
+
+U1 done. U2 (emitter arg semantics), U3 (base NaN edge), U4 (80-bit
+vs `f64` last-ulp) carried unchanged.
