@@ -61,6 +61,17 @@ fabricate hill geometry — smells like progress, isn't.
 `Resource.002` (843 B) is the license/signature package (opaque,
 same reason).
 
+## Settings (HKCU `Software\Mediamond\Deluxe Ski Jump 3`)
+
+`Setup.exe` writes / `DSJ3.exe` reads six values: `Video Adapter`
+(REG_SZ, D3D8 description), `Video Width`/`Video Height` (DWORD
+pixels), `Video Format` (DWORD 16/32 bpp), `Audio Driver` (REG_SZ),
+`Game Language` (REG_SZ `.lan` stem). The Inno installer writes no
+registry (`counts[11]=0`). Portable mapping: `engine/src/settings.rs`
+(`key=value` with exact value names, strings verbatim, DWORDs
+decimal) + round-trip test. Open: missing-key message path,
+adapter prefix-match width, audio match rule.
+
 ## Loader strings (inner `DSJ3.exe`, UTF-16 file offsets)
 
 `Hills` 0x20b29a/0x20b300, `Languages` 0x205992, `Resource`
