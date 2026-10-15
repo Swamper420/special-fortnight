@@ -14,6 +14,7 @@ pub mod fn_00443060;
 pub mod fn_004432a0;
 pub mod fn_00443450;
 pub mod fn_00457110;
+pub mod fn_004ddcb0;
 pub mod fn_004de320;
 pub mod fn_004de480;
 pub mod hill;
