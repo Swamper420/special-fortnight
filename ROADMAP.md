@@ -77,6 +77,12 @@ spec, then parser. Fixtures stay generated-only.
 - Physics from Phase 1 constants: jumper trajectory unit-tested
   against recorded in-game values (tolerance documented, not guessed).
 - Exit: scripted jump plays end-to-end headless with stable hashes.
+- Status 2026-10-15: `engine/src/render.rs` proves the software
+  wireframe path (judgetower renders headless, stable). Hill MESH
+  generation (profile params → 3D) is the next RE kritikal: hill
+  loader is `FUN_00436620`, small setters `00436020/00436150/
+  004361f0` mapped, mesh builder itself unidentified (not among
+  those). Demo scope = 4 in-blob hills (trial parity).
 
 ## Phase 3 — portable presentation
 
