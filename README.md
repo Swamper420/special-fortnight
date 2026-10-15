@@ -159,3 +159,24 @@ returns HANDLE in EAX — decompiler `void` corrected).
 Non-goals: no Wine replacement, no GUI. Boundary code only:
 reconstructed functions stay unmodified; the image file is
 user-supplied, gitignored, read at runtime, never committed.
+
+## Headless extract (Linux)
+
+`--extract DIR` installs the payload without the GUI: parses the
+offset table, decodes setup-0 (header + 58 file locations), decodes
+the setup-1 solid chunk (LZMA1 via `lzma-rs`, 5309 CALL-filter undo),
+writes the 58 files (`{app}` → `DIR`), each SHA1-verified against
+the installer's own location entries, mtimes set from source
+timestamps. Byte-identical to an independent Python decode
+(`diff -r` clean). Needs network once for `lzma-rs` (`Cargo.lock`
+pinned); afterwards fully offline-capable static binary.
+
+```sh
+cargo build --target i686-unknown-linux-musl
+./target/i686-unknown-linux-musl/debug/dsj3 --extract /path/to/dir
+# DSJ3_IMAGE=/path/to/dsj3v171.exe  # if exe not beside the binary
+```
+
+Covers files only: uninstaller stub (generated at install), icon
+shortcuts, `.url` files (ini table), registry/run entries have no
+Linux equivalent and are skipped (listed, not written).

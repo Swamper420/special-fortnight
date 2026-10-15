@@ -5,3 +5,9 @@ edition = "2021"
 publish = false
 
 # 1:1 reconstruction of dsj3v171.exe (PE32 i386). See AGENTS.md.
+
+[dependencies]
+# Host-boundary extraction only (src/extract.rs): raw LZMA1 decode of the
+# installer payload. Pure Rust, no C deps, musl-safe. Reconstructed fn_*
+# modules stay dependency-free.
+lzma-rs = "0.3"

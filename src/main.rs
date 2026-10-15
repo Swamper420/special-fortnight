@@ -519,7 +519,25 @@ mod fn_00411648;
 mod fn_004117dc;
 #[cfg(target_os = "linux")]
 mod host_image;
+mod extract;
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() >= 2 && (args[1] == "--extract" || args[1] == "-x") {
+        let dir = args.get(2).map(String::as_str).unwrap_or("dsj3-installed");
+        let image = std::env::var("DSJ3_IMAGE").unwrap_or_else(|_| "dsj3v171.exe".into());
+        match extract::extract(std::path::Path::new(&image), std::path::Path::new(dir)) {
+            Ok(n) => println!("extracted {n} files to {dir}"),
+            Err(e) => {
+                eprintln!("extract failed: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+    if args.len() >= 2 && (args[1] == "--help" || args[1] == "-h") {
+        println!("usage: dsj3 [--extract DIR]  (default: run reconstructed entry)");
+        return;
+    }
     // Linux host: map the original image so absolute-address reads hit
     // original bytes (see host_image.rs). Other targets run the entry
     // against the linked image directly.
