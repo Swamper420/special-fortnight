@@ -32,12 +32,19 @@ Principles:
 
 ## Phase 1 — formats (offline, no window)
 
+Prereq (settled 2026-10-15): all three formats are encrypted.
+Stub `dsj3v171.exe` holds no loaders; REA target is inner `DSJ3.exe`
+(see README "Payload inventory"). Find decrypt via string xrefs
+(`Hills\`/`hillfile`, `Languages\`, `Resource.000`/`rsa-key`), then
+spec, then parser. Fixtures stay generated-only.
+
 1. `.hil` physics/mesh → parser + spec. Check: hill-mesh viewer
    renders wireframe from parser output (first visible proof).
 2. `.lan` text blobs → string tables. Check: dump all 6 languages
    to text, diff-stable.
 3. `Resource.*` packs → entries + textures. Check: extract every
-   entry byte-identical across runs; decode all 42 BMs to PNG.
+   entry byte-identical across runs; decode textures to PNG only
+   post-decrypt (42 raw `BM` pairs pre-decrypt are chance bytes).
 4. Registry settings → portable config file mapping (res, adapter,
    language). Check: Setup-produced values load unchanged.
 - Exit: every format has spec + round-trip test; viewer milestone done.

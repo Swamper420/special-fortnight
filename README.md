@@ -68,6 +68,13 @@ linker; we build with rustc/LLVM). 1:1 here means:
 - coverage is measured, not claimed: 0/624 until the ledger says otherwise.
 
 Progress lives in the obligation ledger, not in prose claims.
+Status 2026-10-15: 514 `src/fn_*.rs` modules cover all 502 REA
+non-external procs + 12 extra vtable/slot addrs (`0040382c`,
+`004039b4`, `004039b8`, `004094b4`, `0040c328`, `0040c360`,
+`0040c390`, `0040c42c`, `0040c9b0`, `0040cd94`, `0040cda0`,
+`0040ea2c`); only a pilot-5 ledger exists (`analysis/`, gitignored),
+verdict open/failed on verifier authority (static-only vs
+controlled-replay). Full-502 ledger not yet built — see ROADMAP prereq.
 
 ## User-parity acceptance
 
@@ -234,3 +241,27 @@ cargo build --target i686-unknown-linux-musl
 Covers files only: uninstaller stub (generated at install), icon
 shortcuts, `.url` files (ini table), registry/run entries have no
 Linux equivalent and are skipped (listed, not written).
+
+## Payload inventory (researched 2026-10-15, do not re-scope)
+
+`--extract` writes 58 files. The game binary is inside the payload,
+not the stub: `dsj3v171.exe` is an Inno 5.5.7 installer (624 procs =
+502 internal+thunk + 122 external; 332 strings; zero hits for
+`hillfile`/`Hills.cfg`/`Resource.000`/`rsa-key` — only the LZMA setup
+chain `0040cc3c`/`0040cee8`/`0040ce24` is visible in the stub).
+Format loaders live in the inner EXE; point REA there, not at the stub.
+
+- Inner `DSJ3.exe`: 2233240 B, PE32 GUI i386, SHA-256
+  `3619dcbde2bca7e8f6eafacefb20d8d6fb11961fc236bb381d2c1b5acab0e0c4`.
+- 40 `.hil` (`Hill01-HS138`..`Hill40-HS275`), 1906–3487 B, no magic,
+  entropy ~7.9 bits/B: encrypted, not raw floats. HS number from
+  filename. Mesh likely procedural from decrypted profile (D3DX `.x`
+  vocab in game EXE).
+- 6 `.lan` (~37 KB each), no magic, entropy 7.995+: encrypted, not
+  zlib/deflate. String count/encoding unknown until loader found.
+- `Resource.000` 19240 B (likely encrypted index), `Resource.001`
+  2627904 B (payload), `Resource.002` 843 B (likely sig/key). 42 raw
+  `BM` pairs in `.001` are chance bytes (0/42 valid BITMAPFILEHEADER):
+  no texture decode before decrypt.
+- Reproduce: `./target/i686-unknown-linux-musl/debug/dsj3 --extract
+  /tmp/dsj3-wrap` (bytes stay in `/tmp`, never committed).
