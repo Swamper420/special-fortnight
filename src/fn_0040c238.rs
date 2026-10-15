@@ -186,16 +186,18 @@ mod tests {
             0x777
         );
 
-        // Taken lane: inner + unlink dispatch fire, head restored.
-        // vtable returns the vtbl pointer's own upper half, so the
-        // `[obj+4]` slot write is a no-op and `*obj` stays valid:
-        // on the 64-bit host any other return would clobber the
-        // upper half of the 8-byte vtbl pointer that shares the
-        // slot (on the i686 target pointers are 4 bytes, no
-        // overlap). Re-arena anyway: the previous lane's slot
-        // write clobbered it.
-        reset();
-        let obj = arena(&mut slot, &mut buf, &mut vtbl_buf);
+        // Taken lane (64-bit host only): inner + unlink dispatch fire,
+        // head restored. vtable returns the vtbl pointer's own upper
+        // half, so the `[obj+4]` slot write is a no-op and `*obj`
+        // stays valid: on the 64-bit host any other return would
+        // clobber the upper half of the 8-byte vtbl pointer that
+        // shares the slot (on the i686 target pointers are 4 bytes,
+        // no overlap, so this lane cannot run there). Re-arena
+        // anyway: the previous lane's slot write clobbered it.
+        #[cfg(target_pointer_width = "64")]
+        {
+            reset();
+            let obj = arena(&mut slot, &mut buf, &mut vtbl_buf);
         let upper =
             (unsafe { core::ptr::read_unaligned(obj as *const *const u8) } as usize >> 32)
                 as u32;
@@ -217,5 +219,6 @@ mod tests {
             unsafe { crate::fn_004039e4::SEH_HEAD_FS0 } as usize,
             0x777
         );
+        }
     }
 }

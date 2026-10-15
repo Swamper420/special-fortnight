@@ -5,14 +5,15 @@
 /// Dispatch each node: `f=node[1]; f(p1,p2,p3); node=*node`.
 /// Params arrive in EAX/EDX/ECX per `__register` observation. Head
 /// lives in `crate::fn_00406114::DAT_00412030` (no duplicate cell).
-/// Host nodes carry two pointer slots (16 B); callback slot at +8.
+/// Host nodes carry two pointer slots; callback slot at `NODE_VAL_OFF`.
 /// SEH bracket per iteration has no host-visible effect and is omitted.
 pub unsafe fn fn_00406198(param_1: u32, param_2: u32, param_3: *mut u8) {
+    use crate::fn_00406114::NODE_VAL_OFF;
     unsafe {
         let mut cur: *mut u8 = crate::fn_00406114::DAT_00412030;
         while !cur.is_null() {
             let target: usize =
-                core::ptr::read_unaligned(cur.wrapping_byte_add(8) as *const usize);
+                core::ptr::read_unaligned(cur.wrapping_byte_add(NODE_VAL_OFF) as *const usize);
             let f: unsafe extern "C" fn(u32, u32, *mut u8) = core::mem::transmute(target);
             f(param_1, param_2, param_3);
             cur = core::ptr::read_unaligned(cur as *const *mut u8);

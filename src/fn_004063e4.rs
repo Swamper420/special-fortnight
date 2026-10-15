@@ -159,7 +159,12 @@ mod tests {
 
     /// Direct lane (`id >= 0x10000` → real `fn_00404e14`): the id
     /// slot is `u32`, so a 64-bit host truncates real pointers —
-    /// this lane only runs where pointers fit (32-bit).
+    /// this lane only runs where pointers fit (32-bit). The wide
+    /// string lives in a `static`: this statically-linked binary
+    /// maps data low, so the id stays signed-positive and takes
+    /// the `JGE` lane (a stack/heap address would be negative on
+    /// Linux and misroute to the resource lane).
+    static WIDE_AB: [u16; 3] = [0x41, 0x42, 0];
     #[cfg(target_pointer_width = "32")]
     #[test]
     fn direct_lane() {
@@ -174,11 +179,10 @@ mod tests {
         let mut slot = [0u8; 8];
         let param_2 = slot.as_mut_ptr();
         // Wide "AB": len 2 → alloc(2), fill 4, slot takes it.
-        let wide = [0x41u16, 0x42, 0];
         let mut mid: *mut u8 = core::ptr::null_mut();
         let rec = [
             &mut mid as *mut *mut u8 as usize,
-            wide.as_ptr() as usize,
+            WIDE_AB.as_ptr() as usize,
         ];
         reset();
         unsafe { fn_004063e4(rec.as_ptr() as *const u8, param_2) };

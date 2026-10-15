@@ -23,10 +23,13 @@ pub static mut HOOK_00405b48: unsafe extern "C" fn(*mut u8) -> usize =
     default_resolve;
 
 /// Image node: `next @ +0`, keys `u32 [+0x4/+0x8/+0x0c]`; host keeps one
-/// address-width cell per slot (`next @ +0`, keys at `+8/+16/+24`).
+/// address-width cell per slot. Stride follows the cell width, so
+/// 64-bit hosts read `+8/+16/+24` (existing arenas) and 32-bit hosts
+/// read the original `+4/+8/+12`.
 unsafe fn key_at(node: *mut u8, i: usize) -> *mut u8 {
+    let cell = core::mem::size_of::<*mut u8>();
     read_unaligned(
-        ((node as usize).wrapping_add(8).wrapping_add(i.wrapping_mul(8)))
+        ((node as usize).wrapping_add(cell).wrapping_add(i.wrapping_mul(cell)))
             as *const *mut u8,
     )
 }

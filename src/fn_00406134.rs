@@ -13,12 +13,13 @@ pub static mut HOOK_FN_00402e20: unsafe extern "C" fn(usize, u32) = default_free
 /// lane first, else prev/cur walk; frees at most one node with size 8.
 /// `param_1` arrives in EAX (callee-saved via EBP) per observation.
 /// Head lives in `crate::fn_00406114::DAT_00412030` (no duplicate cell).
-/// Host nodes carry two pointer slots (16 B); value slot at +8.
+/// Host nodes carry two pointer slots; value slot at `NODE_VAL_OFF`.
 pub unsafe fn fn_00406134(param_1: u32) {
+    use crate::fn_00406114::NODE_VAL_OFF;
     unsafe {
         let head: *mut u8 = crate::fn_00406114::DAT_00412030;
         if head.is_null()
-            || core::ptr::read_unaligned(head.wrapping_byte_add(8) as *const usize)
+            || core::ptr::read_unaligned(head.wrapping_byte_add(NODE_VAL_OFF) as *const usize)
                 != param_1 as usize
         {
             let mut prev: *mut u8 = head;
@@ -26,7 +27,7 @@ pub unsafe fn fn_00406134(param_1: u32) {
                 let cur: *mut u8 =
                     core::ptr::read_unaligned(prev as *const *mut u8);
                 if !cur.is_null()
-                    && core::ptr::read_unaligned(cur.wrapping_byte_add(8) as *const usize)
+                    && core::ptr::read_unaligned(cur.wrapping_byte_add(NODE_VAL_OFF) as *const usize)
                         == param_1 as usize
                 {
                     let next: *mut u8 =
@@ -66,7 +67,10 @@ mod tests {
     }
 
     unsafe fn val(n: usize) -> usize {
-        core::ptr::read_unaligned((n as *const u8).wrapping_byte_add(8) as *const usize)
+        core::ptr::read_unaligned(
+            (n as *const u8).wrapping_byte_add(crate::fn_00406114::NODE_VAL_OFF)
+                as *const usize,
+        )
     }
 
     unsafe fn next(n: usize) -> usize {

@@ -65,7 +65,7 @@ mod tests {
             QPC_HITS.store(0, Ordering::SeqCst);
             GTC_HITS.store(0, Ordering::SeqCst);
             QPC_RET.store(1, Ordering::SeqCst);
-            QPC_VAL.store(0x1122_3344_5566_7788, Ordering::SeqCst);
+            QPC_VAL.store(0x1122_3344_5566_7788u64 as usize, Ordering::SeqCst);
             fn_004030bc();
             assert_eq!(crate::fn_004030e4::CELL_00412008, 0x5566_7788);
             assert_eq!(QPC_HITS.load(Ordering::SeqCst), 1);

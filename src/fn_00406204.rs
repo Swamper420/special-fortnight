@@ -25,7 +25,10 @@ pub static mut DAT_0041202c: usize = 0;
 /// ECX per Ghidra `__register` observation.
 pub unsafe fn fn_00406204(param_1: *mut usize, param_2: u32, param_3: *mut u8) {
     let _ = param_2;
-    let arg: u32 = *(((param_1 as usize).wrapping_add(8)) as *const u32);
+    // Value slot is one address-width cell past `next` (original `+4`
+    // `u32`; widened to `+8` on the 64-bit host, same arenas as
+    // `fn_00406114`).
+    let arg: u32 = *param_1.wrapping_add(1) as u32;
     CALLEE_00406198(arg, 0, param_3);
     let local: usize = param_1 as usize;
     if local == DAT_0041202c {

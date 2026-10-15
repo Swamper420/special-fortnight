@@ -175,7 +175,11 @@ mod tests {
 
     /// Header arena: obj = base+12; tag u16 @+2 (`obj-10`),
     /// refcount u32 @+4 (`obj-8`), len u32 @+8 (`obj-4`).
-    unsafe fn arena(a: &mut [u8; 32], tag: u16, rc: u32, len: u32) -> (*mut u8, *mut u16) {
+    /// The buffer must really hold `12 + len*2` bytes: the scanner
+    /// reads all `len` words, and a short buffer turns stack garbage
+    /// past the end into history-dependent `%` specs.
+    unsafe fn arena(a: &mut [u8], tag: u16, rc: u32, len: u32) -> (*mut u8, *mut u16) {
+        debug_assert!((12 + len as usize * 2) <= a.len());
         let base = a.as_mut_ptr();
         core::ptr::write_unaligned(base.wrapping_add(2) as *mut u16, tag);
         core::ptr::write_unaligned(base.wrapping_add(4) as *mut u32, rc);
@@ -257,7 +261,7 @@ mod tests {
         // the 0x20 zero words and exits with 0x20, steered to 5:
         // teardown 6->5 with no dtor call.
         reset();
-        let mut ab = [0u8; 32];
+        let mut ab = [0u8; 12 + 0x20 * 2];
         let (ob, ob16) = unsafe { arena(&mut ab, 2, 5, 0x20) };
         let base_b = ob.wrapping_byte_offset(-12);
         let mut slot_b: *mut u8 = core::ptr::null_mut();
@@ -275,7 +279,7 @@ mod tests {
         // real scan emits 0xc00, steered to 5 < 0x17ff so the loop
         // exits; final 00404f00 grows in place (realloc total 5*2+14=24).
         reset();
-        let mut ac = [0u8; 32];
+        let mut ac = [0u8; 12 + 0xc00 * 2];
         let (oc, oc16) = unsafe { arena(&mut ac, 2, 5, 0xc00) };
         let base_c = oc.wrapping_byte_offset(-12);
         let big = unsafe {

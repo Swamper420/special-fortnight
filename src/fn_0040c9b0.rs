@@ -131,6 +131,12 @@ mod tests {
         // target, hence the `cfg` gate — same ceiling as
         // `fn_0040382c`.
         let mut obuf = [0u8; 0x18];
+        // `[obj+8]` is an object per the assembly (`T=[ESI+8];
+        // V=[T]`): its +0 slot holds the table, not the table
+        // itself — wrap `tbuf` in one cell.
+        let tp = tbuf.as_ptr();
+        let mut tobj = tp;
+        let tobj_ptr = &mut tobj as *mut *const u8 as *const u8;
         unsafe {
             core::ptr::copy_nonoverlapping(
                 &vt as *const _ as *const u8,
@@ -142,9 +148,8 @@ mod tests {
                 obuf.as_mut_ptr().add(4),
                 core::mem::size_of::<*const u8>(),
             );
-            let tp = tbuf.as_ptr();
             core::ptr::copy_nonoverlapping(
-                &tp as *const _ as *const u8,
+                &tobj_ptr as *const _ as *const u8,
                 obuf.as_mut_ptr().add(8),
                 core::mem::size_of::<*const u8>(),
             );

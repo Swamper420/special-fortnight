@@ -204,7 +204,10 @@ mod tests {
             let head = crate::fn_00406114::DAT_00412030;
             assert!(!head.is_null());
             assert_eq!(
-                core::ptr::read_unaligned(head.wrapping_byte_add(8) as *const usize),
+                core::ptr::read_unaligned(
+                    head.wrapping_byte_add(crate::fn_00406114::NODE_VAL_OFF)
+                        as *const usize
+                ),
                 0x0040aab4
             );
             assert_eq!(

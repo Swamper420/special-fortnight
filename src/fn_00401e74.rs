@@ -192,9 +192,14 @@ mod tests {
     /// `MOV EBX,[ECX] / MOVZX ECX,[EBX+2]` double-deref). Buffer must
     /// outlive use.
     fn small_block(buf: &mut [u64; 12], esize: u16) -> *mut u32 {
-        let hdrp = buf.as_mut_ptr().wrapping_add(2) as *mut *mut u32;
-        let desc = buf.as_mut_ptr().wrapping_add(4) as *mut *mut u32;
-        let table = buf.as_mut_ptr().wrapping_add(6) as *mut u8;
+        let base = buf.as_mut_ptr() as *mut u8;
+        // 8-align the start: 32-bit hosts align `[u64; 12]` to 4
+        // only, and the tag assert below needs `hdrp & 7 == 0`.
+        // Relative layout unchanged, so 64-bit addresses identical.
+        let start = unsafe { base.add((8 - (base as usize & 7)) & 7) };
+        let hdrp = unsafe { start.add(16) } as *mut *mut u32;
+        let desc = unsafe { start.add(32) } as *mut *mut u32;
+        let table = unsafe { start.add(48) };
         // Target-exact: user block starts 4 bytes past the header cell
         // (byte offset, not host pointer stride).
         let user = unsafe { (hdrp as *mut u8).byte_add(4) } as *mut u32;

@@ -18,26 +18,32 @@ pub static mut HOOK_FN_00402e04: unsafe extern "C" fn(u32) -> usize = default_al
 /// once data layout proven.
 pub static mut DAT_00412030: *mut u8 = core::ptr::null_mut();
 
+/// Value-slot offset: one address-width cell past `next` — the
+/// original `+4` on 32-bit targets, `+8` on the 64-bit host (whose
+/// arenas widen both slots). Readers share this, not a literal.
+pub const NODE_VAL_OFF: usize = core::mem::size_of::<*mut u8>();
+
 /// Test-only serialization for tests sharing `DAT_00412030` (also held
 /// by `fn_00406134`/`fn_00406198` tests).
 pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 /// Push: `node=alloc(8); node[0]=head; node[1]=param; head=node`.
 /// `param_1` arrives in EAX (callee-saved via EBX) per observation.
-/// Node slots are pointer-sized on host (16 B); value slot at +8.
+/// Node slots are pointer-sized on host (16 B on 64-bit, the original
+/// 8 B on 32-bit); value slot at `NODE_VAL_OFF`.
 pub unsafe fn fn_00406114(param_1: u32) {
     unsafe {
         let node = HOOK_FN_00402e04(8) as *mut u8;
         let head: *mut u8 = DAT_00412030;
         core::ptr::write_unaligned(node as *mut *mut u8, head);
-        core::ptr::write_unaligned(node.wrapping_byte_add(8) as *mut usize, param_1 as usize);
+        core::ptr::write_unaligned(node.wrapping_byte_add(NODE_VAL_OFF) as *mut usize, param_1 as usize);
         DAT_00412030 = node;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{DAT_00412030, HOOK_FN_00402e04, TEST_LOCK, fn_00406114};
+    use super::{DAT_00412030, HOOK_FN_00402e04, NODE_VAL_OFF, TEST_LOCK, fn_00406114};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     static ALLOC_HITS: AtomicUsize = AtomicUsize::new(0);
@@ -66,7 +72,7 @@ mod tests {
         unsafe {
             assert_eq!(core::ptr::read_unaligned(n1 as *const usize), 0);
             assert_eq!(
-                core::ptr::read_unaligned((n1 as *const u8).wrapping_byte_add(8) as *const usize),
+                core::ptr::read_unaligned((n1 as *const u8).wrapping_byte_add(NODE_VAL_OFF) as *const usize),
                 0x77
             );
             // Push again; new head links to old.
@@ -77,7 +83,7 @@ mod tests {
         unsafe {
             assert_eq!(core::ptr::read_unaligned(n2 as *const usize), n1);
             assert_eq!(
-                core::ptr::read_unaligned((n2 as *const u8).wrapping_byte_add(8) as *const usize),
+                core::ptr::read_unaligned((n2 as *const u8).wrapping_byte_add(NODE_VAL_OFF) as *const usize),
                 0x99
             );
             let _ = Box::from_raw(n1 as *mut [usize; 2]);

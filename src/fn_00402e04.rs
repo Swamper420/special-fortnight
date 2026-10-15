@@ -67,6 +67,10 @@ mod tests {
     #[test]
     fn branches() {
         let _guard = TEST_LOCK.lock().unwrap();
+        // Cross-module tests share these slots (02e38 holds this
+        // lock too): save/restore so later tests see prior state.
+        let saved_ptr = unsafe { PTR_0041273C };
+        let saved_tail = unsafe { TAIL_00402F60 };
         unsafe {
             PTR_0041273C = indirect;
             TAIL_00402F60 = tail;
@@ -89,5 +93,9 @@ mod tests {
         assert_eq!(INDIRECT_HITS.load(Ordering::SeqCst), 2);
         assert_eq!(TAIL_HITS.load(Ordering::SeqCst), 1);
         assert_eq!(TAIL_ARG.load(Ordering::SeqCst), 1);
+        unsafe {
+            PTR_0041273C = saved_ptr;
+            TAIL_00402F60 = saved_tail;
+        }
     }
 }
