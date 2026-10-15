@@ -194,6 +194,69 @@ impl Inrun {
     }
 }
 
+/// Terrain base `FUN_00434ff0` (evidence `evidence/00434ff0_terrain_base.md`).
+///
+/// `thr/off/x0` = `[this+0x260/+0x264/+0x98]`; `lo/hi` = `[obj60+0x28/+0x2c]`
+/// (`FUN_004de320/004de350`, throw if `[obj60+0x30]==0` → `panic` here, U5).
+/// `xform` = opaque virtual transform `FUN_004de3e0` (target unmapped, U2).
+/// f64 intermediates (≈ x87 extended); f32 round-trips where asm stores float.
+#[derive(Debug, Clone, Copy)]
+pub struct TerrainBase {
+    pub thr: f32,
+    pub off: f32,
+    pub x0: f32,
+    pub lo: f32,
+    pub hi: f32,
+    pub range_present: bool,
+}
+
+/// `FUN_00468310`: median-clamp, C0-bit exact (`NaN` value → `lo`).
+pub fn clamp3(lo: f32, hi: f32, v: f32) -> f32 {
+    if !(lo <= v) {
+        lo
+    } else if hi < v {
+        hi
+    } else {
+        v
+    }
+}
+
+/// `FUN_00468360`: max, C0-bit exact (`NaN` b → `a`).
+pub fn max2(a: f32, b: f32) -> f32 {
+    if !(a <= b) {
+        a
+    } else {
+        b
+    }
+}
+
+impl TerrainBase {
+    /// `FUN_00434ff0(ECX=this, p1, p2) -> f32`, branch-for-branch from asm.
+    pub fn eval(&self, xform: impl FnOnce(f32) -> f32, p1: f32, p2: f32) -> f32 {
+        if !(self.thr <= p1) {
+            // Branch A: sqrt(max(|p2|-xform(clamp(lo,hi,p1)),0)² + g²),
+            // g = p1-x0 if p1 < x0 else 0.
+            if !self.range_present {
+                panic!("FUN_00434ff0: range object absent ([obj60+0x30]==0)");
+            }
+            let d = xform(clamp3(self.lo, self.hi, p1)) as f64;
+            let e = p2.abs() as f64 - d;
+            let f = max2(e as f32, 0.0) as f64;
+            let g = if !(self.x0 <= p1) {
+                p1 as f64 - self.x0 as f64
+            } else {
+                0.0
+            };
+            (f * f + g * g).sqrt() as f32
+        } else {
+            // Branch B: max(sqrt(p2² + (p1-thr)²) - off, 0).
+            let dx = (p1 - self.thr) as f64;
+            let h = ((p2 as f64) * (p2 as f64) + dx * dx).sqrt() - self.off as f64;
+            max2(h as f32, 0.0)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,5 +317,48 @@ mod tests {
         assert_eq!(s.count, i32::MIN);
         s.seal();
         assert_eq!(s.push(0.0, 0.0), Err(EmitErr::Closed));
+    }
+
+    /// ONE check for `FUN_00434ff0` (`evidence/00434ff0_terrain_base.md`,
+    /// generated fixture — no original bytes): closed forms per branch,
+    /// C0-bit NaN mappings (clamp/max/branch-select), absent-range panic.
+    #[test]
+    fn terrain_base_branches() {
+        let t = |thr: f32, off: f32, x0: f32| TerrainBase {
+            thr,
+            off,
+            x0,
+            lo: 0.0,
+            hi: 100.0,
+            range_present: true,
+        };
+        // Branch B: sqrt(4² + (13-10)²) - 2 = 3.
+        assert_eq!(t(10.0, 2.0, 0.0).eval(|c| c, 13.0, 4.0), 3.0);
+        // Branch B clamped: sqrt(0 + 1) - 100 < 0 → 0.
+        assert_eq!(t(10.0, 100.0, 0.0).eval(|c| c, 11.0, 0.0), 0.0);
+        // Branch A, g<0 leg: C=30, D=30, E=|10|-30→0; G=30-50=-20 → 20.
+        assert_eq!(t(100.0, 0.0, 50.0).eval(|c| c, 30.0, 10.0), 20.0);
+        // Branch A, g=0 leg: C=60, D=0, E=10 → 10; G=0 → 10.
+        assert_eq!(t(100.0, 0.0, 50.0).eval(|c| c - 60.0, 60.0, 10.0), 10.0);
+        // Branch A clamp hi: p1=150 → C=100; D=100, E=-90 → F=0; G=-50 → 50.
+        assert_eq!(t(2000.0, 0.0, 200.0).eval(|c| c, 150.0, 10.0), 50.0);
+        // x87 C0 mappings: NaN value → lo; NaN b → a; NaN p1 → A-path (NaN out).
+        assert_eq!(clamp3(2.0, 5.0, f32::NAN), 2.0);
+        assert_eq!(max2(1.0, f32::NAN), 1.0);
+        assert!(t(10.0, 0.0, 0.0).eval(|c| c, f32::NAN, 1.0).is_nan());
+    }
+
+    #[test]
+    #[should_panic(expected = "range object absent")]
+    fn terrain_base_absent_range_panics() {
+        let t = TerrainBase {
+            thr: 100.0,
+            off: 0.0,
+            x0: 0.0,
+            lo: 0.0,
+            hi: 1.0,
+            range_present: false,
+        };
+        t.eval(|c| c, 1.0, 1.0);
     }
 }
