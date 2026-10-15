@@ -474,6 +474,17 @@ mod tests {
     }
 
     #[test]
+    fn lang_write_read_round_trip() {
+        let l = six_langs();
+        for code in ["en", "fi", "de", "no", "pl", "si"] {
+            let stem = lang_stem(code).unwrap();
+            let text = upsert_game_language("Video Width=1024\n", stem);
+            let back = game_language_from_text(&text).unwrap();
+            assert_eq!(resolve_lang(&back, &l), Some(code));
+        }
+    }
+
+    #[test]
     fn write_at_creates_minimal_and_updates() {
         let dir = std::env::temp_dir().join(format!("dsj3-lang-write-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);

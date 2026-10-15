@@ -193,7 +193,10 @@ Delphi original: same flow and defaults, native look differs
 terminal wizard with a one-line note. On multi-language images both
 wizards pre-select the saved `Game Language` settings value
 (`$DSJ3_SETTINGS`, else `$HOME/.config/dsj3/settings`) when it names
-a language in the image, otherwise the default is unchanged.
+a language in the image, otherwise the default is unchanged. A
+successful install writes the chosen language back to the same
+`Game Language` key (other keys preserved; best-effort, never fails
+the install).
 
 ## Release artifacts (local)
 
