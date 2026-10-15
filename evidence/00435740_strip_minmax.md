@@ -113,7 +113,9 @@ Referenced strings: none.
   `FLD [ESP+8]; FCOMP [ESP+4]; TEST AH,0x1` (C0 only); `JZ return
   [ESP+8]` else return `[ESP+4]`. Matches existing `mesh.rs::max2`
   (`NaN b → a` under its `(a=[ESP+4], b=[ESP+8])` convention — reused,
-  not retranscribed). Applied here: NaN → b60-side hi value.
+  not retranscribed). Applied here: NaN → a-side (b50-side) hi value:
+  unordered fails the `JZ` (C0 set), falling through to `[ESP+4]`
+  (correction 2026-10-16; §4 summary previously said b60-side).
 
 ## 5. Transcription
 
