@@ -68,13 +68,19 @@ Progress lives in the obligation ledger, not in prose claims.
 
 ## Linux host run
 
-Supported config (unverified end-to-end in this docs pass — another
-agent owns `src/`, and this job never runs cargo; no
-`i686-unknown-linux-musl` refs exist yet in repo files):
+Supported config (verified end-to-end 2026-10-15: `musl-i686` binary
+runs the entry chain to `exit 0`; `DSJ3_DEBUG=1` trace below):
 
 ```sh
 cargo build --target i686-unknown-linux-musl
-./target/i686-unknown-linux-musl/debug/dsj3
+rm -f /tmp/dsj3-write-*
+DSJ3_DEBUG=1 ./target/i686-unknown-linux-musl/debug/dsj3
+# [dsj3] CreateFile -> handle 0x1000 (image)
+# [dsj3] entry: stream=0x… setup=0x4264f0
+# [dsj3] setup header: plus_c=1 crc_got=0x1f16671d want=0x1f16671d
+# [dsj3] gate: ok=false skip_first=true seek_to=0x38880b
+# [dsj3] table: obj=0x… count=0x0
+# exit 0
 ```
 
 32-bit host target required: pointer widths match the 1:1 target.
@@ -82,7 +88,10 @@ A 64-bit host build truncates pointers at the `u32` vtable/cell
 slots and reads adjacent stack garbage — documented ceiling, not a
 supported config. Image path override: `DSJ3_IMAGE=/path/to/dsj3v171.exe`.
 `WriteFile`/`SetFilePointer` sinks land in `/tmp/dsj3-write-<handle08x>`
-(host-side artifacts, never committed).
+(host-side artifacts, never committed). Debug trace:
+`DSJ3_DEBUG=1` prints the CreateFile handle, entry stream/setup
+pointers, header CRC, size-gate outcome, seek target, and section
+count; `DSJ3_VERBOSE=1` adds per-`c360` size reads.
 
 What the harness does (`src/host_image.rs`, wired in `src/main.rs`
 on `target_os = "linux"` only): maps `dsj3v171.exe` sections
@@ -92,24 +101,35 @@ hit original bytes; writes land on private pages; code maps without
 count at `0x00410144` (8 live slots point at unexecutable original
 inits); zeroes the plugin-count cell `0x004185ac` (static bytes are
 `0x026402fd` garbage); patches reconstructed targets into vtable
-slots (`0x0040c098/0x0040c0b8/0x0040c088/0x0040c0a8/0x0040c0b0/0x0040c0ac/0x0040c0a4/0x0040c68c/0x0040c110/0x0040cc18/0x0040cc0c`,
-slot-by-slot as reconstructions land); installs OS shims — host heap
+slots by value sweep (`0x0040382c/0x00403848/0x004039b4/0x0040c328/`
+`0x0040c360/0x0040c390/0x0040c3d0/0x0040c80c/0x0040c42c/0x0040cee8/`
+`0x0040c9b0/0x0040cda0/0x004039b8/0x0040c2e0`, slot-by-slot as
+reconstructions land); installs OS shims — host heap
 for the Delphi allocator lanes, argv shims (`GetCommandLineW`,
 `GetModuleFileNameW`), resource shims (`.rsrc` walk over the mapped
-image: `Find/Sizeof/Load/LockResource`), `WriteFile` (sink append),
+image: `Find/Sizeof/Load/LockResource`), `CreateFileW` (mints
+`0x1000+` image-backed handles for the setup self-stream),
+`WriteFile` (sink append),
 `ReadFile` (sink read topped up from image bytes at same offset on
-short reads), `GetFileSize`, `SetFilePointer` (shared seek cursor per
-handle).
+short reads), `GetFileSize` (image length for image-backed handles),
+`SetFilePointer` (seeks the image for image-backed handles, shared
+seek cursor per handle), section-drain (`cb34→cad8`).
 
 Known ceilings: 64-bit truncation (above); skipped unit inits +
 seeded cells (`0x00410144=0`, `0x004185ac=0` — revisit slot-by-slot);
 stubbed GUI/fatal paths continue where the original would abort;
-synthetic stream stands in for the installer self-stream (unknown
-handles read the image; short sink reads serve image bytes).
-Entry-path fixes this session (see `src/fn_004117dc.rs`): address/
-content corrections at `[0x40c04c]`, `[0x412b2c]`, `[0x40c640]`,
-`[0x40cbc0]`, `[0x4185ac]` (unverified byte-level in this pass —
-confirm against REA disassembly before citing).
+file-size gate observes `size (0x3f0200) >= expected (0x3ede64)`
+instead of equal (`ok=false`, one `ec58` no-op) — meaning of `+0x10`
+unproven; LZMA bit-hooks (`cee8→d33c→d094/d1a4/d1d0/d244/d11c/d160/
+d034`) and `da38` string alloc/store hooks remain stubs, so the
+section table decodes to zeros (`count=0x0`) and no files extract
+yet; the `3894` installer-run dispatch is reached but has no
+headless file-extraction backend.
+Entry-path fixes (see `src/fn_004117dc.rs`, `evidence/004117dc_*`):
+address/content corrections at `[0x40c04c]`, `[0x412b2c]`,
+`[0x40c640]`, `[0x40cbc0]`, `[0x4185ac]`; `FAKE_SETUP` replaced by
+direct header reads; `[0x40c0b8]` linked to CreateFile (`c2e0`,
+returns HANDLE in EAX — decompiler `void` corrected).
 
 Non-goals: no Wine replacement, no GUI. Boundary code only:
 reconstructed functions stay unmodified; the image file is

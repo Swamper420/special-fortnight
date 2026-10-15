@@ -30,6 +30,9 @@ pub unsafe fn fn_0040c360(stream: *const u8, buf: *mut u32) {
     let handle = core::ptr::read_unaligned(stream.wrapping_byte_add(4) as *const u32);
     let mut high: u32 = 0;
     let low = HOOK_GetFileSize(handle, &mut high);
+    if std::env::var("DSJ3_DEBUG").is_ok() && std::env::var("DSJ3_VERBOSE").is_ok() {
+        eprintln!("[dsj3] c360: stream={stream:?} handle={handle:#x} low={low:#x} high={high:#x}");
+    }
     core::ptr::write_unaligned(buf, low);
     core::ptr::write_unaligned(buf.wrapping_add(1), high);
     if low == 0xffff_ffff {

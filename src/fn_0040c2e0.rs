@@ -35,7 +35,10 @@ pub static mut TABLE_004129F8: [u32; 256] = [0; 256];
 /// `crate::fn_00404d24::fn_00404d24` (signatures match exactly).
 use crate::fn_00404d24::fn_00404d24;
 
-/// Import `KERNEL32.DLL::CreateFileW` (`CALL 0x00406658`), return discarded.
+/// Import `KERNEL32.DLL::CreateFileW` (`CALL 0x00406658`); EAX return
+/// passes through to the caller (`fn_0040c238` stores it to `[obj+4]`).
+/// Earlier modeled void (return discarded by this frame); corrected
+/// per `objdump` (`call 0x406658` with no EAX clear before `ret $8`).
 ///
 /// ponytail: hook standing in for the import (also keeps host tests
 /// linkable), rewire to raw `extern "system" CreateFileW` once
@@ -51,7 +54,7 @@ pub static mut HOOK_CreateFileW: unsafe extern "C" fn(
 ) -> usize = default_create;
 
 /// `CreateFileW(convert(p2), acc[p5], share[p4], 0, disp[p3&0xff],
-/// 0x80, 0)`, return discarded. `param_1` (EAX) unread, `param_3`
+/// 0x80, 0)`, handle returns in EAX. `param_1` (EAX) unread, `param_3`
 /// arrives in ECX (low byte used), `param_4`/`param_5` ride the stack
 /// (`RET 0x8`, host-invisible).
 pub unsafe fn fn_0040c2e0(
@@ -60,12 +63,12 @@ pub unsafe fn fn_0040c2e0(
     param_3: u32,
     param_4: u8,
     param_5: u8,
-) {
+) -> usize {
     let disp: u32 = TABLE_004129F8[(param_3 & 0xff) as usize];
     let share: u32 = TABLE_004129E8[param_4 as usize];
     let access: u32 = TABLE_004129DC[param_5 as usize];
     let name = fn_00404d24(param_2);
-    HOOK_CreateFileW(name as *const u16, access, share, 0, disp, 0x80, 0);
+    HOOK_CreateFileW(name as *const u16, access, share, 0, disp, 0x80, 0)
 }
 
 #[cfg(test)]
@@ -107,7 +110,7 @@ mod tests {
         for (i, v) in got.iter().enumerate() {
             CREATE_ARGS[i].store(*v, Ordering::SeqCst);
         }
-        0
+        0x71aa
     }
 
     #[test]
@@ -120,7 +123,9 @@ mod tests {
             TABLE_004129F8[0xab] = 0x77;
         }
         let path = 0x1234 as *const u8;
-        unsafe { fn_0040c2e0(0xdead, path, 3, 2, 1) };
+        let h = unsafe { fn_0040c2e0(0xdead, path, 3, 2, 1) };
+        // Handle passes through (caller stores it to `[obj+4]`).
+        assert_eq!(h, 0x71aa);
         // Real 00404d24 passes the pointer through.
         let want = [
             path as usize,

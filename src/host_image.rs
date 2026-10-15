@@ -110,12 +110,14 @@ fn patch_vtable() {
         // Bare-`ret` alignment slot for `3a8c`'s `[vtbl-0x18]`
         // dispatch (VMT-only occurrences, same proof as above).
         patch_slots(0x004039b8, crate::fn_004039b8::fn_004039b8 as usize as u32);
-        // Stream-write lane `[obj+0x14] == [0x0040c0b8]` holds
-        // `0x0040c2e0`, not `0x0040c42c`, so the sweep cannot reach it;
-        // explicit patch per the entry-path dispatch (`fn_0040c238`).
-        core::ptr::write_unaligned(
-            0x0040c0b8 as *mut u32,
-            crate::fn_0040c42c::fn_0040c42c as usize as u32,
+        // Stream-open lane `[vtbl+0x14] == [0x0040c0b8]` holds
+        // `0x0040c2e0` (CreateFile, handle returns in EAX for the
+        // `fn_0040c238` caller to store to `[obj+4]`). Link it to our
+        // reconstruction so the setup self-stream gets a real host
+        // handle instead of colliding with sink 0.
+        patch_slots(
+            0x0040c2e0,
+            crate::fn_0040c2e0::fn_0040c2e0 as usize as u32,
         );
     }
 }
@@ -176,6 +178,7 @@ pub fn install_host_heap() {
         crate::fn_004018f8::HOOK_BUCKET_ALLOC = host_bucket_alloc;
         crate::fn_004018f8::HOOK_LARGE_ALLOC = host_large_alloc;
         crate::fn_0040c42c::HOOK_WriteFile = host_write_file;
+        crate::fn_0040c2e0::HOOK_CreateFileW = host_create_file;
         crate::fn_0040b8fc::HOOK_GetCommandLineW = host_command_line;
         crate::fn_0040b8fc::HOOK_GetModuleFileNameW = host_module_file_name;
         crate::fn_0040ee14::FIND_RESOURCE_W_00406678 = host_find_resource;
@@ -185,7 +188,64 @@ pub fn install_host_heap() {
         crate::fn_0040c360::HOOK_GetFileSize = host_get_file_size;
         crate::fn_0040c3d0::HOOK_SetFilePointer = host_set_file_pointer;
         crate::fn_0040c390::HOOK_ReadFile = host_read_file;
+        // Section-table drain: `cb34` null-slot reads decompress through
+        // the real `cad8` buffered drain (which refills via the real
+        // `ca08` + stream vtable). Without this every `da38` length word
+        // drains 0 and the install table stays empty.
+        crate::fn_0040cb34::HOOK_0040cad8 = host_drain_cad8;
     }
+}
+
+/// Handles minted by `host_create_file` (the installer self-stream).
+/// These read the installer image itself; size/seek operate on the
+/// image length, not on a sink file. Tracked separately because the
+/// original HANDLE values are meaningless on host.
+fn image_handles() -> &'static std::sync::Mutex<std::collections::HashSet<u32>> {
+    use std::sync::OnceLock;
+    static SET: OnceLock<std::sync::Mutex<std::collections::HashSet<u32>>> =
+        OnceLock::new();
+    SET.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()))
+}
+
+fn next_host_handle() -> u32 {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static NEXT: AtomicU32 = AtomicU32::new(0x1000);
+    NEXT.fetch_add(1, Ordering::SeqCst)
+}
+
+/// `CreateFileW(name, ...)`: open the installer image itself and mint
+/// a fresh handle for it. The entry path only ever opens its own
+/// executable (the setup self-stream); the name lane is ignored.
+/// Ceiling: output-file creation (different names) not distinguished
+/// yet — all handles read the image. Refine by name once the
+/// installer reaches file extraction.
+unsafe extern "C" fn host_create_file(
+    _name: *const u16,
+    _access: u32,
+    _share: u32,
+    _security: usize,
+    _disp: u32,
+    _flags: u32,
+    _template: usize,
+) -> usize {
+    let h = next_host_handle();
+    let f = std::fs::File::open(image_path()).expect("host_create_file: cannot open image");
+    sink_table().lock().unwrap().insert(h, f);
+    image_handles().lock().unwrap().insert(h);
+    if std::env::var("DSJ3_DEBUG").is_ok() {
+        eprintln!("[dsj3] CreateFile -> handle {h:#x} (image)");
+    }
+    h as usize
+}
+
+fn handle_is_image(handle: u32) -> bool {
+    image_handles().lock().unwrap().contains(&handle)
+}
+
+/// Adapter: `cb34` drain hook (`extern "C"`) to the real `cad8`
+/// buffered drain (Rust ABI). Exact on i686.
+unsafe extern "C" fn host_drain_cad8(o: *mut u8, d: *mut u8, l: u32) -> u32 {
+    crate::fn_0040cad8::fn_0040cad8(o, d, l)
 }
 
 /// `ReadFile(h, buf, n, &got, NULL)`: read up to `n` bytes from the
@@ -253,9 +313,17 @@ unsafe extern "C" fn host_read_file(
 
 /// `GetFileSize(h, &high)`: size of the file behind a `WriteFile`-sink
 /// handle, else the image file size (the setup stream reads the
-/// installer itself). Low dword returns; high via the out slot.
+/// installer itself). Image-backed `CreateFile` handles always report
+/// the image length. Low dword returns; high via the out slot.
 unsafe extern "C" fn host_get_file_size(handle: u32, high: *mut u32) -> u32 {
     use std::io::Seek;
+    if handle_is_image(handle) {
+        let size: u64 = image_path().metadata().map(|m| m.len()).unwrap_or(0);
+        unsafe {
+            core::ptr::write_unaligned(high, (size >> 32) as u32);
+        }
+        return size as u32;
+    }
     let path = format!("/tmp/dsj3-write-{handle:08x}");
     let size: u64 = std::fs::File::open(&path)
         .and_then(|mut f| f.seek(std::io::SeekFrom::End(0)))
@@ -370,10 +438,11 @@ unsafe extern "C" fn host_lock_resource(data: u32) -> *const u8 {
     (0x00400000usize + data as usize) as *const u8
 }
 
-/// `SetFilePointer(h, low, &high, origin)`: seek the sink file behind
-/// a `WriteFile` handle (opened on demand, including the image file
-/// for unknown handles); returns the new low position, `-1` on error.
-/// Origins mirror `SeekFrom::{Start,Current,End}`.
+/// `SetFilePointer(h, low, &high, origin)`: seek the file behind a
+/// handle. Image-backed `CreateFile` handles (the setup self-stream)
+/// seek the image file directly; other handles seek their `WriteFile`
+/// sink (opened on demand). Returns the new low position, `-1` on
+/// error. Origins mirror `SeekFrom::{Start,Current,End}`.
 unsafe extern "C" fn host_set_file_pointer(
     handle: u32,
     low: i32,
@@ -382,6 +451,28 @@ unsafe extern "C" fn host_set_file_pointer(
 ) -> u32 {
     use std::io::{Seek, SeekFrom};
     let mut table = sink_table().lock().unwrap();
+    if handle_is_image(handle) || !table.contains_key(&handle) {
+        // Unknown handles are the self-stream (see `host_read_file`):
+        // back with the image and mark it so size/seek stay coherent.
+        let f = table.entry(handle).or_insert_with(|| {
+            image_handles().lock().unwrap().insert(handle);
+            std::fs::File::open(image_path()).expect("host_set_file_pointer: cannot open image")
+        });
+        let hi = unsafe { core::ptr::read_unaligned(high) } as i64;
+        let pos: i64 = (hi << 32) | (low as u32 as i64);
+        let from = match origin {
+            1 => SeekFrom::Current(pos),
+            2 => SeekFrom::End(pos),
+            _ => SeekFrom::Start(pos as u64),
+        };
+        return match f.seek(from) {
+            Ok(p) => {
+                unsafe { core::ptr::write_unaligned(high, (p >> 32) as i32) };
+                p as u32
+            }
+            Err(_) => 0xffff_ffff,
+        };
+    }
     let path = format!("/tmp/dsj3-write-{handle:08x}");
     let f = table.entry(handle).or_insert_with(|| {
         std::fs::OpenOptions::new()

@@ -149,26 +149,46 @@ pub unsafe fn fn_004117dc() {
     HOOK_00404C98(0x00418658, arg0);
     DAT_0041865C = HOOK_0040C238(img_u32(0x0040c04c), 1, img_u32(0x00418658), 1, 0, 2);
     DAT_00418664 = HOOK_0040EE14();
+    if std::env::var("DSJ3_DEBUG").is_ok() {
+        eprintln!(
+            "[dsj3] entry: stream={:#x} setup={:#x}",
+            DAT_0041865C, DAT_00418664
+        );
+    }
     let mut ok = false;
     let mut skip_first_ec58 = false;
     let base = DAT_00418664;
-    // ponytail: guarded reads; null base → setup-missing path (ec58).
-    let plus_c: u32 = if base == 0 { 0xffff } else { FAKE_SETUP[3] };
+    // Setup header fields live at the `ee14` resource pointer
+    // (`+0xc` version tag, `+0x10` size, `+0x20` seek target,
+    // `+0x28` CRC). Earlier modeled via FAKE_SETUP; now read direct.
+    let plus_c: u32 = if base == 0 {
+        0xffff
+    } else {
+        unsafe { core::ptr::read_unaligned((base as *const u8).wrapping_byte_add(0xc) as *const u32) }
+    };
     if plus_c == 1 {
         let got = HOOK_0040C738(base, 0x28);
-        if got == FAKE_SETUP[10] {
+        let want: u32 =
+            unsafe { core::ptr::read_unaligned((base as *const u8).wrapping_byte_add(0x28) as *const u32) };
+        if std::env::var("DSJ3_DEBUG").is_ok() {
+            eprintln!("[dsj3] setup header: plus_c=1 crc_got={got:#x} want={want:#x}");
+        }
+        if got == want {
             let mut w0 = [0u32; 2];
             HOOK_STREAMREAD(DAT_0041865C, w0.as_mut_ptr(), 8);
-            // ponytail: `local_1c` is second dword; nonzero → goto c220 (skip ec58 #1).
+            // `local_1c` is second dword; nonzero → goto c220 (skip ec58 #1).
             ok = w0[1] == 0;
             if !ok {
                 skip_first_ec58 = true;
             } else {
                 let mut w1 = [0u32; 2];
                 HOOK_STREAMREAD(DAT_0041865C, w1.as_mut_ptr(), 8);
-                ok = w1[0] == FAKE_SETUP[4];
-                // ponytail: `JNC` (w1 >= expected) → goto c220 (skip ec58 #1, ok keeps equality).
-                if FAKE_SETUP[4] <= w1[0] {
+                let expect: u32 = unsafe {
+                    core::ptr::read_unaligned((base as *const u8).wrapping_byte_add(0x10) as *const u32)
+                };
+                ok = w1[0] == expect;
+                // `JNC` (w1 >= expected) → goto c220 (skip ec58 #1, ok keeps equality).
+                if expect <= w1[0] {
                     skip_first_ec58 = true;
                 }
             }
@@ -177,7 +197,15 @@ pub unsafe fn fn_004117dc() {
     if !skip_first_ec58 {
         HOOK_0040EC58();
     }
-    HOOK_0040C220(DAT_0041865C, FAKE_SETUP[8]);
+    let seek_to: u32 = if base == 0 {
+        0
+    } else {
+        unsafe { core::ptr::read_unaligned((base as *const u8).wrapping_byte_add(0x20) as *const u32) }
+    };
+    if std::env::var("DSJ3_DEBUG").is_ok() {
+        eprintln!("[dsj3] gate: ok={ok} skip_first={skip_first_ec58} seek_to={seek_to:#x}");
+    }
+    HOOK_0040C220(DAT_0041865C, seek_to);
     HOOK_0040C1F8(DAT_0041865C, 0x00418674, 0x40);
     // ponytail: decompiler lifts trailing `JZ` as `if (!uVar4)`; return value unused.
     let _ = HOOK_004031E0(0x00418674, img_u32(0x00412b2c), 0x40);
@@ -188,6 +216,9 @@ pub unsafe fn fn_004117dc() {
     HOOK_0040DA38(DAT_004186B8, 0x0041852c, 0x11d, 4, 0x1c);
     let count = img_u32(0x004185ac);
     DAT_00418650 = count;
+    if std::env::var("DSJ3_DEBUG").is_ok() {
+        eprintln!("[dsj3] table: obj={:#x} count={count:#x}", DAT_004186B8);
+    }
     // ponytail: `IMUL count,0x3d` alloc size exact.
     DAT_0041864C = HOOK_00402DEC(count.wrapping_mul(0x3d));
     if (count as i32).wrapping_sub(1) >= 0 {
