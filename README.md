@@ -196,10 +196,12 @@ terminal wizard with a one-line note.
   exe's own resources), needs `dsj3v171.exe` beside the AppImage file
   (found via `$APPIMAGE`).
 
-Needs cargo (both i686 targets), python3 + Pillow, and network once
-for appimagetool (pinned URL, cached in `pack/cache/`, reusable via
-`APPIMAGETOOL=`). `SHA256SUMS` is written alongside. The original
-binary is read, never bundled.
+Needs only cargo, python3, and the image in the repo root: preflight
+adds missing rust targets and Pillow itself, then builds, packages,
+and smoke-tests (AppImage headless install: 74 files, MZ checks).
+Network once for appimagetool (pinned URL, cached in `pack/cache/`,
+reusable via `APPIMAGETOOL=`). `SHA256SUMS` is written alongside. The
+original binary is read, never bundled.
 
 Same 58 payload files (SHA1-verified per file, byte-identical to the
 oracle decode), plus installer-generated artifacts: 3 `.url` links

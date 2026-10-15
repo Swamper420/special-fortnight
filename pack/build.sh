@@ -1,8 +1,9 @@
 #!/bin/sh
 # Build local release artifacts: Windows .exe + Linux AppImage.
-# Needs: cargo (i686 musl + windows-gnu targets), python3 + Pillow,
-# network once for appimagetool (cached under pack/cache).
-# The original dsj3v171.exe is read, never bundled (not redistributable).
+# One command, no setup: preflight installs missing rust targets and
+# Pillow itself, then builds, packages, and smoke-tests. Network once
+# for appimagetool (cached under pack/cache). The original dsj3v171.exe
+# is read, never bundled (not redistributable).
 #
 #   sh pack/build.sh            # both artifacts -> dist/
 #   sh pack/build.sh --exe-only # skip AppImage
@@ -25,6 +26,20 @@ done
 need() { command -v "$1" >/dev/null 2>&1 || { echo "need $1" >&2; exit 1; }; }
 export PATH="$HOME/.cargo/bin:$PATH"
 need cargo; need python3
+
+echo "== preflight"
+for t in i686-pc-windows-gnu i686-unknown-linux-musl; do
+    if ! rustup target list --installed 2>/dev/null | grep -qx "$t"; then
+        echo "add rust target $t"
+        rustup target add "$t"
+    fi
+done
+if ! python3 -c "import PIL" 2>/dev/null; then
+    echo "install Pillow"
+    python3 -m pip install --user pillow || {
+        echo "pip install pillow failed; install it and rerun" >&2; exit 1; }
+fi
+[ -f "$ROOT/dsj3v171.exe" ] || { echo "need $ROOT/dsj3v171.exe (user-supplied image)" >&2; exit 1; }
 
 if [ "$IMG_ONLY" -eq 0 ]; then
     echo "== windows .exe"
@@ -71,4 +86,23 @@ fi
 
 echo "== sums"
 (cd "$DIST" && sha256sum dsj3-windows-i686.exe DSJ3-Linux-i686.AppImage > SHA256SUMS 2>/dev/null || true)
+
+echo "== smoke"
+fail() { echo "smoke FAILED: $1" >&2; exit 1; }
+if [ "$EXE_ONLY" -eq 0 ]; then
+    head -c 4 "$DIST/DSJ3-Linux-i686.AppImage" | grep -q ELF || fail "AppImage magic"
+    "$DIST/DSJ3-Linux-i686.AppImage" --help 2>&1 | grep -q "^usage: dsj3" || fail "AppImage --help"
+    SMOKE=$(mktemp -d)
+    cp "$ROOT/dsj3v171.exe" "$SMOKE/dsj3v171.exe"
+    (cd "$SMOKE" && "$DIST/DSJ3-Linux-i686.AppImage" --yes --dir out >/dev/null 2>&1) \
+        || fail "AppImage headless install"
+    [ "$(find "$SMOKE/out" -type f | wc -l)" -eq 74 ] || fail "file count"
+    head -c 2 "$SMOKE/out/DSJ3.exe" | grep -q MZ || fail "DSJ3.exe magic"
+    rm -rf "$SMOKE"
+    echo "AppImage: 74 files, MZ ok"
+fi
+if [ "$IMG_ONLY" -eq 0 ]; then
+    head -c 2 "$DIST/dsj3-windows-i686.exe" | grep -q MZ || fail ".exe magic"
+    echo ".exe: MZ ok"
+fi
 ls -la "$DIST"
