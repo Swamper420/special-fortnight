@@ -10,4 +10,5 @@ pub mod hill;
 pub mod lang;
 pub mod manifest;
 pub mod model;
+pub mod render;
 pub mod xml;
