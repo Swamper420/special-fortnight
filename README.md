@@ -1,8 +1,11 @@
 # dsj3 — 1:1 reconstruction of dsj3v171.exe
 
 Goal: 1:1 decompilation of `dsj3v171.exe` into Rust. One Rust function per
-original procedure, same semantics, evidence-backed. Workflow rules for
-agents/humans doing the work: [AGENTS.md](AGENTS.md).
+original procedure, same semantics, evidence-backed. End product must be
+identical to the original from the user perspective: same installer screens
+and flows, same installed files (names and contents), same exit behavior.
+Per-function 1:1 semantics is the means; user-visible parity is acceptance.
+Workflow rules for agents/humans doing the work: [AGENTS.md](AGENTS.md).
 
 ## Target
 
@@ -65,6 +68,20 @@ linker; we build with rustc/LLVM). 1:1 here means:
 - coverage is measured, not claimed: 0/624 until the ledger says otherwise.
 
 Progress lives in the obligation ledger, not in prose claims.
+
+## User-parity acceptance
+
+Byte-identical rebuild is impossible (see above), so parity is behavioral,
+judged from the user perspective:
+
+- same installer screens, options, and flows, in the same order;
+- same installed files with identical names and byte contents;
+- same exit codes and failure behavior on corrupt input;
+- no new dialogs, defaults, paths, or telemetry the original lacks.
+
+Parity bugs outrank cosmetic fidelity: a pixel-moved button loses to a
+wrong installed file. Anything unobservable (register allocation, exact
+stack layout) is out of scope unless it leaks into behavior.
 
 ## Linux host run
 

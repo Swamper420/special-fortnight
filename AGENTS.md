@@ -34,6 +34,16 @@ convert a guess into code without labeling it as a guess in evidence.
 - Win32/Borland runtime calls map 1:1 to `windows-sys`/raw extern declarations
   at the original call sites. Do not wrap or abstract them.
 
+## Parity goal
+
+End product identical to original from user perspective (see
+README.md "User-parity acceptance"). Applies to all work:
+
+- never "improve" behavior: same flows, files, exits, errors;
+- a shortcut that changes anything user-visible is a bug, not savings;
+- no guessing: placeholder behavior must match the original observable
+  outcome or stay labeled unknown with the gap recorded.
+
 ## Layout
 
 - `src/fn_XXXXXXXX.rs` or `src/funcs/<name>.rs` per function; modules are
