@@ -29,6 +29,8 @@ Principles:
   enumerate hills/languages/resources, verify SHA1s (already known).
 - Fixture policy: tests use generated blobs, never original bytes.
 - Exit: `cargo test -p engine` green on Linux + Windows.
+  Status 2026-10-15: harness green (3 tests pass Linux;
+  `i686-pc-windows-gnu` build clean, tests Linux-run only).
 
 ## Phase 1 — formats (offline, no window)
 

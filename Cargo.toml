@@ -11,3 +11,6 @@ publish = false
 # installer payload. Pure Rust, no C deps, musl-safe. Reconstructed fn_*
 # modules stay dependency-free.
 lzma-rs = "0.3"
+
+[workspace]
+members = [".", "engine"]
