@@ -95,8 +95,8 @@ call-site order is not ambiguous for the combine itself.
   `crate::fn_00435740::min2`, `crate::mesh::max2` — no duplication.
   Covered by the extended `terrain_loop_core` test (generated fixtures).
 
-Still open (not this wave): sin-weight wiring (`FSIN param_6/param_7`,
-`468360(param_2)`, `468340(1−param_2)`, `468310(lo,hi)` tail into
-`v = f18*noise + f16`), RNG tables, vector growth, exact `004348a0`
+Sin-weight wiring CLOSED by `evidence/004348a0_sin_tail.md`
+(`terrain_sin_tail` in `engine/src/mesh.rs`).
+Still open (not this wave): RNG tables, vector growth, exact `004348a0`
 call-site addresses of the 2+1 reader sites (strip-minmax dossier U2),
 downstream use of the min/max results.

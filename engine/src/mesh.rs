@@ -441,8 +441,11 @@ impl TerrainBase {
 /// grid bounds, per-vertex coords, cosine noise, guard predicates, plus
 /// strip lo-min / hi-max wiring (`FUN_00435740`/`00435770` as called from
 /// the loop: `min2(lo_b50, lo_b60)` / `max2(hi_b50, hi_b60)`, arg order
-/// from asm staging per `evidence/00435740_strip_minmax.md` §3).
-/// Sin weights, RNG tables, vector growth: still open.
+/// from asm staging per `evidence/00435740_strip_minmax.md` §3) plus the
+/// sin-weight tail (`evidence/004348a0_sin_tail.md`: `FSIN param_6/7`,
+/// `max2(param_2, 1-t1)` / `min2(1-param_2, t1)` weights,
+/// `clamp3(h-t2, h+t2)` into `v = f18*noise + f16`).
+/// RNG tables, vector growth: still open.
 pub const TERRAIN_ROWS: u32 = 61; // `MOV [EBP+0x84],0x3d` (outer bound)
 
 /// Per-vertex coords (`0x434b51`-`0x434b8f`, asm order): `FILD` col/row
@@ -485,6 +488,50 @@ pub fn terrain_noise(
         acc += (t2 + t2 + ph_b[k] as f64).cos() * amp_b[k] as f64;
     }
     acc as f32
+}
+
+/// Sin-weight tail factors (`0x434cd8`-`0x434dcb`, exact file bits):
+/// `[0x5ce058]` (t1 weight), `[0x5ce054]` (clamp half-width), `[0x5ce050]`
+/// (f18 weight). See `evidence/004348a0_sin_tail.md`.
+pub const TERRAIN_W_LO: f32 = f32::from_bits(0x3B5A_740E);
+pub const TERRAIN_W_HI: f32 = f32::from_bits(0x3E99_999A);
+pub const TERRAIN_W_F18: f32 = f32::from_bits(0x3D08_8889);
+
+/// Sin-weight tail (`0x434cd8`-`0x434dcb`, per vertex, after the noise
+/// loop; `evidence/004348a0_sin_tail.md`). Slot identities from ESP
+/// simulation: `fvar4`/`fvar5` = vertex coords, `lo_b60` =
+/// `strip_lo(b60)`, `param_5` read as `f32`, `base` = `00434ff0` return,
+/// `h` = height accum, `noise` = cosine accum. x87 extended ≈ f64; one
+/// f32 round per `FSTP` (`wsum`, `t1`/`t2`, `m1*h`, `combined`, clamp
+/// args, `f18` arg, `v`). Combines reuse `max2`/`min2`/`clamp3` (same
+/// `FCOMP` shapes + NaN sides as the reader sites).
+#[allow(clippy::too_many_arguments)]
+pub fn terrain_sin_tail(
+    fvar4: f32,
+    lo_b60: f32,
+    fvar5: f32,
+    param_5: f32,
+    param_6: f32,
+    param_7: f32,
+    param_2: f32,
+    base: f32,
+    h: f32,
+    noise: f32,
+) -> f32 {
+    // `FSIN` on the widened params (host sin ≈ x87 FSIN, see U-host-sin).
+    let s6 = (param_6 as f64).sin();
+    let s7 = (param_7 as f64).sin();
+    // `FMULP`/`FADDP` order: `(fvar4-lo_b60)*s7 + fvar5*s6 + param_5`.
+    let wsum = ((fvar4 as f64 - lo_b60 as f64) * s7 + fvar5 as f64 * s6 + param_5 as f64) as f32;
+    let t1 = (base as f64 * TERRAIN_W_LO as f64) as f32;
+    let t2 = (base as f64 * TERRAIN_W_HI as f64) as f32;
+    let m1 = max2(param_2, 1.0 - t1);
+    let m1h = (m1 as f64 * h as f64) as f32;
+    let m2 = crate::fn_00435740::min2(1.0 - param_2, t1);
+    let combined = (m2 as f64 * wsum as f64 + m1h as f64) as f32;
+    let f16 = clamp3((h as f64 - t2 as f64) as f32, (h as f64 + t2 as f64) as f32, combined);
+    let f18 = crate::fn_00435740::min2((base as f64 * TERRAIN_W_F18 as f64) as f32, 1.0);
+    (f18 as f64 * noise as f64 + f16 as f64) as f32
 }
 
 /// `FUN_00435740` as called from `FUN_004348a0` (terrain builder):
@@ -766,6 +813,28 @@ mod tests {
         // NaN hi_b60 falls back to hi_b50.
         assert!(strip_hi_max(&n, &b60).is_nan());
         assert_eq!(strip_hi_max(&b50, &n), 44.0);
+    }
+
+    /// ONE check for the `FUN_004348a0` sin-weight tail
+    /// (`evidence/004348a0_sin_tail.md`, generated fixture — no
+    /// original bytes): `wsum` sin wiring, `t1`/`t2` weights,
+    /// `max2(param_2, 1-t1)` / `min2(1-param_2, t1)` combines,
+    /// `clamp3(h-t2, h+t2)` center, `v = f18*noise + f16`;
+    /// NaN `param_2` falls back to `lo`, NaN `base` poisons `v`.
+    #[test]
+    fn terrain_sin_tail_weights() {
+        let v = terrain_sin_tail(7.0, 2.0, 3.0, 1.0, 0.0, 0.0, 0.25, 10.0, 5.0, 6.0);
+        assert!((v - 6.8666663).abs() < 1e-5, "{v}");
+        // sin(pi/2) steers fvar5 fully into wsum: 3*1+1 = 4.
+        let v = terrain_sin_tail(7.0, 2.0, 3.0, 1.0, std::f32::consts::FRAC_PI_2, 0.0, 0.25, 10.0, 5.0, 6.0);
+        assert!((v - 6.9666662).abs() < 1e-5, "{v}");
+        // NaN param_2: m1 -> NaN side, m2 -> t1 side; combined NaN
+        // clamps to lo = h - t2, so v = f18*noise + lo.
+        let v = terrain_sin_tail(7.0, 2.0, 3.0, 1.0, 0.0, 0.0, f32::NAN, 10.0, 5.0, 6.0);
+        assert!((v - 4.0).abs() < 1e-5, "{v}");
+        // NaN base: weights NaN, f18 falls back to 1.0, v NaN.
+        let v = terrain_sin_tail(7.0, 2.0, 3.0, 1.0, 0.5, -0.25, 0.25, f32::NAN, 5.0, 6.0);
+        assert!(v.is_nan(), "{v}");
     }
 
     #[test]
