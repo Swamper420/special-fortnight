@@ -6,6 +6,7 @@
 
 pub mod assets;
 pub mod decrypt;
+pub mod hill;
 pub mod lang;
 pub mod manifest;
 pub mod model;
