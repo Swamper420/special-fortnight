@@ -34,8 +34,29 @@ pub(crate) fn has_flag(args: &[String], name: &str) -> bool {
     args.iter().any(|a| a == name)
 }
 
-/// Locate the installer image: `--image`, `DSJ3_IMAGE`, exe beside binary, cwd.
+/// Locate the installer image: `--image`, `DSJ3_IMAGE`, beside the
+/// AppImage (`$APPIMAGE`, which points at the file, not the mount),
+/// exe beside binary, cwd.
 pub(crate) fn locate_image(args: &[String]) -> PathBuf {
+    if let Some(v) = arg_value(args, "--image") {
+        return PathBuf::from(v);
+    }
+    if let Ok(v) = std::env::var("DSJ3_IMAGE") {
+        if !v.is_empty() {
+            return PathBuf::from(v);
+        }
+    }
+    if let Ok(a) = std::env::var("APPIMAGE") {
+        let p = PathBuf::from(&a);
+        if let Some(dir) = p.parent() {
+            for name in ["dsj3v171.exe", "DSJ3V171.EXE"] {
+                let q = dir.join(name);
+                if q.exists() {
+                    return q;
+                }
+            }
+        }
+    }
     if let Some(v) = arg_value(args, "--image") {
         return PathBuf::from(v);
     }

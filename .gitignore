@@ -6,3 +6,7 @@ analysis/
 
 # Rust
 /target
+
+# Local release artifacts (pack/build.sh)
+/dist
+pack/cache/

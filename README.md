@@ -185,6 +185,22 @@ Delphi original: same flow and defaults, native look differs
 (ceiling). Without a display or `wish`, `--gui` falls back to the
 terminal wizard with a one-line note.
 
+## Release artifacts (local)
+
+`sh pack/build.sh` builds both distributables into `dist/` (gitignored):
+
+- `dsj3-windows-i686.exe` — the installer for Windows
+  (`i686-pc-windows-gnu`), needs `dsj3v171.exe` beside it;
+- `DSJ3-Linux-i686.AppImage` — the installer as an AppImage
+  (static musl binary + Tk-script GUI + original 32px icon from the
+  exe's own resources), needs `dsj3v171.exe` beside the AppImage file
+  (found via `$APPIMAGE`).
+
+Needs cargo (both i686 targets), python3 + Pillow, and network once
+for appimagetool (pinned URL, cached in `pack/cache/`, reusable via
+`APPIMAGETOOL=`). `SHA256SUMS` is written alongside. The original
+binary is read, never bundled.
+
 Same 58 payload files (SHA1-verified per file, byte-identical to the
 oracle decode), plus installer-generated artifacts: 3 `.url` links
 (ini table, exact bytes), `Shortcuts/*.desktop` (icon table Linux

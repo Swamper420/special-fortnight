@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Deluxe Ski Jump 3 Setup
+Comment=Install Deluxe Ski Jump 3 v1.7.1 (1:1 Linux reconstruction of dsj3v171.exe)
+Exec=dsj3
+Icon=dsj3
+Categories=Game;
+X-AppImage-Architecture=i686
