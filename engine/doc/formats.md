@@ -20,3 +20,13 @@ UTF-16 (file offsets): `Hills` 0x20b29a/0x20b300, `Languages`
 Next: REA on inner `DSJ3.exe` — xrefs to those string addresses,
 then decrypt routine, then spec + parser per format. Fixtures in
 `engine/tests/` stay generated-only.
+
+Direction 2026-10-15 (see `analysis/decrypt-notes.md`, scratch):
+shared file-read helper `FUN_0055fcb0` (31 callers) BOM-checks the
+buffer (UTF-8 `EF BB BF` / UTF-16LE `FF FE`), so decrypt sits
+before/inside it; key init `FUN_004f89e0` builds bigints from hex
+(`FUN_0040feb0`: 3 nibbles per 12-bit limb) with exponent `10001`
+→ manifest signature check; `FUN_004ef5b0` (caller: init only)
+drives `Resource.000` → `resourcelist` → `file`/`size`/`offset`.
+Next hooks: `0055c320`/`0055c790`/stream-vtable, `.lan` block past
+`0x40263d`, `FUN_004710f0` PUSH-pair successors for `.hil`.
