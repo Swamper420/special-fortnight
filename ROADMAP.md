@@ -42,6 +42,15 @@ spec, then parser. Fixtures stay generated-only.
 
 1. `.hil` physics/mesh → parser + spec. Check: hill-mesh viewer
    renders wireframe from parser output (first visible proof).
+   Status 2026-10-15: decrypt STRUCTURE fully mapped (REA evidence
+   in `analysis/decrypt-notes.md`, scratch): shared reader
+   `FUN_0055fcb0` → keyed stream (`005d136c`, key-init `004f89e0`)
+   → `FUN_004f8af0`: 0x100-B header + body, RSA/modexp key
+   derivation (`004122d0`), 4-round XOR (dual-step LCG
+   `004df900`, mult `0x8088405`, mod `0xFFFFFFFF`), dual MD5
+   verify (`0046fd90`+`004107f0`). Hill loader is `FUN_00436620`
+   (keys `hill/dhill/terrain/judgetower/fence/pillar/stairs/flag/
+   trees`). Reimplementation pending bigint-arith briefs.
 2. `.lan` text blobs → string tables. Check: dump all 6 languages
    to text, diff-stable.
 3. `Resource.*` packs → entries + textures. Check: extract every
