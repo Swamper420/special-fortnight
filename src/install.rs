@@ -1,4 +1,4 @@
-//! Linux installer wizard (host boundary, no GUI).
+//! Linux installer wizard (terminal; `--gui` for the graphical one).
 //!
 //! Replicates the original installer flow in a terminal: welcome,
 //! license, language, destination, tasks, confirm, progress, finish.
@@ -17,7 +17,7 @@ pub struct Options {
     pub yes: bool,
 }
 
-fn arg_value(args: &[String], name: &str) -> Option<String> {
+pub(crate) fn arg_value(args: &[String], name: &str) -> Option<String> {
     let mut it = args.iter().peekable();
     while let Some(a) = it.next() {
         if a == name {
@@ -30,12 +30,12 @@ fn arg_value(args: &[String], name: &str) -> Option<String> {
     None
 }
 
-fn has_flag(args: &[String], name: &str) -> bool {
+pub(crate) fn has_flag(args: &[String], name: &str) -> bool {
     args.iter().any(|a| a == name)
 }
 
 /// Locate the installer image: `--image`, `DSJ3_IMAGE`, exe beside binary, cwd.
-fn locate_image(args: &[String]) -> PathBuf {
+pub(crate) fn locate_image(args: &[String]) -> PathBuf {
     if let Some(v) = arg_value(args, "--image") {
         return PathBuf::from(v);
     }
@@ -68,7 +68,7 @@ fn prompt_line(text: &str) -> String {
     s.trim().to_string()
 }
 
-fn is_tty() -> bool {
+pub(crate) fn is_tty() -> bool {
     // No libc dep: treat stdin as tty unless redirected/empty.
     // `prompt_line` still works piped; `--yes` skips prompts entirely.
     unsafe {
@@ -80,7 +80,7 @@ fn is_tty() -> bool {
 }
 
 pub fn usage() -> &'static str {
-    "usage: dsj3 [--image EXE] [--dir DIR] [--lang CODE] [--desktop|--no-desktop] [--yes] [--extract DIR]\n       dsj3 --entry   (reconstructed original entry, developer harness)"
+    "usage: dsj3 [--image EXE] [--dir DIR] [--lang CODE] [--desktop|--no-desktop] [--yes] [--extract DIR] [--gui|--no-gui]\n       dsj3 --entry   (reconstructed original entry, developer harness)"
 }
 
 /// Run the wizard. Returns the process exit code.

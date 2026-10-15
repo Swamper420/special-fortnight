@@ -156,23 +156,34 @@ address/content corrections at `[0x40c04c]`, `[0x412b2c]`,
 direct header reads; `[0x40c0b8]` linked to CreateFile (`c2e0`,
 returns HANDLE in EAX — decompiler `void` corrected).
 
-Non-goals: no Wine replacement, no GUI. Boundary code only:
+Non-goals: no Wine replacement. Boundary code only:
 reconstructed functions stay unmodified; the image file is
 user-supplied, gitignored, read at runtime, never committed.
 
 ## Linux installer run
 
-One static 32-bit binary, no runtime deps. Put `dsj3v171.exe`
-beside it (or pass `--image` / set `DSJ3_IMAGE`), then:
+One static 32-bit binary, no Rust runtime deps (GUI needs system
+`wish` 8.6+, Tk). Put `dsj3v171.exe` beside it (or pass `--image` /
+set `DSJ3_IMAGE`), then:
 
 ```sh
 cargo build --release --target i686-unknown-linux-musl
-./target/i686-unknown-linux-musl/release/dsj3          # wizard: welcome, license,
-                                                       # language, dir, task, confirm
+./target/i686-unknown-linux-musl/release/dsj3          # GUI on a desktop,
+                                                       # terminal wizard otherwise
+./target/i686-unknown-linux-musl/release/dsj3 --gui    # force GUI
+./target/i686-unknown-linux-musl/release/dsj3 --no-gui # force terminal wizard
 ./target/i686-unknown-linux-musl/release/dsj3 --yes --dir /path/to/dir
 ./target/i686-unknown-linux-musl/release/dsj3 --extract /path/to/dir  # headless, no prompts
 # DSJ3_IMAGE=/path/to/dsj3v171.exe  # if exe not beside the binary
 ```
+
+Both wizards walk the same pages in the same order (welcome,
+license, language, destination, task, confirm, progress, finish;
+the language page is skipped for single-language images; the desktop
+task defaults to off as in the original). The GUI is Tk, not the
+Delphi original: same flow and defaults, native look differs
+(ceiling). Without a display or `wish`, `--gui` falls back to the
+terminal wizard with a one-line note.
 
 Same 58 payload files (SHA1-verified per file, byte-identical to the
 oracle decode), plus installer-generated artifacts: 3 `.url` links

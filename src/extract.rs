@@ -369,6 +369,9 @@ pub struct SetupMeta {
     pub ini: Vec<IniEntry>,
     pub run: Vec<RunEntry>,
     pub has_desktop_task: bool,
+    /// Payload files the installer writes (58 for this image; the
+    /// file-table entry with `loc < 0` is the generated uninstaller stub).
+    pub file_total: usize,
 }
 
 /// Parse setup-0 block1 (header + all entry tables).
@@ -544,6 +547,7 @@ fn parse_tables(dec: &[u8]) -> Result<(Vec<FileEntry>, SetupMeta, usize)> {
         ini,
         run,
         has_desktop_task,
+        file_total: files.iter().filter(|f| f.loc >= 0).count(),
     };
     Ok((files, meta, table_start))
 }
@@ -991,6 +995,7 @@ mod tests {
         assert_eq!(m.ini.len(), 3);
         assert_eq!(m.run.len(), 18);
         assert!(m.has_desktop_task);
+        assert_eq!(m.file_total, 58);
         assert!(String::from_utf8_lossy(&m.license).contains("End-User License Agreement"));
     }
 }

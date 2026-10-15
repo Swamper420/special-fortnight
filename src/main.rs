@@ -521,6 +521,7 @@ mod fn_004117dc;
 mod host_image;
 mod extract;
 mod install;
+mod gui;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() >= 2 && (args[1] == "--extract" || args[1] == "-x") {
@@ -547,6 +548,18 @@ fn main() {
     if args.len() >= 2 && (args[1] == "--help" || args[1] == "-h") && args.len() == 2 {
         println!("{}", install::usage());
         return;
+    }
+    // Graphical wizard: explicit --gui, or desktop launch (display + tty)
+    // unless --no-gui or a non-interactive mode was asked.
+    let non_interactive = ["--yes", "-y", "--extract", "-x", "--entry"].iter().any(|f| {
+        args.iter().any(|a| a == f)
+    });
+    let gui = args.iter().any(|a| a == "--gui")
+        || (!args.iter().any(|a| a == "--no-gui") && !non_interactive
+            && gui::has_display()
+            && install::is_tty());
+    if gui {
+        std::process::exit(gui::run(&args));
     }
     std::process::exit(install::run(&args));
 }
