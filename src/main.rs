@@ -549,17 +549,49 @@ fn main() {
         println!("{}", install::usage());
         return;
     }
-    // Graphical wizard: explicit --gui, or desktop launch (display + tty)
-    // unless --no-gui or a non-interactive mode was asked.
-    let non_interactive = ["--yes", "-y", "--extract", "-x", "--entry"].iter().any(|f| {
-        args.iter().any(|a| a == f)
-    });
-    let gui = args.iter().any(|a| a == "--gui")
-        || (!args.iter().any(|a| a == "--no-gui") && !non_interactive
-            && gui::has_display()
-            && install::is_tty());
-    if gui {
+    // Graphical wizard: explicit --gui, or any interactive launch on a
+    // display (double-click has no tty stdin, so tty must NOT gate this).
+    // --no-gui or a non-interactive flag forces the terminal path.
+    if (want_gui(&args, gui::has_display())) {
         std::process::exit(gui::run(&args));
     }
     std::process::exit(install::run(&args));
+}
+
+/// GUI iff: explicit --gui; else display present with no --no-gui and
+/// no non-interactive flag. Pure for tests.
+fn want_gui(args: &[String], display: bool) -> bool {
+    if args.iter().any(|a| a == "--gui") {
+        return true;
+    }
+    if args.iter().any(|a| a == "--no-gui") {
+        return false;
+    }
+    if ["--yes", "-y", "--extract", "-x", "--entry"]
+        .iter()
+        .any(|f| args.iter().any(|a| a == f))
+    {
+        return false;
+    }
+    display
+}
+
+#[cfg(test)]
+mod tests {
+    fn a(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn gui_selection() {
+        // Double-click: no tty, display present -> GUI.
+        assert!(super::want_gui(&a(&["dsj3"]), true));
+        assert!(super::want_gui(&a(&["dsj3", "--gui"]), false));
+        assert!(!super::want_gui(&a(&["dsj3"]), false));
+        assert!(!super::want_gui(&a(&["dsj3", "--no-gui"]), true));
+        assert!(!super::want_gui(&a(&["dsj3", "--yes"]), true));
+        assert!(!super::want_gui(&a(&["dsj3", "--extract", "d"]), true));
+        // --dir alone still goes GUI (prefill), matching the original.
+        assert!(super::want_gui(&a(&["dsj3", "--dir", "d"]), true));
+    }
 }
