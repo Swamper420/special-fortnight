@@ -12,20 +12,25 @@ unsafe extern "C" fn default_alloc(_len: u32) -> *mut u8 {
 }
 
 /// Target `0x00404818` (`FUN_00404818`), called with the slot on the
-/// non-`2` tag lane; result reloaded from `*slot`.
-///
-/// ponytail: hook standing in for done `fn_00404818`, rewire to real
-/// call once cross-module test serialization exists (its hook global
-/// has no owner lock, so a direct call would race its writer test).
-pub static mut HOOK_00404818: unsafe extern "C" fn(*mut u8) = default_convert;
+/// non-`2` tag lane; result reloaded from `*slot`: direct
+/// intra-reconstruction call (rewired; `fn_00404818` verified
+/// `fn(*mut u32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404818(slot: *mut u8) {
+    crate::fn_00404818::fn_00404818(slot as *mut u32)
+}
+pub static mut HOOK_00404818: unsafe extern "C" fn(*mut u8) = adapt_00404818;
 
 /// Target `0x004054b4` (`FUN_004054b4`), called with `[obj-4]` length;
-/// result is the new data pointer, stored to `*slot`.
-///
-/// ponytail: hook standing in for same-batch `fn_004054b4`, rewire to
-/// the real call once both modules are linked.
+/// result is the new data pointer, stored to `*slot`: direct
+/// intra-reconstruction call (rewired; `fn_004054b4` verified
+/// `fn(i32) -> *mut u8`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004054b4(len: u32) -> *mut u8 {
+    crate::fn_004054b4::fn_004054b4(len as i32)
+}
 pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> *mut u8 =
-    default_alloc;
+    adapt_004054b4;
 
 /// Detach the string in `*slot` (copy-on-write): null → null; tag
 /// `[p-10]!=2` → convert lane and reload; refcount `[p-8]==1` →

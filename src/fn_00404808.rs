@@ -4,12 +4,15 @@
 unsafe extern "C" fn default_callee(_a: *mut u32, _b: *mut u16, _c: u16) {}
 
 /// Callee `0x00404e94` (`FUN_00404e94`); args `(param_1, *param_1, DAT)`
-/// carried in EAX/EDX/ECX per `__register` observation.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_00404e94` once it exists.
+/// carried in EAX/EDX/ECX per `__register` observation: direct
+/// intra-reconstruction call (rewired; `fn_00404e94` verified
+/// `fn(*mut u8, *mut u8, u16)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404e94(a: *mut u32, b: *mut u16, c: u16) {
+    crate::fn_00404e94::fn_00404e94(a as *mut u8, b as *mut u8, c)
+}
 pub static mut CALLEE_00404E94: unsafe extern "C" fn(*mut u32, *mut u16, u16) =
-    default_callee;
+    adapt_00404e94;
 
 /// Global word `DAT_004138c8`, zero-extended into ECX (`MOVZX`).
 ///

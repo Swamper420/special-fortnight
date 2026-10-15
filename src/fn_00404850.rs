@@ -15,25 +15,44 @@ unsafe extern "C" fn default_convert(
 
 unsafe extern "C" fn default_alloc(_a: *mut u32, _b: u32, _c: u32) {}
 
-/// Release `0x004046c4` (`FUN_004046c4`); return discarded by body.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_004046c4` once it exists.
-pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u32) = default_release;
+/// Release `0x004046c4` (`FUN_004046c4`); return discarded by body:
+/// direct intra-reconstruction call (rewired; `fn_004046c4` verified
+/// `fn(*mut u8) -> *mut u8`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004046c4(a: *mut u32) {
+    crate::fn_004046c4::fn_004046c4(a as *mut u8);
+}
+pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u32) = adapt_004046c4;
 
 /// Convert `0x004047c0` (`FUN_004047c0`); probe `(NULL,0,src,tag,count)`
-/// returns size, fill `(*slot,size,src,tag,count)`.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_004047c0` once it exists.
+/// returns size, fill `(*slot,size,src,tag,count)`: direct
+/// intra-reconstruction call with a host size probe (rewired;
+/// `fn_004047c0` verified `fn(*mut u8, i32, *const u16, u32, i32)`,
+/// result discarded per its contract — the count comes from the host
+/// `WideCharToMultiByte` shim, exact on i686).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004047c0(
+    a: *mut u8,
+    b: u32,
+    c: *mut u16,
+    d: u32,
+    e: i32,
+) -> u32 {
+    let n = crate::fn_004047c0::W2M_00401170(d, 0, c, e, core::ptr::null_mut(), 0, 0, 0);
+    crate::fn_004047c0::fn_004047c0(a, b as i32, c, d, e);
+    n
+}
 pub static mut HOOK_004047C0: unsafe extern "C" fn(*mut u8, u32, *mut u16, u32, i32) -> u32 =
-    default_convert;
+    adapt_004047c0;
 
-/// Alloc `0x004049c4` (`FUN_004049c4`); args `(slot,size,0)`.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_004049c4` once it exists.
-pub static mut HOOK_004049C4: unsafe extern "C" fn(*mut u32, u32, u32) = default_alloc;
+/// Alloc `0x004049c4` (`FUN_004049c4`); args `(slot,size,0)`: direct
+/// intra-reconstruction call (rewired; `fn_004049c4` verified
+/// `fn(*mut *mut u8, u32, i32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004049c4(a: *mut u32, b: u32, c: u32) {
+    crate::fn_004049c4::fn_004049c4(a as *mut *mut u8, b, c as i32)
+}
+pub static mut HOOK_004049C4: unsafe extern "C" fn(*mut u32, u32, u32) = adapt_004049c4;
 
 /// Global word `DAT_004138c8`, default tag when `param_4 == 0`.
 ///

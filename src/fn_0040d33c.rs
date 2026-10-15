@@ -23,21 +23,58 @@ unsafe extern "C" fn default_direct(_r: *mut u8, _a: i32, _b: i32) -> u32 {
     0
 }
 
-/// `FUN_0040d094` bit-prob decode (`×6` sites).
-/// ponytail: hook standing in for out-of-batch `fn_0040d094`.
-pub static mut HOOK_0040D094: unsafe extern "C" fn(*mut u16, *mut u8) -> u32 = default_bit;
-/// `FUN_0040d1a4` literal decode. ponytail: hook for out-of-batch callee.
-pub static mut HOOK_0040D1A4: unsafe extern "C" fn(*mut u16, *mut u8) -> u32 = default_lit;
-/// `FUN_0040d1d0` matched-literal decode. ponytail: hook for out-of-batch callee.
-pub static mut HOOK_0040D1D0: unsafe extern "C" fn(*mut u16, *mut u8, u8) -> u32 = default_litm;
-/// `FUN_0040d244` length decode (`+0x332`/`+0x534`). ponytail: hook for out-of-batch callee.
-pub static mut HOOK_0040D244: unsafe extern "C" fn(*mut u16, *mut u8, u32) -> u32 = default_len;
-/// `FUN_0040d11c` dist-slot decode. ponytail: hook for out-of-batch callee.
-pub static mut HOOK_0040D11C: unsafe extern "C" fn(*mut u16, u32, *mut u8) -> u32 = default_dist;
-/// `FUN_0040d160` dist-refine decode. ponytail: hook for out-of-batch callee.
-pub static mut HOOK_0040D160: unsafe extern "C" fn(*mut u16, i32, *mut u8) -> u32 = default_dist2;
-/// `FUN_0040d034` direct-bits decode. ponytail: hook for out-of-batch callee.
-pub static mut HOOK_0040D034: unsafe extern "C" fn(*mut u8, i32, i32) -> u32 = default_direct;
+/// `FUN_0040d094` bit-prob decode (`×6` sites): direct
+/// intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u16, *mut u8) -> u32`).
+use crate::fn_0040d094::fn_0040d094;
+unsafe extern "C" fn adapt_0040d094(p: *mut u16, r: *mut u8) -> u32 {
+    fn_0040d094(p, r)
+}
+pub static mut HOOK_0040D094: unsafe extern "C" fn(*mut u16, *mut u8) -> u32 = adapt_0040d094;
+/// `FUN_0040d1a4` literal decode: direct intra-reconstruction call
+/// (rewired; `fn_0040d1a4` verified `fn(usize, *mut u8) -> u32`;
+/// adapter narrows, exact on the i686 target).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040d1a4(p: *mut u16, r: *mut u8) -> u32 {
+    crate::fn_0040d1a4::fn_0040d1a4(p as usize, r)
+}
+pub static mut HOOK_0040D1A4: unsafe extern "C" fn(*mut u16, *mut u8) -> u32 = adapt_0040d1a4;
+/// `FUN_0040d1d0` matched-literal decode: direct intra-reconstruction
+/// call (rewired; verified `fn(usize, *mut u8, u8) -> u32`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040d1d0(p: *mut u16, r: *mut u8, m: u8) -> u32 {
+    crate::fn_0040d1d0::fn_0040d1d0(p as usize, r, m)
+}
+pub static mut HOOK_0040D1D0: unsafe extern "C" fn(*mut u16, *mut u8, u8) -> u32 = adapt_0040d1d0;
+/// `FUN_0040d244` length decode (`+0x332`/`+0x534`): direct
+/// intra-reconstruction call (rewired; verified
+/// `fn(*mut u16, *mut u8, i32) -> i32`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040d244(p: *mut u16, r: *mut u8, pos: u32) -> u32 {
+    crate::fn_0040d244::fn_0040d244(p, r, pos as i32) as u32
+}
+pub static mut HOOK_0040D244: unsafe extern "C" fn(*mut u16, *mut u8, u32) -> u32 = adapt_0040d244;
+/// `FUN_0040d11c` dist-slot decode: direct intra-reconstruction call
+/// (rewired; verified `fn(usize, u32, *mut u8) -> i32`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040d11c(p: *mut u16, n: u32, r: *mut u8) -> u32 {
+    crate::fn_0040d11c::fn_0040d11c(p as usize, n, r) as u32
+}
+pub static mut HOOK_0040D11C: unsafe extern "C" fn(*mut u16, u32, *mut u8) -> u32 = adapt_0040d11c;
+/// `FUN_0040d160` dist-refine decode: direct intra-reconstruction call
+/// (rewired; verified `fn(usize, u32, *mut u8) -> u32`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040d160(p: *mut u16, n: i32, r: *mut u8) -> u32 {
+    crate::fn_0040d160::fn_0040d160(p as usize, n as u32, r)
+}
+pub static mut HOOK_0040D160: unsafe extern "C" fn(*mut u16, i32, *mut u8) -> u32 = adapt_0040d160;
+/// `FUN_0040d034` direct-bits decode: direct intra-reconstruction call
+/// (rewired; verified `fn(*mut u8, u32, i32) -> u32`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040d034(r: *mut u8, a: i32, b: i32) -> u32 {
+    crate::fn_0040d034::fn_0040d034(r, a as u32, b)
+}
+pub static mut HOOK_0040D034: unsafe extern "C" fn(*mut u8, i32, i32) -> u32 = adapt_0040d034;
 /// `FUN_0040cff4` range init: direct intra-reconstruction call
 /// (rewired; signatures verified `fn(*mut u8)`).
 
@@ -71,11 +108,21 @@ pub unsafe fn fn_0040d33c(
     let mut dict_size = r(3);
     let mut dict_pos = r(10);
     let mut state = r(0x11) as i32;
-    // ponytail: range/code threaded as opaque pair; base points 8 below, matching d094 layout.
-    let mut rc = [0u8; 16];
+    // Range-decoder struct at `EBP-0x84` per assembly (`LEA -0x84` at
+    // `0x40d4b7/0x40d5ab/...`): `{cur, end, range, code, obj, ...}`.
+    // Prologue loads (`0x40d3e3–0x40d40f`): `cur=state[5]`,
+    // `end=state[6]`, `range=state[8]`, `code=state[9]`,
+    // `obj=&block` (saved EDX). Earlier revision misread
+    // `state[5/6]` as range/code and left obj unset, so the first
+    // `cfb4` renormalize dereferenced garbage and faulted.
+    // ponytail: pointer lanes `usize`, narrowed on writeback (exact i686).
+    let mut rc = [0u8; 0x20];
     let rc_base = rc.as_mut_ptr();
-    core::ptr::write_unaligned(rc_base.wrapping_byte_add(8) as *mut u32, r(5));
-    core::ptr::write_unaligned(rc_base.wrapping_byte_add(0xc) as *mut u32, r(6));
+    core::ptr::write_unaligned(rc_base as *mut usize, r(5) as usize);
+    core::ptr::write_unaligned(rc_base.wrapping_byte_add(4) as *mut usize, r(6) as usize);
+    core::ptr::write_unaligned(rc_base.wrapping_byte_add(8) as *mut u32, r(8));
+    core::ptr::write_unaligned(rc_base.wrapping_byte_add(0xc) as *mut u32, r(9));
+    core::ptr::write_unaligned(rc_base.wrapping_byte_add(0x10) as *mut usize, _param_2 as usize);
     core::ptr::write_unaligned(param_4, 0);
     if len == 0xffffffff {
         return 0;
@@ -328,7 +375,7 @@ unsafe fn writeback(
     param_4: *mut u32,
     out_n: u32,
     w: &impl Fn(usize, u32),
-    _rc: &[u8; 16],
+    _rc: &[u8; 0x20],
     rc_base: *mut u8,
     rep0: u32,
     rep1: u32,
@@ -356,8 +403,11 @@ unsafe fn writeback(
     w(0x11, state as u32);
     w(0x12, len);
     core::ptr::write_unaligned(param_1.wrapping_byte_add(0x4c) as *mut u8, last);
-    w(5, core::ptr::read_unaligned(rc_base.wrapping_byte_add(8) as *const u32));
-    w(6, core::ptr::read_unaligned(rc_base.wrapping_byte_add(0xc) as *const u32));
+    // `state[5]=rc.cur`, `state[6]=rc.end` per `0x40d9b1–0x40d9c1`
+    // (not range/code — corrected against the prologue loads).
+    // ponytail: cur/end narrow to u32 (exact i686).
+    w(5, core::ptr::read_unaligned(rc_base as *const usize) as u32);
+    w(6, core::ptr::read_unaligned(rc_base.wrapping_byte_add(4) as *const usize) as u32);
     core::ptr::write_unaligned(param_4, out_n);
 }
 
@@ -384,7 +434,7 @@ unsafe fn goto_flush(
     dict_pos: &mut u32,
     state: &mut i32,
     rc_base: *mut u8,
-    rc: &mut [u8; 16],
+    rc: &mut [u8; 0x20],
     last: &mut u8,
 ) -> i32 {
     let r = |o: usize| core::ptr::read_unaligned(param_1.wrapping_byte_add(o * 4) as *const u32);
@@ -411,9 +461,23 @@ unsafe fn goto_flush(
     } else {
         *last = core::ptr::read_unaligned(dict.wrapping_byte_add((*dict_pos).wrapping_sub(1) as usize));
     }
+    // Main loop: identical to the primary loop above (the init path
+    // joins it at `LAB_0040d4e5` in the original; an earlier revision
+    // ran literals only and returned short on the first match/rep,
+    // desyncing every later read).
+    let mut fatal = 0i32;
+    let mut hard = 0i32;
     loop {
         if out_n >= param_5 {
             break;
+        }
+        if fatal != 0 {
+            writeback(param_1, param_4, out_n, &w, rc, rc_base, *rep0, *rep1, *rep2, *rep3, *len, *pos, *dict_remain, *dict, dict_size, *dict_pos, *state, *last);
+            return fatal;
+        }
+        if hard != 0 {
+            writeback(param_1, param_4, out_n, &w, rc, rc_base, *rep0, *rep1, *rep2, *rep3, *len, *pos, *dict_remain, *dict, dict_size, *dict_pos, *state, *last);
+            return 1;
         }
         let pos_slot = out_n.wrapping_add(*pos) & pos_mask;
         let is_match = HOOK_0040D094(
@@ -421,18 +485,30 @@ unsafe fn goto_flush(
             rc_base,
         );
         if is_match == 0 {
-            let idx = ((out_n.wrapping_add(*pos) & lit_mask).wrapping_shl((lit_ctx & 0x1f) as u32))
-                .wrapping_add((*last as u32).wrapping_shr(8u32.wrapping_sub(lit_ctx & 0x1f) as u32))
-                .wrapping_mul(0x300)
-                .wrapping_add(0x736);
-            // ponytail: init path always state<7 (state==0); literal-only lane matches.
-            *last = HOOK_0040D1A4(probs.wrapping_byte_add(idx as usize * 2), rc_base) as u8;
+            if *state < 7 {
+                let idx = ((out_n.wrapping_add(*pos) & lit_mask).wrapping_shl((lit_ctx & 0x1f) as u32))
+                    .wrapping_add((*last as u32).wrapping_shr(8u32.wrapping_sub(lit_ctx & 0x1f) as u32))
+                    .wrapping_mul(0x300)
+                    .wrapping_add(0x736);
+                *last = HOOK_0040D1A4(probs.wrapping_byte_add(idx as usize * 2), rc_base) as u8;
+            } else {
+                let mut back = (*dict_pos).wrapping_sub(*rep0);
+                if dict_size <= back {
+                    back = back.wrapping_add(dict_size);
+                }
+                let mb = core::ptr::read_unaligned((*dict).wrapping_byte_add(back as usize));
+                let idx = ((out_n.wrapping_add(*pos) & lit_mask).wrapping_shl((lit_ctx & 0x1f) as u32))
+                    .wrapping_add((*last as u32).wrapping_shr(8u32.wrapping_sub(lit_ctx & 0x1f) as u32))
+                    .wrapping_mul(0x300)
+                    .wrapping_add(0x736);
+                *last = HOOK_0040D1D0(probs.wrapping_byte_add(idx as usize * 2), rc_base, mb) as u8;
+            }
             core::ptr::write_unaligned(param_3.wrapping_byte_add(out_n as usize), *last);
             out_n = out_n.wrapping_add(1);
             if *dict_remain < dict_size {
                 *dict_remain = (*dict_remain).wrapping_add(1);
             }
-            core::ptr::write_unaligned(dict.wrapping_byte_add(*dict_pos as usize), *last);
+            core::ptr::write_unaligned((*dict).wrapping_byte_add(*dict_pos as usize), *last);
             *dict_pos = (*dict_pos).wrapping_add(1);
             if *dict_pos == dict_size {
                 *dict_pos = 0;
@@ -446,11 +522,127 @@ unsafe fn goto_flush(
             }
             continue;
         }
-        // Non-literal after init: reuse match/rep handling via single-step break to shared tail.
-        // ponytail: full rep/match tail lives in the primary loop above; init-path non-literal
-        // returns through writeback with progress so far (same writeback order).
-        *len = 0;
-        break;
+        let is_rep = HOOK_0040D094(probs.wrapping_byte_add((*state as usize + 0xc0) * 2), rc_base);
+        if is_rep == 1 {
+            let g0 = HOOK_0040D094(probs.wrapping_byte_add((*state as usize + 0xcc) * 2), rc_base);
+            if g0 == 0 {
+                let sr = HOOK_0040D094(
+                    probs.wrapping_byte_add((*state as usize * 0x10 + pos_slot as usize + 0xf0) * 2),
+                    rc_base,
+                );
+                if sr == 0 {
+                    if *dict_remain == 0 {
+                        writeback(param_1, param_4, out_n, &w, rc, rc_base, *rep0, *rep1, *rep2, *rep3, *len, *pos, *dict_remain, *dict, dict_size, *dict_pos, *state, *last);
+                        return 1;
+                    }
+                    *state = if *state < 7 { 9 } else { 11 };
+                    let mut back = (*dict_pos).wrapping_sub(*rep0);
+                    if dict_size <= back {
+                        back = back.wrapping_add(dict_size);
+                    }
+                    let b = core::ptr::read_unaligned((*dict).wrapping_byte_add(back as usize));
+                    core::ptr::write_unaligned((*dict).wrapping_byte_add(*dict_pos as usize), b);
+                    *dict_pos = (*dict_pos).wrapping_add(1);
+                    if *dict_pos == dict_size {
+                        *dict_pos = 0;
+                    }
+                    core::ptr::write_unaligned(param_3.wrapping_byte_add(out_n as usize), b);
+                    out_n = out_n.wrapping_add(1);
+                    *last = b;
+                    if *dict_remain < dict_size {
+                        *dict_remain = (*dict_remain).wrapping_add(1);
+                    }
+                    continue;
+                }
+            } else {
+                let g1 = HOOK_0040D094(probs.wrapping_byte_add((*state as usize + 0xd8) * 2), rc_base);
+                if g1 == 0 {
+                    let t = *rep0;
+                    *rep0 = *rep1;
+                    *rep1 = t;
+                } else {
+                    let g2 = HOOK_0040D094(probs.wrapping_byte_add((*state as usize + 0xe4) * 2), rc_base);
+                    if g2 == 0 {
+                        let t = *rep0;
+                        *rep0 = *rep2;
+                        *rep2 = *rep1;
+                        *rep1 = t;
+                    } else {
+                        let t = *rep0;
+                        *rep0 = *rep3;
+                        *rep3 = *rep2;
+                        *rep2 = *rep1;
+                        *rep1 = t;
+                    }
+                }
+            }
+            *len = HOOK_0040D244(probs.wrapping_byte_add(0x534 * 2), rc_base, pos_slot);
+            *state = if *state < 7 { 8 } else { 11 };
+        } else {
+            *rep3 = *rep2;
+            *rep2 = *rep1;
+            *rep1 = *rep0;
+            *state = if *state < 7 { 7 } else { 10 };
+            *len = HOOK_0040D244(probs.wrapping_byte_add(0x332 * 2), rc_base, pos_slot);
+            let mut slot = *len;
+            if (slot as i32) > 3 {
+                slot = 3;
+            }
+            let mut dist = HOOK_0040D11C(
+                probs.wrapping_byte_add((slot as usize * 0x40 + 0x1b0) * 2),
+                6,
+                rc_base,
+            );
+            if (dist as i32) > 3 {
+                let b = ((dist as i32) >> 1) - 1;
+                let base = ((dist & 1) | 2).wrapping_shl((b as u32) & 0x1f);
+                if (dist as i32) < 0xe {
+                    dist = base.wrapping_add(HOOK_0040D160(
+                        probs.wrapping_byte_add((base as usize + (0x2af - dist as usize)) * 2),
+                        b,
+                        rc_base,
+                    ));
+                } else {
+                    let d = HOOK_0040D034(rc_base, ((dist as i32) >> 1) - 5, b);
+                    dist = base
+                        .wrapping_add(d.wrapping_mul(0x10))
+                        .wrapping_add(HOOK_0040D160(probs.wrapping_byte_add(0x322 * 2), 4, rc_base));
+                }
+            }
+            dist = dist.wrapping_add(1);
+            if dist == 0 {
+                *len = 0xffffffff;
+                writeback(param_1, param_4, out_n, &w, rc, rc_base, *rep0, *rep1, *rep2, *rep3, *len, *pos, *dict_remain, *dict, dict_size, *dict_pos, *state, *last);
+                break;
+            }
+            *rep0 = dist;
+        }
+        *len = (*len).wrapping_add(2);
+        if *dict_remain < *rep0 {
+            writeback(param_1, param_4, out_n, &w, rc, rc_base, *rep0, *rep1, *rep2, *rep3, *len, *pos, *dict_remain, *dict, dict_size, *dict_pos, *state, *last);
+            return 1;
+        }
+        if *len < dict_size.wrapping_sub(*dict_remain) {
+            *dict_remain = (*dict_remain).wrapping_add(*len);
+        } else {
+            *dict_remain = dict_size;
+        }
+        while *len != 0 && out_n < param_5 {
+            let mut back = (*dict_pos).wrapping_sub(*rep0);
+            if dict_size <= back {
+                back = back.wrapping_add(dict_size);
+            }
+            let b = core::ptr::read_unaligned((*dict).wrapping_byte_add(back as usize));
+            core::ptr::write_unaligned((*dict).wrapping_byte_add(*dict_pos as usize), b);
+            *dict_pos = (*dict_pos).wrapping_add(1);
+            if *dict_pos == dict_size {
+                *dict_pos = 0;
+            }
+            *len = (*len).wrapping_sub(1);
+            core::ptr::write_unaligned(param_3.wrapping_byte_add(out_n as usize), b);
+            out_n = out_n.wrapping_add(1);
+            *last = b;
+        }
     }
     writeback(param_1, param_4, out_n, &w, rc, rc_base, *rep0, *rep1, *rep2, *rep3, *len, *pos, *dict_remain, *dict, dict_size, *dict_pos, *state, *last);
     0

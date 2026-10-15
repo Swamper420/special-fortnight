@@ -193,13 +193,76 @@ pub fn install_host_heap() {
         // `ca08` + stream vtable). Without this every `da38` length word
         // drains 0 and the install table stays empty.
         crate::fn_0040cb34::HOOK_0040cad8 = host_drain_cad8;
+        crate::fn_0040ce24::HOOK_VirtualAlloc = host_virtual_alloc;
+        crate::fn_004047ec::M2W_00401150 = host_m2w;
+        crate::fn_004047c0::W2M_00401170 = host_w2m;
     }
 }
 
-/// Handles minted by `host_create_file` (the installer self-stream).
+/// `VirtualAlloc(0, size, COMMIT|RESERVE, RW)`: host heap backing for
+/// the LZMA dictionary (`fn_0040ce24`). Zeroed, installer-lifetime
+/// leak like the Delphi heap. Exact on i686 (addresses fit `u32`).
+unsafe extern "C" fn host_virtual_alloc(_addr: u32, size: u32, _ty: u32, _prot: u32) -> u32 {
+    host_heap_alloc(size as usize) as u32
+}
+/// `MultiByteToWideChar(cp, flags, multi, mlen, wide, wlen)`: naive
+/// byte-widening conversion (installer metadata is ANSI/Latin-1;
+/// DBCS/MBCS sequences are out of scope — revisit with a real codec
+/// if non-ASCII names corrupt). Returns the converted count, 0 on a
+/// null source. `wlen==0` probes the needed size.
+unsafe extern "C" fn host_m2w(
+    _cp: u32,
+    _flags: u32,
+    multi: *const u8,
+    mlen: i32,
+    wide: *mut u16,
+    wlen: i32,
+) -> u32 {
+    if multi.is_null() || mlen <= 0 {
+        return 0;
+    }
+    let n = mlen as usize;
+    if wide.is_null() || wlen <= 0 {
+        return n as u32;
+    }
+    let k = n.min(wlen as usize);
+    for i in 0..k {
+        unsafe { core::ptr::write_unaligned(wide.wrapping_add(i), core::ptr::read_unaligned(multi.wrapping_add(i)) as u16) };
+    }
+    k as u32
+}
+
+/// `WideCharToMultiByte(cp, flags, wide, wlen, multi, mlen, def, used)`:
+/// naive narrowing (`>0xFF` maps to `?`). Returns the converted
+/// count; null/empty source yields 0; null dst probes the size.
+unsafe extern "C" fn host_w2m(
+    _cp: u32,
+    _flags: u32,
+    wide: *const u16,
+    wlen: i32,
+    multi: *mut u8,
+    mlen: i32,
+    _def: usize,
+    _used: usize,
+) -> u32 {
+    if wide.is_null() || wlen <= 0 {
+        return 0;
+    }
+    let n = wlen as usize;
+    if multi.is_null() || mlen <= 0 {
+        return n as u32;
+    }
+    let k = n.min(mlen as usize);
+    for i in 0..k {
+        let c = unsafe { core::ptr::read_unaligned(wide.wrapping_add(i)) };
+        unsafe { core::ptr::write_unaligned(multi.wrapping_add(i), if c > 0xff { b'?' } else { c as u8 }) };
+    }
+    k as u32
+}
 /// These read the installer image itself; size/seek operate on the
 /// image length, not on a sink file. Tracked separately because the
 /// original HANDLE values are meaningless on host.
+/// Handles minted by `host_create_file` (the installer self-stream).
 fn image_handles() -> &'static std::sync::Mutex<std::collections::HashSet<u32>> {
     use std::sync::OnceLock;
     static SET: OnceLock<std::sync::Mutex<std::collections::HashSet<u32>>> =
@@ -308,6 +371,9 @@ unsafe extern "C" fn host_read_file(
         }
     }
     unsafe { core::ptr::write_unaligned(got, total as u32) };
+    if std::env::var("DSJ3_DEBUG").is_ok() && std::env::var("DSJ3_VERBOSE").is_ok() {
+        eprintln!("[dsj3] read: handle={handle:#x} n={n:#x} got={total:#x}");
+    }
     1
 }
 

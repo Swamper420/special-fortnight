@@ -79,9 +79,16 @@ DSJ3_DEBUG=1 ./target/i686-unknown-linux-musl/debug/dsj3
 # [dsj3] entry: stream=0x… setup=0x4264f0
 # [dsj3] setup header: plus_c=1 crc_got=0x1f16671d want=0x1f16671d
 # [dsj3] gate: ok=false skip_first=true seek_to=0x38880b
-# [dsj3] table: obj=0x… count=0x0
+# [dsj3] table: obj=0x… count=0x6
 # exit 0
 ```
+
+Oracle cross-check (independent Python LZMA1 decode of the carved
+payload — `[crc32][≤0x1000]*` chunks at file offset `0x388854`,
+`left=0x6fa7`, all CRCs verify; raw stream past the 5-byte header with
+`lc=3,lp=0,pb=2,dict=0x200000` → `0x31a46` bytes): 28 setup strings,
+EULA blob, `count=6` tail word. The run's decoded slots match byte for
+byte (`Deluxe Ski Jump 3`, `Deluxe Ski Jump 3 v1.7.1`, …).
 
 32-bit host target required: pointer widths match the 1:1 target.
 A 64-bit host build truncates pointers at the `u32` vtable/cell
@@ -113,18 +120,19 @@ image: `Find/Sizeof/Load/LockResource`), `CreateFileW` (mints
 `ReadFile` (sink read topped up from image bytes at same offset on
 short reads), `GetFileSize` (image length for image-backed handles),
 `SetFilePointer` (seeks the image for image-backed handles, shared
-seek cursor per handle), section-drain (`cb34→cad8`).
+seek cursor per handle), section-drain (`cb34→cad8`), LZMA dictionary
+(`VirtualAlloc` → host heap), string conversion (`MultiByteToWideChar`
+naive widen / `WideCharToMultiByte` naive narrow — ANSI metadata only).
 
 Known ceilings: 64-bit truncation (above); skipped unit inits +
 seeded cells (`0x00410144=0`, `0x004185ac=0` — revisit slot-by-slot);
 stubbed GUI/fatal paths continue where the original would abort;
 file-size gate observes `size (0x3f0200) >= expected (0x3ede64)`
 instead of equal (`ok=false`, one `ec58` no-op) — meaning of `+0x10`
-unproven; LZMA bit-hooks (`cee8→d33c→d094/d1a4/d1d0/d244/d11c/d160/
-d034`) and `da38` string alloc/store hooks remain stubs, so the
-section table decodes to zeros (`count=0x0`) and no files extract
-yet; the `3894` installer-run dispatch is reached but has no
-headless file-extraction backend.
+unproven; the setup table decodes fully (`count=0x6`, oracle-verified)
+but the `3894` installer-run dispatch only finalizes — per-file
+extraction needs the GUI-driven install flow, which has no headless
+backend yet (non-goal, see below).
 Entry-path fixes (see `src/fn_004117dc.rs`, `evidence/004117dc_*`):
 address/content corrections at `[0x40c04c]`, `[0x412b2c]`,
 `[0x40c640]`, `[0x40cbc0]`, `[0x4185ac]`; `FAKE_SETUP` replaced by

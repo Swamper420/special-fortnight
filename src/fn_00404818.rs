@@ -4,12 +4,15 @@
 unsafe extern "C" fn default_callee(_a: *mut u32, _b: *mut u8) {}
 
 /// Callee `0x00404e6c` (`FUN_00404e6c`); args `(param_1, *param_1)`
-/// carried in EAX/EDX per `__register` observation.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_00404e6c` once it exists.
+/// carried in EAX/EDX per `__register` observation: direct
+/// intra-reconstruction call (rewired; `fn_00404e6c` verified
+/// `fn(*mut u8, *mut u8)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404e6c(a: *mut u32, b: *mut u8) {
+    crate::fn_00404e6c::fn_00404e6c(a as *mut u8, b)
+}
 pub static mut CALLEE_00404E6C: unsafe extern "C" fn(*mut u32, *mut u8) =
-    default_callee;
+    adapt_00404e6c;
 
 /// `callee(param_1, *param_1)`. `param_1` arrives in EAX; EDX is pure
 /// passthrough (body never alters EAX).

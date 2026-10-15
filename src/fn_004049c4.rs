@@ -14,19 +14,25 @@ unsafe extern "C" fn default_alloc(_len: u32, _p3: u32) -> *mut u8 {
 unsafe extern "C" fn default_release(_slot: *mut u8) {}
 
 /// Normalize target `0x00404e94` (`FUN_00404e94`), called with
-/// `(&tmp=0 out-slot, old *slot value, p3)`.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_00404e94` once it exists.
+/// `(&tmp=0 out-slot, old *slot value, p3)`: direct
+/// intra-reconstruction call (rewired; `fn_00404e94` verified
+/// `fn(*mut u8, *mut u8, u16)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404e94(slot: *mut *mut u8, src: *mut u8, p3: i32) {
+    crate::fn_00404e94::fn_00404e94(slot as *mut u8, src, p3 as u16)
+}
 pub static mut HOOK_00404E94: unsafe extern "C" fn(*mut *mut u8, *mut u8, i32) =
-    default_convert;
+    adapt_00404e94;
 
 /// Realloc target `0x00402e38` (`FUN_00402e38`), called with an in-out
-/// slot initialized to `base` plus `total = len+13`.
-///
-/// ponytail: hook standing in for done `fn_00402e38`, rewire to real
-/// call once cross-module linkage proven.
-pub static mut HOOK_00402E38: unsafe extern "C" fn(*mut *mut u8, u32) = default_realloc;
+/// slot initialized to `base` plus `total = len+13`: direct
+/// intra-reconstruction call (rewired; `fn_00402e38` verified
+/// `fn(*mut u32, u32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00402e38(slot: *mut *mut u8, total: u32) {
+    crate::fn_00402e38::fn_00402e38(slot as *mut u32, total)
+}
+pub static mut HOOK_00402E38: unsafe extern "C" fn(*mut *mut u8, u32) = adapt_00402e38;
 
 /// OOM thunk `0x0040380c` (`thunk_FUN_00402f60`), reached by terminal
 /// `JMP` with `EAX=base` on `len+13` unsigned overflow.
@@ -35,11 +41,14 @@ pub static mut HOOK_00402E38: unsafe extern "C" fn(*mut *mut u8, u32) = default_
 /// target's return behavior is proven.
 pub static mut HOOK_00402F60_OOM: unsafe extern "C" fn(*mut u8) = default_oom;
 
-/// Alloc target `0x00404774` (`FUN_00404774`), called with `(len, p3)`.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_00404774` once it exists.
-pub static mut HOOK_00404774: unsafe extern "C" fn(u32, u32) -> *mut u8 = default_alloc;
+/// Alloc target `0x00404774` (`FUN_00404774`), called with `(len, p3)`:
+/// direct intra-reconstruction call (rewired; `fn_00404774` verified
+/// `fn(i32, u32) -> *mut u8`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404774(len: u32, p3: u32) -> *mut u8 {
+    crate::fn_00404774::fn_00404774(len as i32, p3)
+}
+pub static mut HOOK_00404774: unsafe extern "C" fn(u32, u32) -> *mut u8 = adapt_00404774;
 
 /// Copy target `0x00402fbc` (`FUN_00402fbc`), called with
 /// `(prev, newbuf, signed-min([prev-4], len))`: direct
@@ -47,11 +56,14 @@ pub static mut HOOK_00404774: unsafe extern "C" fn(u32, u32) -> *mut u8 = defaul
 /// `fn(*mut u8, *mut u8, u32)`).
 
 /// Release target `0x004046c4` (`FUN_004046c4`), called with the slot
-/// (tail path) or a stack copy of the old object (grow path).
-///
-/// ponytail: hook standing in for done `fn_004046c4`, rewire to real
-/// call once cross-module linkage proven.
-pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u8) = default_release;
+/// (tail path) or a stack copy of the old object (grow path): direct
+/// intra-reconstruction call (rewired; `fn_004046c4` verified
+/// `fn(*mut u8) -> *mut u8`, return dropped per assembly).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004046c4(slot: *mut u8) {
+    crate::fn_004046c4::fn_004046c4(slot);
+}
+pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u8) = adapt_004046c4;
 
 /// Growable-buffer ensure: `len<=0` (signed) → release+store 0;
 /// non-null `cur` with flag `i16 @-10 != 1` → normalize + XCHG;

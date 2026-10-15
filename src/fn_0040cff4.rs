@@ -5,11 +5,14 @@ unsafe extern "C" fn default_next(_b: *mut u8, _p2: u32, _p3: i32) -> u8 {
     0
 }
 
-/// Target `0x0040cfb4` (`FUN_0040cfb4`), exactly 5 folds.
-///
-/// ponytail: hook standing in for same-batch `fn_0040cfb4`, rewire to the
-/// real call once cross-module linkage proven.
-pub static mut HOOK_0040CFB4: unsafe extern "C" fn(*mut u8, u32, i32) -> u8 = default_next;
+/// Target `0x0040cfb4` (`FUN_0040cfb4`), exactly 5 folds: direct
+/// intra-reconstruction call (rewired; `fn_0040cfb4` verified
+/// `fn(*mut u8, u32, i32) -> u8`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040cfb4(b: *mut u8, p2: u32, p3: i32) -> u8 {
+    crate::fn_0040cfb4::fn_0040cfb4(b, p2, p3)
+}
+pub static mut HOOK_0040CFB4: unsafe extern "C" fn(*mut u8, u32, i32) -> u8 = adapt_0040cfb4;
 
 /// Zero cells, `[+8]=-1`, then 5× `cfb4→([+0xc]<<8)|byte→[+0xc]`.
 pub unsafe fn fn_0040cff4(param_1: *mut u8) {

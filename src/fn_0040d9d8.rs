@@ -5,10 +5,14 @@ unsafe extern "C" fn default_check(_p1: *mut u32, _p3: *mut u8, _p6: i32) -> i32
     1
 }
 
-/// Target `0x0040d2bc` (`FUN_0040d2bc`), header check; nonzero return kept.
-///
-/// ponytail: hook standing in for out-of-batch `fn_0040d2bc`.
-pub static mut HOOK_0040D2BC: unsafe extern "C" fn(*mut u32, *mut u8, i32) -> i32 = default_check;
+/// Target `0x0040d2bc` (`FUN_0040d2bc`), header check: direct
+/// intra-reconstruction call (rewired; `fn_0040d2bc` verified
+/// `fn(*mut u32, *const u8, i32) -> u32`; nonzero return kept).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040d2bc(p1: *mut u32, p3: *mut u8, p6: i32) -> i32 {
+    crate::fn_0040d2bc::fn_0040d2bc(p1, p3 as *const u8, p6) as i32
+}
+pub static mut HOOK_0040D2BC: unsafe extern "C" fn(*mut u32, *mut u8, i32) -> i32 = adapt_0040d2bc;
 
 /// Gate on `param_2==0x50`; on check-zero writes size/param outs, returns check result or 1.
 /// `param_1` EAX / `param_2` EDX / `param_3` ECX per `__register` observation.

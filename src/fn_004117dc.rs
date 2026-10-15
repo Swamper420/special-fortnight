@@ -72,9 +72,9 @@ unsafe extern "C" fn adapter_0040da38(a: u32, b: u32, c: u32, d: u32, e: u32) {
 }
 // ponytail: adapter, exact parity on i686 only.
 unsafe extern "C" fn adapter_00402dec(n: u32) -> u32 {
-    // Real fn is a void guard (not the allocator); 0 preserves old stub value.
-    crate::fn_00402dec::fn_00402dec(n);
-    0
+    // Real fn returns the allocation base in EAX (via `0218c`);
+    // the spine stores it to `DAT_0041864C`.
+    crate::fn_00402dec::fn_00402dec(n)
 }
 // ponytail: adapter, exact parity on i686 only.
 unsafe extern "C" fn adapter_00403894(a: u32) {

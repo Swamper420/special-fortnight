@@ -20,9 +20,17 @@ pub unsafe fn fn_0040cfb4(param_1: *mut u8, _param_2: u32, param_3: i32) -> u8 {
             core::mem::transmute(target);
         let r = f(obj, param_1 as usize, &mut got);
         core::ptr::write_unaligned(param_1.wrapping_byte_add(0x14) as *mut i32, r);
+        // `end = [base] + got` with `[base]` RE-READ after the call:
+        // the reader publishes the new cursor (`rc.cur = state+0x6c`)
+        // before returning (`0x40cfcb–0x40cfd3`: `MOV EAX,ret;
+        // MOV ECX,[EBX]; ADD (ESP),ECX; MOV [EBX+4],ECX`). An earlier
+        // revision reused the stale pre-call `cur` (0 on first refill),
+        // so `end` landed near zero and the buffered lane overran the
+        // refill window into heap garbage without faulting.
+        let fresh: usize = core::ptr::read_unaligned(param_1 as *const usize);
         core::ptr::write_unaligned(
             param_1.wrapping_byte_add(4) as *mut usize,
-            cur.wrapping_add(got as usize),
+            fresh.wrapping_add(got as usize),
         );
         if got == 0 {
             core::ptr::write_unaligned(param_1.wrapping_byte_add(0x18) as *mut u32, 1);

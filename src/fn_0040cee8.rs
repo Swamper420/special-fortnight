@@ -14,11 +14,22 @@ unsafe extern "C" fn default_decode(
 /// `0x0040ce24` setup: direct intra-cluster call
 /// (rewired; signatures verified `fn(*mut u8)`).
 
-/// `0x0040d33c` decode `(state,&block,p2,&out,p3)->i32`.
-///
-/// ponytail: hook standing in for unreconstructed callee.
+/// `0x0040d33c` decode `(state,&block,p2,&out,p3)->i32`: direct
+/// intra-reconstruction call (rewired; `fn_0040d33c` verified
+/// `fn(*mut u32, u32, *mut u8, *mut u32, u32) -> i32`; the block lane
+/// is opaque to the body).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040d33c(
+    s: *mut u8,
+    b: *mut usize,
+    p2: usize,
+    o: *mut u32,
+    n: u32,
+) -> i32 {
+    crate::fn_0040d33c::fn_0040d33c(s as *mut u32, b as u32, p2 as *mut u8, o, n)
+}
 pub static mut HOOK_0040D33C: unsafe extern "C" fn(*mut u8, *mut usize, usize, *mut u32, u32) -> i32 =
-    default_decode;
+    adapt_0040d33c;
 
 /// `0x0040cc3c` reporter (codes 5/6): direct intra-cluster call
 /// (rewired; signatures verified `fn(u32)`).
@@ -37,9 +48,14 @@ pub unsafe fn fn_0040cee8(param_1: *mut u8, param_2: usize, param_3: u32) {
     if core::ptr::read_unaligned(param_1.wrapping_byte_add(0x11) as *const u8) == 0 {
         crate::fn_0040ce24::fn_0040ce24(param_1);
     }
-    // ponytail: 2-word block `[0x0040cd94, base]`; label address is a code
-    // constant, kept verbatim (target 32-bit wrap = host value here).
-    let mut blk = [0x40cd94usize, param_1 as usize];
+    // ponytail: 2-word block `[reader, base]`; the reader word links
+    // our `fn_0040cd94` (same precedent as the `cad8` link below and
+    // `patch_vtable`): original bytes are unexecutable on host.
+    // Target 32-bit wrap = host value here.
+    let mut blk = [
+        crate::fn_0040cd94::fn_0040cd94 as usize,
+        param_1 as usize,
+    ];
     let mut out: u32 = 0;
     let r = HOOK_0040D33C(
         param_1.wrapping_byte_add(0x14),

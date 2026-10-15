@@ -19,19 +19,35 @@ unsafe extern "C" fn default_size(_slot: *mut u8, _n: u32) {}
 /// Target `0x004047ec` (`FUN_004047ec`): converts the counted source
 /// into the WCHAR dst (cap in WCHARs), returns the converted length
 /// (signed int in EAX; stack lane needs `> 0`, heap lane clamps
-/// `< 0` to 0).
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to
-/// real `fn_004047ec` once it exists.
+/// `< 0` to 0): direct intra-reconstruction call with a host count
+/// probe (rewired; `fn_004047ec` verified
+/// `fn(*mut u16, i32, *const u8, u32, i32)`, result discarded per its
+/// contract — the count comes from the host `MultiByteToWideChar`
+/// shim, exact on i686).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004047ec(
+    dst: *mut u16,
+    cap: u32,
+    src: *const u8,
+    p4: u32,
+    n: u32,
+) -> i32 {
+    let r = crate::fn_004047ec::M2W_00401150(p4, 0, src, n as i32, dst, cap as i32);
+    crate::fn_004047ec::fn_004047ec(dst, cap as i32, src, p4, n as i32);
+    r as i32
+}
 pub static mut HOOK_004047ec: unsafe extern "C" fn(*mut u16, u32, *const u8, u32, u32) -> i32 =
-    default_convert;
+    adapt_004047ec;
 
 /// Target `0x00404f00` (`FUN_00404f00`): sizes `*param_1`, first with
-/// `param_3+1`, then with the converted length.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to
-/// real `fn_00404f00` once it exists.
-pub static mut HOOK_00404f00: unsafe extern "C" fn(*mut u8, u32) = default_size;
+/// `param_3+1`, then with the converted length: direct
+/// intra-reconstruction call (rewired; `fn_00404f00` verified
+/// `fn(*mut *mut u8, u32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404f00(slot: *mut u8, n: u32) {
+    crate::fn_00404f00::fn_00404f00(slot as *mut *mut u8, n)
+}
+pub static mut HOOK_00404f00: unsafe extern "C" fn(*mut u8, u32) = adapt_00404f00;
 
 /// `p3<=0 → 46c4(p1); else if p3+1<0x7ff && convert(stack)>0 →
 /// 4dd4(p1,stack,r); else { 4f00(p1,p3+1); r=convert(*p1);

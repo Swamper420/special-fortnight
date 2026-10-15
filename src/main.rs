@@ -342,6 +342,7 @@ mod fn_0040cd3c;
 mod fn_0040cdcc;
 mod fn_0040cdf0;
 mod fn_0040ce24;
+mod fn_0040cd94;
 mod fn_0040cee8;
 mod fn_0040cfb4;
 mod fn_0040cff4;

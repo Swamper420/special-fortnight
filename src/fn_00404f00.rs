@@ -14,27 +14,34 @@ unsafe extern "C" fn default_alloc(_n: u32) -> *mut u8 {
 unsafe extern "C" fn default_fail(_base: *mut u8) {}
 
 /// Normalize target `0x00404e6c` (`FUN_00404e6c`), called with
-/// `(&tmp=0 out-slot, old *slot value)` on the foreign-tag lane.
-///
-/// ponytail: hook standing in for same-batch `fn_00404e6c`,
-/// rewire to the real call once cross-module linkage proven.
-pub static mut HOOK_00404e6c: unsafe extern "C" fn(*mut u8, *mut u8) = default_normalize;
+/// `(&tmp=0 out-slot, old *slot value)` on the foreign-tag lane:
+/// direct intra-reconstruction call (rewired; `fn_00404e6c` verified
+/// `fn(*mut u8, *mut u8)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404e6c(slot: *mut u8, src: *mut u8) {
+    crate::fn_00404e6c::fn_00404e6c(slot, src)
+}
+pub static mut HOOK_00404e6c: unsafe extern "C" fn(*mut u8, *mut u8) = adapt_00404e6c;
 
 /// Realloc target `0x00402e38` (`FUN_00402e38`), called with an
-/// in-out slot initialized to `base` plus `total = count*2+14`.
-///
-/// ponytail: hook standing in for done `fn_00402e38` (which owns
-/// unreconstructed import state), rewire to the real call once
-/// cross-module test serialization exists.
-pub static mut HOOK_00402e38: unsafe extern "C" fn(*mut *mut u8, u32) = default_realloc;
+/// in-out slot initialized to `base` plus `total = count*2+14`:
+/// direct intra-reconstruction call (rewired; `fn_00402e38` verified
+/// `fn(*mut u32, u32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00402e38(slot: *mut *mut u8, total: u32) {
+    crate::fn_00402e38::fn_00402e38(slot as *mut u32, total)
+}
+pub static mut HOOK_00402e38: unsafe extern "C" fn(*mut *mut u8, u32) = adapt_00402e38;
 
 /// Alloc target `0x004054b4` (`FUN_004054b4`), called with `count`,
-/// result stored to the slot by the tail.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire
-/// to real `fn_004054b4` once it exists. Returns the DATA
-/// pointer (base+12), never the header base.
-pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> *mut u8 = default_alloc;
+/// result stored to the slot by the tail: direct intra-reconstruction
+/// call (rewired; `fn_004054b4` verified `fn(i32) -> *mut u8`).
+/// Returns the DATA pointer (base+12), never the header base.
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004054b4(n: u32) -> *mut u8 {
+    crate::fn_004054b4::fn_004054b4(n as i32)
+}
+pub static mut HOOK_004054b4: unsafe extern "C" fn(u32) -> *mut u8 = adapt_004054b4;
 
 /// Copy target `0x00402fbc` (`FUN_00402fbc`), called with
 /// `(prev, newbuf, signed-min([prev-4], count)<<1`): direct

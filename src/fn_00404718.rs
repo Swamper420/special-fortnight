@@ -12,30 +12,42 @@ unsafe extern "C" fn default_copy(_old: *mut u8, _new: *mut u8, _len: u32) {}
 unsafe extern "C" fn default_free(_base: *mut u8) {}
 
 /// Convert tail `0x00404e94` (`FUN_00404e94`), reached by `JMP` when the tag
-/// word at `src−10` is not 1 (args: dest slot, src, `DAT_004138c8`).
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_00404e94` once it exists.
+/// word at `src−10` is not 1 (args: dest slot, src, `DAT_004138c8`):
+/// direct intra-reconstruction call (rewired; `fn_00404e94` verified
+/// `fn(*mut u8, *mut u8, u16)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404e94(d: *mut usize, s: *mut u8, c: u32) {
+    crate::fn_00404e94::fn_00404e94(d as *mut u8, s, c as u16)
+}
 pub static mut CONVERT_00404E94: unsafe extern "C" fn(*mut usize, *mut u8, u32) =
-    default_convert;
+    adapt_00404e94;
 
-/// Alloc `0x00404774` (`FUN_00404774`), copy-on-write arm.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_00404774` (same work package) once cross-module wiring exists.
-pub static mut ALLOC_00404774: unsafe extern "C" fn(u32, u32) -> *mut u8 = default_alloc;
+/// Alloc `0x00404774` (`FUN_00404774`), copy-on-write arm: direct
+/// intra-reconstruction call (rewired; `fn_00404774` verified
+/// `fn(i32, u32) -> *mut u8`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404774(len: u32, cp: u32) -> *mut u8 {
+    crate::fn_00404774::fn_00404774(len as i32, cp)
+}
+pub static mut ALLOC_00404774: unsafe extern "C" fn(u32, u32) -> *mut u8 = adapt_00404774;
 
-/// Copy `0x00402fbc` (`FUN_00402fbc`), args `(old, new, old_len)`.
-///
-/// ponytail: hook standing in for done `fn_00402fbc`, rewire to real call
-/// once cross-module test serialization exists.
-pub static mut COPY_00402FBC: unsafe extern "C" fn(*mut u8, *mut u8, u32) = default_copy;
+/// Copy `0x00402fbc` (`FUN_00402fbc`), args `(old, new, old_len)`:
+/// direct intra-reconstruction call (rewired; `fn_00402fbc` verified
+/// `fn(*mut u8, *mut u8, u32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00402fbc(old: *mut u8, new: *mut u8, len: u32) {
+    crate::fn_00402fbc::fn_00402fbc(old, new, len)
+}
+pub static mut COPY_00402FBC: unsafe extern "C" fn(*mut u8, *mut u8, u32) = adapt_00402fbc;
 
-/// Free `0x00402e20` (`FUN_00402e20`), arg is header base (`old−12`).
-///
-/// ponytail: hook standing in for done `fn_00402e20` (which takes the base
-/// as `u32`); rewire once address-width unification is decided.
-pub static mut FREE_00402E20: unsafe extern "C" fn(*mut u8) = default_free;
+/// Free `0x00402e20` (`FUN_00402e20`), arg is header base (`old−12`):
+/// direct intra-reconstruction call (rewired; `fn_00402e20` verified
+/// `fn(u32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00402e20(base: *mut u8) {
+    crate::fn_00402e20::fn_00402e20(base as u32)
+}
+pub static mut FREE_00402E20: unsafe extern "C" fn(*mut u8) = adapt_00402e20;
 
 /// Default codeword observed as `dword ptr [0x004138c8]`.
 ///
@@ -66,8 +78,11 @@ pub unsafe fn fn_00404718(param_1: *mut usize, param_2: *mut u8) {
             src = fresh;
         }
     }
-    let old = *param_1;
-    *param_1 = src as usize;
+    // ponytail: `dst` advances by the `0x3d` table stride (odd), so the
+    // slot lane is not dword-aligned — `read/write_unaligned` matches
+    // the original `MOV` (x86 permits unaligned).
+    let old = core::ptr::read_unaligned(param_1 as *const usize);
+    core::ptr::write_unaligned(param_1 as *mut usize, src as usize);
     if old == 0 {
         return;
     }

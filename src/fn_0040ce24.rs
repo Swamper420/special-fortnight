@@ -22,11 +22,22 @@ unsafe extern "C" fn default_emit(_s: *mut u8, _d: usize, _o: usize) {}
 /// `0x00403250` fill `(state,0x50,0)`: direct intra-reconstruction
 /// call (rewired; signatures verified `fn(*mut u8, u32, u8)`).
 
-/// `0x0040d9d8` header parse `(state,0x50,hdr,&sz,&off,5)`.
-///
-/// ponytail: hook standing in for unreconstructed callee.
+/// `0x0040d9d8` header parse `(state,0x50,hdr,&sz,&off,5)`: direct
+/// intra-reconstruction call (rewired; `fn_0040d9d8` verified
+/// `fn(*mut u32, i32, *mut u8, *mut u32, *mut i32, i32) -> i32`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040d9d8(
+    s: *mut u8,
+    n: u32,
+    h: *const u8,
+    o1: *mut u32,
+    o2: *mut i32,
+    c: u32,
+) -> i32 {
+    crate::fn_0040d9d8::fn_0040d9d8(s as *mut u32, n as i32, h as *mut u8, o1, o2, c as i32)
+}
 pub static mut HOOK_0040D9D8: unsafe extern "C" fn(*mut u8, u32, *const u8, *mut u32, *mut i32, u32) -> i32 =
-    default_parse;
+    adapt_0040d9d8;
 
 /// `0x0040cdcc` free lane: direct intra-cluster call
 /// (rewired; signatures verified `fn(*mut u8)`).
@@ -37,10 +48,13 @@ pub static mut HOOK_0040D9D8: unsafe extern "C" fn(*mut u8, u32, *const u8, *mut
 /// `windows-sys` once import mapping proven.
 pub static mut HOOK_VirtualAlloc: unsafe extern "C" fn(u32, u32, u32, u32) -> u32 = default_alloc;
 
-/// `0x0040da28` emit `(state,dst,dst+off)`.
-///
-/// ponytail: hook standing in for unreconstructed callee.
-pub static mut HOOK_0040DA28: unsafe extern "C" fn(*mut u8, usize, usize) = default_emit;
+/// `0x0040da28` emit `(state,dst,dst+off)`: direct intra-reconstruction
+/// call (rewired; `fn_0040da28` verified `fn(*mut u8, u32, u32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040da28(s: *mut u8, d: usize, o: usize) {
+    crate::fn_0040da28::fn_0040da28(s, d as u32, o as u32)
+}
+pub static mut HOOK_0040DA28: unsafe extern "C" fn(*mut u8, usize, usize) = adapt_0040da28;
 
 /// `0x00409818` OOM lane: direct intra-reconstruction call
 /// (rewired; signatures verified `fn()`).

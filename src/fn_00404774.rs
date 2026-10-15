@@ -9,11 +9,14 @@ unsafe extern "C" fn default_fail(_arg: u32) -> *mut u8 {
     core::ptr::null_mut()
 }
 
-/// Allocator `0x00402e04` (`FUN_00402e04`), arg is evened `len+14`.
-///
-/// ponytail: hook standing in for done `fn_00402e04` (which takes/returns
-/// `i32`), rewire to real call once cross-module test serialization exists.
-pub static mut ALLOC_00402E04: unsafe extern "C" fn(u32) -> *mut u8 = default_alloc;
+/// Allocator `0x00402e04` (`FUN_00402e04`), arg is evened `len+14`:
+/// direct intra-reconstruction call (rewired; `fn_00402e04` verified
+/// `fn(i32) -> i32`, pointer as int).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00402e04(size: u32) -> *mut u8 {
+    crate::fn_00402e04::fn_00402e04(size as i32) as *mut u8
+}
+pub static mut ALLOC_00402E04: unsafe extern "C" fn(u32) -> *mut u8 = adapt_00402e04;
 
 /// Overflow arm `0x0040380c` (`thunk_FUN_00402f60`), terminal `JMP` with the
 /// wrapped `len+14`.

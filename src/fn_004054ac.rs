@@ -5,11 +5,14 @@ unsafe extern "C" fn default_target(_slot: *mut u32) -> i32 {
     0
 }
 
-/// Target `0x00405458` (`FUN_00405458`), reached by terminal `JMP`.
-///
-/// ponytail: hook standing in for unreconstructed target, rewire to
-/// real `fn_00405458` once cross-module linkage proven.
-pub static mut HOOK_00405458: unsafe extern "C" fn(*mut u32) -> i32 = default_target;
+/// Target `0x00405458` (`FUN_00405458`), reached by terminal `JMP`:
+/// direct intra-reconstruction call (rewired; `fn_00405458` verified
+/// `fn(*mut u8) -> *mut u8`, pointer as int for the thunk lane).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00405458(slot: *mut u32) -> i32 {
+    crate::fn_00405458::fn_00405458(slot as *mut u8) as u32 as i32
+}
+pub static mut HOOK_00405458: unsafe extern "C" fn(*mut u32) -> i32 = adapt_00405458;
 
 /// `JMP 0x00405458` with `param_1` in EAX per Ghidra `__register`
 /// observation. Tail jump modeled as call+return.

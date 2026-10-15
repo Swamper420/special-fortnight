@@ -13,22 +13,67 @@ unsafe extern "C" fn default_free(_s: *mut u32) {}
 /// Reader `0x0040cb34(EAX,EDX,ECX)`; all five sites: direct
 /// intra-reconstruction call (rewired; signatures verified
 /// `fn(*mut u8, *mut u8, u32)`).
-/// ponytail: hook for `fn_00404f00`.
-pub static mut HOOK_00404F00: unsafe extern "C" fn(*mut u32, i32) = default_alloc;
-/// ponytail: hook for `fn_00404c98`.
-pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u32, u32) = default_store;
-/// ponytail: hook for `fn_004049c4`.
-pub static mut HOOK_004049C4: unsafe extern "C" fn(*mut u32, u32, u32) = default_alloc0;
-/// ponytail: hook for `fn_00404718`.
-pub static mut HOOK_00404718: unsafe extern "C" fn(*mut u32, u32) = default_store2;
-/// ponytail: hook for `thunk 0x004054ac`.
-pub static mut HOOK_004054AC: unsafe extern "C" fn(*mut u32) -> *mut u8 = default_thunk;
-/// ponytail: hook for `thunk 0x004049bc`.
-pub static mut HOOK_004049BC: unsafe extern "C" fn(*mut u32) -> *mut u8 = default_thunk;
-/// ponytail: hook for `fn_004046c4`.
-pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u32) = default_free;
-/// ponytail: hook for `thunk 0x00404c88`.
-pub static mut HOOK_00404C88: unsafe extern "C" fn(*mut u32) = default_free;
+/// `0x00404f00` wide-string ensure `(slot, half)`: direct
+/// intra-reconstruction call (rewired; `fn_00404f00` verified
+/// `fn(*mut *mut u8, u32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404f00(s: *mut u32, n: i32) {
+    crate::fn_00404f00::fn_00404f00(s as *mut *mut u8, n as u32)
+}
+pub static mut HOOK_00404F00: unsafe extern "C" fn(*mut u32, i32) = adapt_00404f00;
+/// `0x00404c98` acquire-store `(dst, s)`: direct intra-reconstruction
+/// call (rewired; `fn_00404c98` verified `fn(*mut u8, *mut u8)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404c98(d: *mut u32, s: u32) {
+    crate::fn_00404c98::fn_00404c98(d as *mut u8, s as *mut u8)
+}
+pub static mut HOOK_00404C98: unsafe extern "C" fn(*mut u32, u32) = adapt_00404c98;
+/// `0x004049c4` alloc `(slot, len, 0)`: direct intra-reconstruction
+/// call (rewired; `fn_004049c4` verified `fn(*mut *mut u8, u32, i32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004049c4(s: *mut u32, n: u32, z: u32) {
+    crate::fn_004049c4::fn_004049c4(s as *mut *mut u8, n, z as i32)
+}
+pub static mut HOOK_004049C4: unsafe extern "C" fn(*mut u32, u32, u32) = adapt_004049c4;
+/// `0x00404718` store `(dst, s)`: direct intra-reconstruction call
+/// (rewired; `fn_00404718` verified `fn(*mut usize, *mut u8)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404718(d: *mut u32, s: u32) {
+    crate::fn_00404718::fn_00404718(d as *mut usize, s as *mut u8)
+}
+pub static mut HOOK_00404718: unsafe extern "C" fn(*mut u32, u32) = adapt_00404718;
+/// Thunk `0x004054ac` data-pointer `(slot)`: direct
+/// intra-reconstruction call (rewired; `fn_004054ac` verified
+/// `fn(*mut u32) -> i32`, pointer as int).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004054ac(s: *mut u32) -> *mut u8 {
+    crate::fn_004054ac::fn_004054ac(s) as *mut u8
+}
+pub static mut HOOK_004054AC: unsafe extern "C" fn(*mut u32) -> *mut u8 = adapt_004054ac;
+/// Thunk `0x004049bc` data-pointer `(slot)`: direct
+/// intra-reconstruction call (rewired; `fn_004049bc` verified
+/// `fn(*mut u32) -> i32`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004049bc(s: *mut u32) -> *mut u8 {
+    crate::fn_004049bc::fn_004049bc(s) as *mut u8
+}
+pub static mut HOOK_004049BC: unsafe extern "C" fn(*mut u32) -> *mut u8 = adapt_004049bc;
+/// `0x004046c4` release `(slot)`: direct intra-reconstruction call
+/// (rewired; `fn_004046c4` verified `fn(*mut u8) -> *mut u8`, return
+/// dropped per assembly).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_004046c4(s: *mut u32) {
+    crate::fn_004046c4::fn_004046c4(s as *mut u8);
+}
+pub static mut HOOK_004046C4: unsafe extern "C" fn(*mut u32) = adapt_004046c4;
+/// Thunk `0x00404c88` release `(slot)`: direct intra-reconstruction
+/// call (rewired; `fn_00404c88` verified `fn(*mut u32) -> *mut u32`,
+/// return dropped per assembly).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404c88(s: *mut u32) {
+    crate::fn_00404c88::fn_00404c88(s);
+}
+pub static mut HOOK_00404C88: unsafe extern "C" fn(*mut u32) = adapt_00404c88;
 
 /// Two-group counted-blob loader + remainder read + cleanup.
 /// `param_1` EAX / `param_2` EDX / `param_3` ECX / `param_4,5` stack.

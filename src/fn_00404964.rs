@@ -8,18 +8,23 @@ unsafe extern "C" fn default_alloc(_data: u32, _units: u32) -> *mut u8 {
 }
 
 /// Normalize target `0x00404808` (`FUN_00404808`), called with the slot;
-/// EAX preserved across it (`PUSH/POP`).
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_00404808` once it exists.
-pub static mut HOOK_00404808: unsafe extern "C" fn(*mut u8) = default_normalize;
+/// EAX preserved across it (`PUSH/POP`): direct intra-reconstruction
+/// call (rewired; `fn_00404808` verified `fn(*mut u32)`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404808(slot: *mut u8) {
+    crate::fn_00404808::fn_00404808(slot as *mut u32)
+}
+pub static mut HOOK_00404808: unsafe extern "C" fn(*mut u8) = adapt_00404808;
 
 /// Alloc target `0x00404774` (`FUN_00404774`), called with
-/// `(u32 data @obj-4, zero-extended u16 @obj-12)`, returns new object.
-///
-/// ponytail: hook standing in for unreconstructed callee, rewire to real
-/// `fn_00404774` once it exists.
-pub static mut HOOK_00404774: unsafe extern "C" fn(u32, u32) -> *mut u8 = default_alloc;
+/// `(u32 data @obj-4, zero-extended u16 @obj-12)`: direct
+/// intra-reconstruction call (rewired; `fn_00404774` verified
+/// `fn(i32, u32) -> *mut u8`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00404774(data: u32, units: u32) -> *mut u8 {
+    crate::fn_00404774::fn_00404774(data as i32, units)
+}
+pub static mut HOOK_00404774: unsafe extern "C" fn(u32, u32) -> *mut u8 = adapt_00404774;
 
 /// Copy target `0x00402fbc` (`FUN_00402fbc`), called with
 /// `(old, new, u32 len @old-4)`: direct intra-reconstruction call

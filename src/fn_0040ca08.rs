@@ -10,33 +10,45 @@ unsafe extern "C" fn default_crc(_b: *const u8, _l: u32) -> u32 {
     0
 }
 
-/// Error-link target `0x00409824`, `(base, 1, msg)`; returns DATA pointer.
-///
-/// ponytail: hook standing in for done `fn_00409824`, rewire to the
-/// real call once cross-module linkage proven.
+/// Error-link target `0x00409824`, `(base, 1, msg)`; returns DATA pointer:
+/// direct intra-reconstruction call (rewired; signatures verified
+/// `fn(*mut u8, u8, *mut u8) -> *mut u8`).
+use crate::fn_00409824::fn_00409824;
+unsafe extern "C" fn adapt_00409824(b: *mut u8, f: u8, m: *mut u8) -> *mut u8 {
+    fn_00409824(b, f, m)
+}
 pub static mut HOOK_00409824: unsafe extern "C" fn(*mut u8, u8, *mut u8) -> *mut u8 =
-    default_error;
+    adapt_00409824;
 
-/// Error-consume target `0x00403f88`, `(obj)`.
-///
-/// ponytail: hook standing in for done `fn_00403f88` (which takes
-/// the object as a `u32` lane on target); pointer-sized here so host
-/// pointers are never truncated, rewire once linkage proven.
-pub static mut HOOK_00403f88: unsafe extern "C" fn(*mut u8) = default_consume;
+/// Error-consume target `0x00403f88`, `(obj)`: direct
+/// intra-reconstruction call (rewired; `fn_00403f88` verified
+/// `fn(u32)`; adapter narrows, exact on the i686 target).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_00403f88(o: *mut u8) {
+    crate::fn_00403f88::fn_00403f88(o as u32)
+}
+pub static mut HOOK_00403f88: unsafe extern "C" fn(*mut u8) = adapt_00403f88;
 
-/// Read target `0x0040c1f8`, `(stream, buf, len)`.
-///
-/// ponytail: hook standing in for done `fn_0040c1f8` (whose buffer
-/// lane is a `u32` on target); pointer-sized here so host pointers
-/// are never truncated, rewire once linkage proven.
+/// Read target `0x0040c1f8`, `(stream, buf, len)`: direct
+/// intra-reconstruction call (rewired; signatures verified against
+/// `fn_0040c1f8` as `fn(*mut *const u8, u32, i32)` — buffer lane
+/// widened here so host pointers are never truncated; the adapter
+/// narrows, exact on the i686 target).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040c1f8(s: *mut *const u8, b: *mut u8, l: u32) {
+    crate::fn_0040c1f8::fn_0040c1f8(s, b as u32, l as i32)
+}
 pub static mut HOOK_0040c1f8: unsafe extern "C" fn(*mut *const u8, *mut u8, u32) =
-    default_read;
+    adapt_0040c1f8;
 
-/// CRC target `0x0040c738`, `(buf, len)`.
-///
-/// ponytail: hook standing in for done `fn_0040c738`, rewire to the
-/// real call once CRC-table setup proven.
-pub static mut HOOK_0040c738: unsafe extern "C" fn(*const u8, u32) -> u32 = default_crc;
+/// CRC target `0x0040c738`, `(buf, len)`: direct intra-reconstruction
+/// call (rewired; `fn_0040c738` verified `fn(*const u8, i32) -> u32`;
+/// table self-inits via `fn_0040c6e4`).
+// ponytail: adapter, exact parity on i686 only.
+unsafe extern "C" fn adapt_0040c738(b: *const u8, l: u32) -> u32 {
+    crate::fn_0040c738::fn_0040c738(b, l as i32)
+}
+pub static mut HOOK_0040c738: unsafe extern "C" fn(*const u8, u32) -> u32 = adapt_0040c738;
 
 /// Cell observed as `dword ptr [0x0040c4dc]` (`PTR_PTR_0040c4dc`),
 /// dereferenced as the error-link base.
