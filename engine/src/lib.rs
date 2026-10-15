@@ -10,6 +10,7 @@ pub mod fn_00434390;
 pub mod fn_00435740;
 pub mod fn_004357a0;
 pub mod fn_00442f80;
+pub mod fn_00442fb0;
 pub mod fn_00443030;
 pub mod fn_00443060;
 pub mod fn_004432a0;
