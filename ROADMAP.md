@@ -14,6 +14,10 @@ Principles:
   calls; rendering/audio/input sit behind small traits.
 - Testable without a GPU: headless software path first, pixels
   asserted in CI; GPU backends only add presentation.
+- Dependencies: Rust crates are allowed whenever they save massive
+  time (rendering, audio, windowing, parsing) — judged per case,
+  pinned in `Cargo.lock`. Hand-rolled only where a crate would cost
+  more than it saves.
 - Documented formats: every decoded format gets a spec in
   `engine/doc/` plus a round-trip test, so modders never guess.
 - No empty scaffolding: crates appear when a phase needs them.
@@ -49,8 +53,8 @@ Principles:
 ## Phase 3 — portable presentation
 
 - `wgpu` backend (Vulkan/Metal/DX12/GL from one codebase) + `winit`
-  window/input + `rodio` audio. New deps only here — platform
-  demands it, stdlib cannot cover GPUs.
+  window/input + `rodio` audio. Per the dependency rule above: GPUs,
+  windows, and sound cards are exactly the massive-savings case.
 - Menus/HUD first (2D overlays over 3D scene), then hill rendering
   from Phase 1 meshes, then textures from Phase 1 packs.
 - Exit: menu navigable, hill renders textured, same on Linux/Windows.
