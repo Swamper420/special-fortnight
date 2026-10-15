@@ -77,6 +77,16 @@ Principles:
 - Reuse `pack/build.sh` pattern per OS (AppImage, .exe installer,
   macOS bundle). Original assets still user-supplied.
 
+## Execution
+
+- Use subagents whenever independent workstreams exist: format
+  parsers (`.hil` vs `.lan` vs `Resource.*`), per-hill verification,
+  per-backend bring-up. Parallel workers, one owner each.
+- Use subagents to contain context: scoping a subsystem or auditing
+  a format should return a short brief, not flood the main session.
+- Sequentialize only true dependencies (core physics before HUD,
+  specs before parsers). If it can run parallel, it runs parallel.
+
 ## Non-goals
 
 - Online play / hill-record DB (protocol + server; revisit post-1.0).
