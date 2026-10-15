@@ -7,6 +7,7 @@
 pub mod assets;
 pub mod decrypt;
 pub mod fn_00435740;
+pub mod fn_004357a0;
 pub mod fn_00457110;
 pub mod hill;
 pub mod lang;
