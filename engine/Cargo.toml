@@ -3,3 +3,7 @@ name = "dsj3-engine"
 version = "0.0.0"
 edition = "2021"
 publish = false
+
+[dependencies]
+# Big-int for the RSA step of file decryption (pure Rust, no C deps).
+num-bigint = "0.4"

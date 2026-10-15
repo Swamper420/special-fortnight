@@ -50,12 +50,21 @@ spec, then parser. Fixtures stay generated-only.
    `004df900`, mult `0x8088405`, mod `0xFFFFFFFF`), dual MD5
    verify (`0046fd90`+`004107f0`). Hill loader is `FUN_00436620`
    (keys `hill/dhill/terrain/judgetower/fence/pillar/stairs/flag/
-   trees`). Reimplementation pending bigint-arith briefs.
+   trees`). Engine `decrypt` reimplemented + verified offline
+   (`engine/src/decrypt.rs`, 5 tests incl. live BOM checks).
+   BLOCKED on license keys (see `engine/doc/formats.md`
+   "Hills"): unregistered shows `REGHILL`; no license available.
 2. `.lan` text blobs → string tables. Check: dump all 6 languages
    to text, diff-stable.
+   Status 2026-10-15: DONE (`engine/src/lang.rs`; English 610
+   strings, `Hill01=Norway`). All 6 decrypt with `K_LAN_HEX`.
 3. `Resource.*` packs → entries + textures. Check: extract every
    entry byte-identical across runs; decode textures to PNG only
    post-decrypt (42 raw `BM` pairs pre-decrypt are chance bytes).
+   Status 2026-10-15: DONE for entries (`engine/src/manifest.rs`
+   + `model.rs`: 145 entries, judgetower 18 batches/72v/36f).
+   Textures not yet decoded to PNG (entries verified, PNG decode
+   open).
 4. Registry settings → portable config file mapping (res, adapter,
    language). Check: Setup-produced values load unchanged.
 - Exit: every format has spec + round-trip test; viewer milestone done.

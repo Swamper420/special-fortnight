@@ -5,3 +5,8 @@
 //! inputs, never bundled, never modified. See `engine/doc/formats.md`.
 
 pub mod assets;
+pub mod decrypt;
+pub mod lang;
+pub mod manifest;
+pub mod model;
+pub mod xml;
