@@ -14,6 +14,7 @@ pub mod fn_00435740;
 pub mod fn_004357a0;
 pub mod fn_00457110;
 pub mod fn_004de320;
+pub mod fn_004de480;
 pub mod hill;
 pub mod lang;
 pub mod manifest;
