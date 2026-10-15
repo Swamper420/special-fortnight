@@ -78,11 +78,16 @@ spec, then parser. Fixtures stay generated-only.
   against recorded in-game values (tolerance documented, not guessed).
 - Exit: scripted jump plays end-to-end headless with stable hashes.
 - Status 2026-10-15: `engine/src/render.rs` proves the software
-  wireframe path (judgetower renders headless, stable). Hill MESH
-  generation (profile params → 3D) is the next RE kritikal: hill
-  loader is `FUN_00436620`, small setters `00436020/00436150/
-  004361f0` mapped, mesh builder itself unidentified (not among
-  those). Demo scope = 4 in-blob hills (trial parity).
+  wireframe path (judgetower renders headless, stable). Hill MESH:
+  anchors/bindings/conversions transcribed (`engine/src/mesh.rs`:
+  inrun P0–P3 + moveTo exact; landing x1–x4 + slope exact; angle
+  keys `at as ar ak a0` converted `×pi×(1/180)` in caller;
+  `[0x61b880]`=pi assumed; arc-length structure verified —
+  `l1/rl`, `l2/rl` sweeps give exactly l1/l2 meters). OPEN: emit
+  topology→polyline, takeoff markers (`+0x268/+0x274`), mesh
+  composition (frames don't meet absolutely — relative placement
+  unmapped), terrain base `FUN_00434ff0`. Demo scope = 4 in-blob
+  hills (trial parity).
 
 ## Phase 3 — portable presentation
 
