@@ -520,6 +520,7 @@ mod fn_004117dc;
 #[cfg(target_os = "linux")]
 mod host_image;
 mod extract;
+mod install;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() >= 2 && (args[1] == "--extract" || args[1] == "-x") {
@@ -534,19 +535,18 @@ fn main() {
         }
         return;
     }
-    if args.len() >= 2 && (args[1] == "--help" || args[1] == "-h") {
-        println!("usage: dsj3 [--extract DIR]  (default: run reconstructed entry)");
+    if args.len() >= 2 && args[1] == "--entry" {
+        // Reconstructed original entry (developer harness, see host_image.rs).
+        #[cfg(target_os = "linux")]
+        host_image::map_original_image();
+        #[cfg(target_os = "linux")]
+        host_image::install_host_heap();
+        unsafe { crate::fn_004117dc::fn_004117dc(); }
         return;
     }
-    // Linux host: map the original image so absolute-address reads hit
-    // original bytes (see host_image.rs). Other targets run the entry
-    // against the linked image directly.
-    #[cfg(target_os = "linux")]
-    host_image::map_original_image();
-    // Linux host: back the Delphi allocator with host memory (leaked,
-    // installer-lifetime). Module defaults stay stubs for hermetic tests.
-    #[cfg(target_os = "linux")]
-    host_image::install_host_heap();
-    // Process entry point (original 0x004117dc), reconstructed 1:1.
-    unsafe { crate::fn_004117dc::fn_004117dc(); }
+    if args.len() >= 2 && (args[1] == "--help" || args[1] == "-h") && args.len() == 2 {
+        println!("{}", install::usage());
+        return;
+    }
+    std::process::exit(install::run(&args));
 }

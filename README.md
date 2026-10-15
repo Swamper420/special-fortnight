@@ -160,6 +160,31 @@ Non-goals: no Wine replacement, no GUI. Boundary code only:
 reconstructed functions stay unmodified; the image file is
 user-supplied, gitignored, read at runtime, never committed.
 
+## Linux installer run
+
+One static 32-bit binary, no runtime deps. Put `dsj3v171.exe`
+beside it (or pass `--image` / set `DSJ3_IMAGE`), then:
+
+```sh
+cargo build --release --target i686-unknown-linux-musl
+./target/i686-unknown-linux-musl/release/dsj3          # wizard: welcome, license,
+                                                       # language, dir, task, confirm
+./target/i686-unknown-linux-musl/release/dsj3 --yes --dir /path/to/dir
+./target/i686-unknown-linux-musl/release/dsj3 --extract /path/to/dir  # headless, no prompts
+# DSJ3_IMAGE=/path/to/dsj3v171.exe  # if exe not beside the binary
+```
+
+Same 58 payload files (SHA1-verified per file, byte-identical to the
+oracle decode), plus installer-generated artifacts: 3 `.url` links
+(ini table, exact bytes), `Shortcuts/*.desktop` (icon table Linux
+equivalent, 12 entries; desktop `DSJ3.desktop` only with `--desktop`
+or the wizard's task prompt), `uninstall.sh` (uninstaller-stub
+equivalent). Finish-page `run` entries (launch/readme/setup) name
+Windows executables and are listed, not launched; registry entries
+have no Linux equivalent and are skipped. Exit 0 on success, 1 on
+corrupt input or refusal, same as the original's abort paths.
+`--entry` runs the reconstructed original entry (developer harness).
+
 ## Headless extract (Linux)
 
 `--extract DIR` installs the payload without the GUI: parses the

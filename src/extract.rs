@@ -340,14 +340,47 @@ struct FileLoc {
     timestamp: i64,
 }
 
-/// Parse setup-0 block1 (header + all entry tables). Returns (files, counts).
-fn parse_tables(dec: &[u8]) -> Result<(Vec<FileEntry>, usize)> {
+/// Installer metadata the wizard shows (names, license, options).
+/// Layouts follow public Inno 5.5.7 table order; see analysis/oracle_files.py.
+pub struct IconEntry {
+    pub name: String,
+    pub file: String,
+}
+
+pub struct IniEntry {
+    pub file: String,
+    pub section: String,
+    pub key: String,
+    pub value: String,
+}
+
+pub struct RunEntry {
+    pub name: String,
+    pub desc: String,
+}
+
+pub struct SetupMeta {
+    pub app_name: String,
+    pub version: String,
+    pub default_dir: String,
+    pub license: Vec<u8>,
+    pub languages: Vec<(String, String)>,
+    pub icons: Vec<IconEntry>,
+    pub ini: Vec<IniEntry>,
+    pub run: Vec<RunEntry>,
+    pub has_desktop_task: bool,
+}
+
+/// Parse setup-0 block1 (header + all entry tables).
+fn parse_tables(dec: &[u8]) -> Result<(Vec<FileEntry>, SetupMeta, usize)> {
     let mut c = Cursor { b: dec, p: 0 };
+    let mut names = Vec::new();
     for _ in 0..28 {
-        c.wstr()?;
+        names.push(c.wstr()?);
     }
+    let mut ansi = Vec::new();
     for _ in 0..4 {
-        c.astr()?;
+        ansi.push(c.astr()?);
     }
     let mut counts = [0u32; 16];
     for v in counts.iter_mut() {
@@ -357,14 +390,17 @@ fn parse_tables(dec: &[u8]) -> Result<(Vec<FileEntry>, usize)> {
     c.take(93)?;
     let table_start = c.p;
     // language entries: 6 wide + 4 ansi + 21 tail
+    let mut languages = Vec::new();
     for _ in 0..counts[0] {
+        let mut ws = Vec::new();
         for _ in 0..6 {
-            c.wstr()?;
+            ws.push(c.wstr()?);
         }
         for _ in 0..4 {
             c.astr()?;
         }
         c.take(21)?;
+        languages.push((ws[0].clone(), ws[1].clone()));
     }
     // custom messages: 2 wide + i32
     for _ in 0..counts[1] {
@@ -391,11 +427,16 @@ fn parse_tables(dec: &[u8]) -> Result<(Vec<FileEntry>, usize)> {
         c.take(8 + 4 + 1 + 10 + 10 + 1 + 8)?;
     }
     // tasks: 6 wide + 4 + 1 + 10 + 10 + 1
+    let mut has_desktop_task = false;
     for _ in 0..counts[5] {
+        let mut ws = Vec::new();
         for _ in 0..6 {
-            c.wstr()?;
+            ws.push(c.wstr()?);
         }
         c.take(4 + 1 + 10 + 10 + 1)?;
+        if ws[0] == "desktopicon" {
+            has_desktop_task = true;
+        }
     }
     // dirs: 7 wide + 4 + 10 + 10 + 2 + 1
     for _ in 0..counts[6] {
@@ -421,7 +462,90 @@ fn parse_tables(dec: &[u8]) -> Result<(Vec<FileEntry>, usize)> {
         files.push(FileEntry { dest: ws[1].clone(), loc, opts, ftype });
         let _ = (&ws, _esz);
     }
-    Ok((files, table_start))
+    // icons: 13 wide + 10 + 10 + 4 + 4 + 1 + 2 + 1 (oracle_files.py)
+    let mut icons = Vec::new();
+    for _ in 0..counts[9] {
+        let mut ws = Vec::new();
+        for _ in 0..13 {
+            ws.push(c.wstr()?);
+        }
+        c.take(20)?;
+        let _icon_index = c.i32()?;
+        let _show_cmd = c.i32()?;
+        c.take(1)?; // close-on-exit
+        c.take(2)?; // hotkey
+        c.take(1)?; // options
+        icons.push(IconEntry { name: ws[0].clone(), file: ws[1].clone() });
+    }
+    // ini: 10 wide + 10 + 10 + 1
+    let mut ini = Vec::new();
+    for _ in 0..counts[10] {
+        let mut ws = Vec::new();
+        for _ in 0..10 {
+            ws.push(c.wstr()?);
+        }
+        c.take(20)?;
+        c.take(1)?; // options
+        ini.push(IniEntry {
+            file: ws[0].clone(),
+            section: ws[1].clone(),
+            key: ws[2].clone(),
+            value: ws[3].clone(),
+        });
+    }
+    // registry: 9 wide + 10 + 10 + 4 + 1 (skipped: no Linux equivalent)
+    for _ in 0..counts[11] {
+        for _ in 0..9 {
+            c.wstr()?;
+        }
+        c.take(20 + 4 + 1)?;
+    }
+    // install-delete: 7 wide + 10 + 10 + 1 (none in this image)
+    for _ in 0..counts[12] {
+        for _ in 0..7 {
+            c.wstr()?;
+        }
+        c.take(20 + 1)?;
+    }
+    // uninstall-delete: 7 wide + 10 + 10 + 1
+    for _ in 0..counts[13] {
+        for _ in 0..7 {
+            c.wstr()?;
+        }
+        c.take(20 + 1)?;
+    }
+    // run: 13 wide + 10 + 10 + 4 + 1 + 2 (oracle_files.py)
+    let mut run = Vec::new();
+    for _ in 0..counts[14] {
+        let mut ws = Vec::new();
+        for _ in 0..13 {
+            ws.push(c.wstr()?);
+        }
+        c.take(20)?;
+        c.take(4)?; // show-cmd
+        c.take(1)?; // wait
+        c.take(2)?; // options
+        run.push(RunEntry { name: ws[0].clone(), desc: ws[6].clone() });
+    }
+    // uninstall-run: 13 wide + 10 + 10 + 4 + 1 + 2 (none in this image)
+    for _ in 0..counts[15] {
+        for _ in 0..13 {
+            c.wstr()?;
+        }
+        c.take(20 + 4 + 1 + 2)?;
+    }
+    let meta = SetupMeta {
+        app_name: names[0].clone(),
+        version: names[9].clone(),
+        default_dir: names[10].clone(),
+        license: ansi[0].clone(),
+        languages,
+        icons,
+        ini,
+        run,
+        has_desktop_task,
+    };
+    Ok((files, meta, table_start))
 }
 
 /// Parse setup-0 block2 (file-location entries, 74 bytes each).
@@ -476,17 +600,11 @@ fn filetime_to_systemtime(ft: i64) -> Option<std::time::SystemTime> {
     std::time::UNIX_EPOCH.checked_add(std::time::Duration::from_secs(secs as u64))
 }
 
-/// Extract the installer image at `image_path` into `outdir`.
-/// Returns the number of files written.
-pub fn extract(image_path: &Path, outdir: &Path) -> Result<usize> {
-    let img = std::fs::read(image_path)
-        .map_err(|e| fail(format!("cannot read {}: {e}", image_path.display())))?;
-    let (_sections, roff, rva_base) = parse_pe(&img)?;
-    let (data_rva, _size) = find_resource(&img, roff, 10, 11111)?;
-    // data_rva is image-relative; convert to file offset via section map.
+/// Read setup-0 blocks (header+tables, file locations) from the image.
+fn read_setup_blocks(img: &[u8]) -> Result<(Vec<u8>, Vec<u8>)> {
+    let (_sections, roff, rva_base) = parse_pe(img)?;
+    let (data_rva, _size) = find_resource(img, roff, 10, 11111)?;
     let to_file_off = |rva: u32| -> Result<usize> {
-        // section with lowest file offset mapping: res implied in .rsrc;
-        // compute from the resource dir base.
         let rva = rva as usize;
         let base_rva = rva_base - _sections.image_base as usize;
         Ok(roff + (rva - base_rva))
@@ -497,9 +615,7 @@ pub fn extract(image_path: &Path, outdir: &Path) -> Result<usize> {
         return Err(fail("bad offset-table id"));
     }
     let ver = u32::from_le_bytes(tab[12..16].try_into().unwrap());
-    let off_exe = u32::from_le_bytes(tab[20..24].try_into().unwrap()) as usize;
     let off0 = u32::from_le_bytes(tab[32..36].try_into().unwrap()) as usize;
-    let off1 = u32::from_le_bytes(tab[36..40].try_into().unwrap()) as usize;
     let tcrc = u32::from_le_bytes(tab[40..44].try_into().unwrap());
     if ver != 1 {
         return Err(fail(format!("unsupported offset-table version {ver}")));
@@ -511,12 +627,35 @@ pub fn extract(image_path: &Path, outdir: &Path) -> Result<usize> {
     if !sid.starts_with(b"Inno Setup Setup Data (5.5.7)") {
         return Err(fail("unsupported setup id"));
     }
-    // setup-0 blocks: header+tables, then file locations.
-    let (_, dec1, next) = read_block(&img, off0 + 64)?;
-    let (_, dec2, _) = read_block(&img, next)?;
-    let (files, _tstart) = parse_tables(&dec1)?;
+    let (_, dec1, next) = read_block(img, off0 + 64)?;
+    let (_, dec2, _) = read_block(img, next)?;
+    Ok((dec1, dec2))
+}
+
+/// Read installer metadata (names, license, icons, run list) without decoding files.
+pub fn read_meta(image_path: &Path) -> Result<SetupMeta> {
+    let img = std::fs::read(image_path)
+        .map_err(|e| fail(format!("cannot read {}: {e}", image_path.display())))?;
+    let (dec1, _dec2) = read_setup_blocks(&img)?;
+    let (_files, meta, _tstart) = parse_tables(&dec1)?;
+    Ok(meta)
+}
+
+/// Extract with options. `desktop` honors the desktop-icon task.
+/// Returns the number of payload files written (58 for this image).
+pub fn extract_with(image_path: &Path, outdir: &Path, desktop: bool) -> Result<usize> {
+    let img = std::fs::read(image_path)
+        .map_err(|e| fail(format!("cannot read {}: {e}", image_path.display())))?;
+    let (dec1, dec2) = read_setup_blocks(&img)?;
+    let (files, meta, _tstart) = parse_tables(&dec1)?;
     let locs = parse_locs(&dec2)?;
-    let _ = off_exe;
+    // setup-1 chunk offset lives in the offset table; re-read it here.
+    let (_sections, roff, rva_base) = parse_pe(&img)?;
+    let (data_rva, _size) = find_resource(&img, roff, 10, 11111)?;
+    let base_rva = rva_base - _sections.image_base as usize;
+    let tab_off = roff + (data_rva as usize - base_rva);
+    let tab = img.get(tab_off..tab_off + 44).ok_or_else(|| fail("truncated offset table"))?;
+    let off1 = u32::from_le_bytes(tab[36..40].try_into().unwrap()) as usize;
     // setup-1 chunk.
     if &img[off1..off1 + 4] != b"zlb\x1a" {
         return Err(fail("bad chunk magic"));
@@ -570,7 +709,78 @@ pub fn extract(image_path: &Path, outdir: &Path) -> Result<usize> {
         written += 1;
         let _ = f.opts;
     }
+    write_generated(outdir, &meta, desktop)?;
     Ok(written)
+}
+
+/// Legacy headless entry: desktop shortcut off (task default unchecked).
+pub fn extract(image_path: &Path, outdir: &Path) -> Result<usize> {
+    extract_with(image_path, outdir, false)
+}
+
+/// Write installer-generated files: `.url` links (ini table), `.desktop`
+/// shortcuts (icon table, Linux equivalent of `{group}`/desktop icons),
+/// and `uninstall.sh` (uninstaller-stub equivalent: removes what was put down).
+fn write_generated(outdir: &Path, meta: &SetupMeta, desktop: bool) -> Result<()> {
+    for e in &meta.ini {
+        let path = dest_path(outdir, &e.file)?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| fail(format!("mkdir {}: {e}", parent.display())))?;
+        }
+        let body = format!("[{}]\r\n{}={}\r\n", e.section, e.key, e.value);
+        std::fs::write(&path, body.as_bytes())
+            .map_err(|e| fail(format!("write {}: {e}", path.display())))?;
+        println!("gen {} (ini {}.{}.{})", path.display(), e.section, e.key, e.value);
+    }
+    // `{group}\X` -> `<dir>/Shortcuts/X.desktop`; `{userdesktop}\DSJ3` -> `<dir>/DSJ3.desktop`.
+    let shortcut_dir = PathBuf::from(outdir).join("Shortcuts");
+    for icon in &meta.icons {
+        let (dir, leaf, enabled) = if let Some(rest) = icon.name.strip_prefix("{group}\\") {
+            (shortcut_dir.clone(), rest.to_string(), true)
+        } else if icon.name.starts_with("{userdesktop}") {
+            (PathBuf::from(outdir), "DSJ3".to_string(), desktop)
+        } else {
+            println!("skip icon {} (unsupported prefix)", icon.name);
+            continue;
+        };
+        if !enabled {
+            println!("skip icon {} (task unchecked)", icon.name);
+            continue;
+        }
+        // `{app}\X` -> installed path; `{uninstallexe}` -> uninstall.sh.
+        let target = if icon.file == "{uninstallexe}" {
+            PathBuf::from(outdir).join("uninstall.sh")
+        } else if let Ok(p) = dest_path(outdir, &icon.file) {
+            p
+        } else {
+            println!("skip icon {} (unresolvable target {})", icon.name, icon.file);
+            continue;
+        };
+        let safe: String = leaf
+            .chars()
+            .map(|ch| if ch == '\\' { '/' } else { ch })
+            .collect();
+        let file_name = format!("{}.desktop", safe.replace('/', "-"));
+        let path = dir.join(file_name);
+        std::fs::create_dir_all(&dir)
+            .map_err(|e| fail(format!("mkdir {}: {e}", dir.display())))?;
+        let body = format!(
+            "[Desktop Entry]\nType=Link\nName={}\nURL=file://{}\n",
+            leaf,
+            target.display()
+        );
+        std::fs::write(&path, body.as_bytes())
+            .map_err(|e| fail(format!("write {}: {e}", path.display())))?;
+        println!("gen {} (icon {} -> {})", path.display(), icon.name, target.display());
+    }
+    // Uninstaller stub equivalent: removes installed payload + generated files.
+    let uninstall = PathBuf::from(outdir).join("uninstall.sh");
+    let body = "#!/bin/sh\n# Generated by dsj3 Linux installer (uninstaller-stub equivalent).\n# Removes the files this installer wrote. Review before running.\nHERE=$(dirname \"$0\")\nrm -f \"$HERE/DSJ3.desktop\" \"$HERE/uninstall.sh\"\nrm -rf \"$HERE/Shortcuts\" \"$HERE/Links\" \"$HERE/DSJ3.exe\" \"$HERE/Setup.exe\" \"$HERE/Readme\" \"$HERE/Licenses\" \"$HERE/Data Files\"\n";
+    std::fs::write(&uninstall, body.as_bytes())
+        .map_err(|e| fail(format!("write {}: {e}", uninstall.display())))?;
+    println!("gen {} (uninstaller stub)", uninstall.display());
+    Ok(())
 }
 
 #[cfg(test)]
@@ -758,6 +968,29 @@ mod tests {
         assert_eq!(n, 58);
         let exe = std::fs::read(dir.join("DSJ3.exe")).expect("DSJ3.exe");
         assert_eq!(&exe[0..2], b"MZ");
+        // ini-table links land as .url files with exact installer contents.
+        let url = std::fs::read(dir.join("Links").join("Deluxe Ski Jump 3.url")).expect(".url");
+        assert_eq!(url, b"[InternetShortcut]\r\nURL=http://www.mediamond.fi/dsj3/\r\n");
+        // icon table lands as .desktop shortcuts; uninstall stub exists.
+        assert!(dir.join("Shortcuts").join("Deluxe Ski Jump 3.desktop").exists());
+        assert!(dir.join("uninstall.sh").exists());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn live_image_meta() {
+        let img = std::path::Path::new("dsj3v171.exe");
+        if !img.exists() {
+            return;
+        }
+        let m = super::read_meta(img).expect("meta");
+        assert_eq!(m.app_name, "Deluxe Ski Jump 3");
+        assert_eq!(m.version, "1.7.1");
+        assert_eq!(m.languages.len(), 6);
+        assert_eq!(m.icons.len(), 13);
+        assert_eq!(m.ini.len(), 3);
+        assert_eq!(m.run.len(), 18);
+        assert!(m.has_desktop_task);
+        assert!(String::from_utf8_lossy(&m.license).contains("End-User License Agreement"));
     }
 }
