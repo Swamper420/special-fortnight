@@ -189,11 +189,13 @@ impl Inrun {
     }
 
     /// First lineTo transcribed from `0x43422a`-`0x434237`:
-    /// `(x=as_rad, y=P3.x)` — axis roles flagged, HS/plotted.
+    /// `(x=P3.x, y=P3.y)` — proven in
+    /// `evidence/00434020_esp_shift.md` (pushed-last word is
+    /// param_1; the `dda60` `RET 8` slot trick re-bases later
+    /// `[ESP+X]` by +4, so `[ESP+0x5c]` there is P3.x).
     pub fn lineto1(&self, deg2rad: bool) -> (f32, f32) {
-        let cvt = |d: f32| if deg2rad { d * PI / 180.0 } else { d };
         let p = self.anchors(deg2rad);
-        (cvt(self.as_), p[3].0)
+        (p[3].0, p[3].1)
     }
 }
 
@@ -302,6 +304,54 @@ impl TerrainBase {
             max2(h as f32, 0.0)
         }
     }
+}
+
+/// Terrain heightfield loop `FUN_004348a0`
+/// (`evidence/004348a0_terrain_loop.md`). Only the asm-certain parts:
+/// grid bounds, per-vertex coords, cosine noise, guard predicates.
+/// Max/min-arg wiring, sin weights, RNG tables, vector growth: open (U3-U5).
+pub const TERRAIN_ROWS: u32 = 61; // `MOV [EBP+0x84],0x3d` (outer bound)
+
+/// Per-vertex coords (`0x434b51`-`0x434b8f`, asm order): `FILD` col/row
+/// (int→x87, exact), `FMUL` step, `FADD` base, `FSTP` float.
+/// f64 intermediates (≈ x87 extended); single f32 round per slot.
+pub fn terrain_coords(col: u32, row: u32, step_x: f32, base_x: f32, step_y: f32, base_y: f32) -> (f32, f32) {
+    (
+        (col as f64 * step_x as f64 + base_x as f64) as f32,
+        (row as f64 * step_y as f64 + base_y as f64) as f32,
+    )
+}
+
+/// Adjustment-guard predicate (`0x434bd6`/`0x434c24`): `FCOMP; FNSTSW;
+/// TEST AH,1; JZ skip` — skips iff C0=0 (ordered ≥), so less OR
+/// unordered (NaN) enters. `!(fvar >= bound)` matches exactly.
+pub fn terrain_adjust_enter(fvar: f32, bound: f32) -> bool {
+    !(fvar >= bound)
+}
+
+/// Cosine noise (`0x434c75`-`0x434cd4`, tap order): `acc=0`;
+/// per tap `t=fvar/div*pi; acc += cos(t+t+ph)*amp` (first fVar4 taps,
+/// then fVar5 taps). x87 extended ≈ f64; one f32 round at return.
+#[allow(clippy::too_many_arguments)]
+pub fn terrain_noise(
+    fvar4: f32,
+    fvar5: f32,
+    pi: f32,
+    div_a: &[f32; 8],
+    ph_a: &[f32; 8],
+    amp_a: &[f32; 8],
+    div_b: &[f32; 8],
+    ph_b: &[f32; 8],
+    amp_b: &[f32; 8],
+) -> f32 {
+    let mut acc = 0.0f64;
+    for k in 0..8 {
+        let t1 = fvar4 as f64 / div_a[k] as f64 * pi as f64;
+        acc += (t1 + t1 + ph_a[k] as f64).cos() * amp_a[k] as f64;
+        let t2 = fvar5 as f64 / div_b[k] as f64 * pi as f64;
+        acc += (t2 + t2 + ph_b[k] as f64).cos() * amp_b[k] as f64;
+    }
+    acc as f32
 }
 
 /// Hill-mesh dispatch `FUN_00436620` (`evidence/00436620_composition.md`).
@@ -455,6 +505,30 @@ mod tests {
             assert!(v.is_finite());
         }
         assert!(((n.m2.0 - n.m1.0) as f64 - 0.075 * (-0.61f64).cos()).abs() < 1e-3);
+    }
+
+    /// ONE check for `FUN_004348a0` loop core
+    /// (`evidence/004348a0_terrain_loop.md`, generated fixture — no
+    /// original bytes): 61-row bound; exact coords (col 3 → 7.0,
+    /// row 0 → −300.0); noise zero-amps → 0, unit tables at origin →
+    /// 16.0 (8 taps × (1+1)); guard less/equal/greater + NaN-enters.
+    #[test]
+    fn terrain_loop_core() {
+        assert_eq!(TERRAIN_ROWS, 61);
+        assert_eq!(terrain_coords(3, 0, 2.0, 1.0, 10.0, -300.0), (7.0, -300.0));
+        assert_eq!(terrain_coords(u32::MAX, 60, 1.0, 0.0, 1.0, 0.0).1, 60.0);
+        let z = [0.0f32; 8];
+        let u = [1.0f32; 8];
+        assert_eq!(terrain_noise(1.5, -2.5, std::f32::consts::PI, &u, &z, &z, &u, &z, &z), 0.0);
+        assert_eq!(
+            terrain_noise(0.0, 0.0, std::f32::consts::PI, &u, &z, &u, &u, &z, &u),
+            16.0
+        );
+        assert!(terrain_adjust_enter(1.0, 2.0));
+        assert!(!terrain_adjust_enter(2.0, 1.0));
+        assert!(!terrain_adjust_enter(1.0, 1.0));
+        assert!(terrain_adjust_enter(f32::NAN, 1.0));
+        assert!(terrain_adjust_enter(1.0, f32::NAN));
     }
 
     #[test]
