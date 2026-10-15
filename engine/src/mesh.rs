@@ -198,6 +198,137 @@ impl Inrun {
     }
 }
 
+/// Landing (`dhill`) anchors `FUN_00434390` (`0x4344d1`-`0x4345f6`,
+/// evidence `evidence/00434390_anchors.md` §2 + emit roles
+/// `evidence/00434390_emit_args.md` §§3-4 + key map
+/// `evidence/00436620_param_keys.md` §3).
+///
+/// Caller `0x436620` parses dhill keys in order
+/// `wb wk w0 ar nr hr lb rs l2 l1 rl nk hk ak a0`, first-parsed
+/// ends deepest, so `p1=a0 p2=ak p3=hk p4=nk p5=rl p6=l1 p7=l2
+/// p8=rs p9=lb p10=hr p11=nr p12=ar p13=w0 p14=wk p15=wb`
+/// (reversal = inference, param_keys U1). Caller converts only
+/// `a0/ak/ar` via `×pi×(1/180)` FMUL pairs, hence `deg2rad`
+/// touches just those three.
+#[derive(Debug, Clone, Copy)]
+pub struct Landing {
+    pub a0: f32,
+    pub ak: f32,
+    pub hk: f32,
+    pub nk: f32,
+    pub rl: f32,
+    pub l1: f32,
+    pub l2: f32,
+    pub rs: f32,
+    pub lb: f32,
+    pub hr: f32,
+    pub nr: f32,
+    pub ar: f32,
+    pub w0: f32,
+    pub wk: f32,
+    pub wb: f32,
+}
+
+/// Stored landing anchors (one field per `FSTP`/`FST` slot) plus
+/// the x87-stack-only angles/slopes consumed at emit time.
+#[derive(Debug, Clone, Copy)]
+pub struct LandingAnchors {
+    pub l1x: f32,
+    pub l1y: f32,
+    pub a16: f32,
+    pub l2x: f32,
+    pub l2y: f32,
+    pub l3x: f32,
+    pub l3y: f32,
+    pub l4x: f32,
+    pub s5: f32,
+    pub l4y: f32,
+    pub n9: f32,
+    pub n11: f32,
+    pub m10: f32,
+    pub at: f32,
+    /// `tan(-p1)` (`0x434618-0x434623` FCHS/FPTAN, popped).
+    pub slope0: f32,
+    /// `tan(-p2-p6/p5)` (`0x434602-0x434615` FCHS/FSUB/FPTAN, popped).
+    pub slope1: f32,
+}
+
+impl Landing {
+    pub fn from_map(m: &std::collections::HashMap<String, f32>) -> Result<Self, String> {
+        let g = |k: &str| m.get(k).copied().ok_or_else(|| format!("dhill missing @{k}"));
+        Ok(Landing {
+            a0: g("a0")?,
+            ak: g("ak")?,
+            hk: g("hk")?,
+            nk: g("nk")?,
+            rl: g("rl")?,
+            l1: g("l1")?,
+            l2: g("l2")?,
+            rs: g("rs")?,
+            lb: g("lb")?,
+            hr: g("hr")?,
+            nr: g("nr")?,
+            ar: g("ar")?,
+            w0: g("w0")?,
+            wk: g("wk")?,
+            wb: g("wb")?,
+        })
+    }
+
+    /// Anchor chain transcribed op-for-op from `0x4344d1`-`0x4345f6`
+    /// in asm order (param_N roles, key names where param_keys §3
+    /// proves them). f64 intermediates (≈ x87 ST0), one f32 round
+    /// per stored slot; x87-stack-only angles stay f64 until use.
+    /// Slot reuses (`param_3/param_7/T65/T75/N9` slots) are comments
+    /// only — fresh locals here.
+    pub fn anchors(&self, deg2rad: bool) -> LandingAnchors {
+        let cvt = |d: f32| if deg2rad { d * PI / 180.0 } else { d };
+        // p1=a0 p2=ak p12=ar arrive in radians when caller converts.
+        let (p1, p2, p12) = (cvt(self.a0), cvt(self.ak), cvt(self.ar));
+        let (p3, p4, p5) = (self.hk, self.nk, self.rl);
+        let (p6, p7, p8) = (self.l1, self.l2, self.rs);
+        let (p9, p10, p11) = (self.lb, self.hr, self.nr);
+        let pi = std::f64::consts::PI;
+        // Angle base: pi*0.5-p2 (x87 stack; p4 parked at [B+0x2c]).
+        let a14base = pi * 0.5 - p2 as f64;
+        // L1x=[B+0x14], L1y=[B+0x10].
+        let l1x = ((a14base.cos() * p5 as f64 + p4 as f64)) as f32;
+        let l1y = ((a14base.sin() * p5 as f64 - p3 as f64)) as f32;
+        // T65=[B+0x1c] scratch (p6/p5).
+        let t65 = (p6 / p5) as f32;
+        // A16base=pi*1.5-p2 (x87 stack); A16=[B+0x30]=A16base-T65.
+        let a16base = pi * 1.5 - p2 as f64;
+        let a16 = (a16base - t65 as f64) as f32;
+        // L2x=[B+0x18]; L2y inline (recomputed at ddcb0#1, no store).
+        let l2x = ((a16 as f64).cos() * p5 as f64 + l1x as f64) as f32;
+        let l2y = ((a16 as f64).sin() * p5 as f64 + l1y as f64) as f32;
+        // T75=[B+0x78] scratch (p7/p5); A15=A16base+T75 (x87 stack).
+        let t75 = (p7 / p5) as f32;
+        let a15 = a16base + t75 as f64;
+        // L3x=[B+0x6c] (dead param_3 slot); L3y=[B+0x20].
+        let l3x = (a15.cos() * p5 as f64 + l1x as f64) as f32;
+        let l3y = (a15.sin() * p5 as f64 + l1y as f64) as f32;
+        // A14=a14base+T75 (x87 stack, FADD onto surviving copy).
+        let a14 = a14base + t75 as f64;
+        // L4x=[B+0x7c] (dead param_7 slot); S5=[B+0x24] FST-kept
+        // (dead T65 slot); L4y=[B+0x28]=S5-p8.
+        let l4x = ((a14.cos() * p8 as f64 + l3x as f64)) as f32;
+        let s5 = ((a14.sin() * p8 as f64 + l3y as f64)) as f32;
+        let l4y = (s5 as f64 - p8 as f64) as f32;
+        // N9=[B+0x80]=L4x+p9; N11=[B+0x78]=N9+p11 (dead T75 slot);
+        // M10=[B+0x8c]=L4y+p10 (dead param_11 slot).
+        let n9 = (l4x as f64 + p9 as f64) as f32;
+        let n11 = (n9 as f64 + p11 as f64) as f32;
+        let m10 = (l4y as f64 + p10 as f64) as f32;
+        // AT=[B+0x84]=atan(p12) via FLD1/FPATAN (dead param_9 slot).
+        let at = (p12 as f64).atan() as f32;
+        // Emit-time slopes (FPTAN, popped, not stored).
+        let slope0 = (-(p1 as f64)).tan() as f32;
+        let slope1 = ((-(p2 as f64)) - t65 as f64).tan() as f32;
+        LandingAnchors { l1x, l1y, a16, l2x, l2y, l3x, l3y, l4x, s5, l4y, n9, n11, m10, at, slope0, slope1 }
+    }
+}
+
 /// Takeoff markers (`FUN_00538660` + stores in `FUN_00434020`;
 /// evidence `evidence/00538660_takeoff_markers.md`).
 ///
@@ -435,6 +566,64 @@ mod tests {
         }
     }
 
+    /// ONE check for landing anchors `FUN_00434390`
+    /// (`evidence/00434390_anchors.md` §2 chain,
+    /// `evidence/00434390_emit_args.md` §§3-4 endpoint roles,
+    /// `evidence/00436620_param_keys.md` §3 key map; generated
+    /// fixture for unit shape + live Hill01 dhill values when
+    /// user-supplied files present, skipped otherwise).
+    #[test]
+    fn landing_anchors_endpoints() {
+        // Generated shape: endpoint relations straight from the
+        // emit_args wiring (b60 cursor (N11,M10), b68 end (N11,0);
+        // ddf10#2 curve end (L4x,S5) vs cursor (L4x,L4y)).
+        let mut m = std::collections::HashMap::new();
+        for (k, v) in [
+            ("a0", 10.0), ("ak", 44.0), ("hk", 65.0), ("nk", 1.0),
+            ("rl", 120.0), ("l1", 8.0), ("l2", 12.0), ("rs", 60.0),
+            ("lb", 5.0), ("hr", 3.0), ("nr", 40.0), ("ar", 35.0),
+            ("w0", 6.0), ("wk", 6.5), ("wb", 7.0),
+        ] {
+            m.insert(k.to_string(), v);
+        }
+        let la = Landing::from_map(&m).unwrap();
+        let a = la.anchors(true);
+        for v in [a.l1x, a.l1y, a.l2x, a.l2y, a.l3x, a.l3y, a.l4x, a.s5, a.l4y, a.n9, a.n11, a.m10, a.at] {
+            assert!(v.is_finite());
+        }
+        assert!((a.n11 - (a.n9 + 40.0)).abs() < 1e-3);
+        assert!((a.m10 - (a.l4y + 3.0)).abs() < 1e-3);
+        assert!((a.l4y - (a.s5 - 60.0)).abs() < 1e-3);
+        assert!((a.at - (35.0f32 * PI / 180.0).atan()).abs() < 1e-6);
+        // Live Hill01 dhill values (manifest locate like
+        // hill.rs live_all_demo_hills): finite/bounded + same
+        // endpoint relations with live nr/hr/rs.
+        let (r000, r001) = (
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.000"),
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.001"),
+        );
+        if !r000.exists() || !r001.exists() {
+            return;
+        }
+        let mraw = std::fs::read(r000).unwrap();
+        let mplain = crate::decrypt::decrypt(&mraw, crate::decrypt::K_RES_HEX).unwrap();
+        let man = crate::manifest::parse(&String::from_utf16le_lossy(&mplain)).unwrap();
+        let raw = std::fs::read(r001).unwrap();
+        let blob = crate::decrypt::decrypt(&raw, crate::decrypt::K_RES_HEX).unwrap();
+        let e = man.entries.iter().find(|e| e.id.ends_with(".hil")).unwrap();
+        let t = std::str::from_utf8(&blob[e.offset as usize..e.offset as usize + e.size as usize]).unwrap();
+        let h = hill::parse(t).unwrap();
+        let live = Landing::from_map(&h.profile_dhill).unwrap();
+        let b = live.anchors(true);
+        eprintln!("live landing anchors={b:?}");
+        for v in [b.l1x, b.l1y, b.l2x, b.l2y, b.l3x, b.l3y, b.l4x, b.s5, b.l4y, b.n9, b.n11, b.m10, b.at, b.slope0, b.slope1] {
+            assert!(v.is_finite(), "{v}");
+            assert!(v.abs() < 5000.0, "{v}");
+        }
+        assert!((b.n11 - (b.n9 + live.nr)).abs() < 1e-2);
+        assert!((b.m10 - (b.l4y + live.hr)).abs() < 1e-2);
+        assert!((b.l4y - (b.s5 - live.rs)).abs() < 1e-2);
+    }
     /// ONE check for the emit-guard transcription
     /// (`evidence/004ddae0_emit_check.md`): branch order
     /// closed → decrease (incl. NaN, x87 C0) → equal-drop → emit;
