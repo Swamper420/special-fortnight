@@ -167,6 +167,74 @@ pub(crate) fn saved_default_lang(languages: &[(String, String)]) -> Option<Strin
     resolve_lang(&game_language_from_text(&text)?, languages).map(str::to_string)
 }
 
+/// Installer code (`--lang`) to settings `Game Language` stem
+/// (`.lan` file stem per `engine/src/settings.rs`). Reverse of the
+/// `STEMS` table in [`resolve_lang`]. `None` when unknown.
+fn lang_stem(code: &str) -> Option<&str> {
+    match code {
+        "en" => Some("English"),
+        "fi" => Some("Finnish"),
+        "de" => Some("German"),
+        "no" => Some("Norwegian"),
+        "pl" => Some("Polish"),
+        "si" => Some("Slovenian"),
+        _ => None,
+    }
+}
+
+/// Set `Game Language` in settings text, preserving all other lines
+/// (comments, blank lines, other keys) verbatim. Appends the key
+/// when absent. Line endings normalize to `\n`.
+pub(crate) fn upsert_game_language(text: &str, stem: &str) -> String {
+    let mut found = false;
+    let mut out = String::new();
+    for line in text.lines() {
+        let line = line.strip_suffix('\r').unwrap_or(line);
+        match line.split_once('=') {
+            Some((k, _)) if k.trim() == "Game Language" => {
+                found = true;
+                out.push_str(&format!("Game Language={stem}\n"));
+            }
+            _ => {
+                out.push_str(line);
+                out.push('\n');
+            }
+        }
+    }
+    if !found {
+        out.push_str(&format!("Game Language={stem}\n"));
+    }
+    out
+}
+
+/// Write `stem` to the settings file at `path`: update in place when
+/// present, else create a minimal file with just `Game Language`.
+/// Best-effort: I/O failures are ignored, never fail the install.
+fn write_lang_at(path: &Path, stem: &str) {
+    let updated = match std::fs::read_to_string(path) {
+        Ok(text) => upsert_game_language(&text, stem),
+        Err(_) => format!("Game Language={stem}\n"),
+    };
+    if let Some(parent) = path.parent() {
+        if std::fs::create_dir_all(parent).is_err() {
+            return;
+        }
+    }
+    let _ = std::fs::write(path, updated);
+}
+
+/// Record the installed language back to the settings file, closing
+/// the loop with [`saved_default_lang`]. Best-effort no-op when the
+/// stem is unknown or no settings path locates.
+fn persist_lang(code: &str) {
+    let stem = match lang_stem(code) {
+        Some(s) => s,
+        None => return,
+    };
+    if let Some(p) = settings_path() {
+        write_lang_at(&p, stem);
+    }}
+
 pub fn usage() -> &'static str {
     "usage: dsj3 [--image EXE] [--dir DIR] [--lang CODE] [--desktop|--no-desktop] [--yes] [--extract DIR] [--gui|--no-gui]\n       dsj3 --entry   (reconstructed original entry, developer harness)"
 }
@@ -297,6 +365,7 @@ fn install(opts: &Options, meta: &crate::extract::SetupMeta) -> i32 {
     println!("installing {} {} to {}", meta.app_name, meta.version, opts.dir.display());
     match crate::extract::extract_with(&opts.image, &opts.dir, opts.desktop) {
         Ok(n) => {
+            persist_lang(&opts.lang);
             println!("installed {n} files to {}", opts.dir.display());
             println!("shortcuts: {}/Shortcuts ({} entries)", opts.dir.display(), meta.icons.len());
             if opts.desktop {
@@ -375,6 +444,50 @@ mod tests {
             Some(v) => std::env::set_var("DSJ3_SETTINGS", v),
             None => std::env::remove_var("DSJ3_SETTINGS"),
         }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn code_to_stem() {
+        assert_eq!(lang_stem("en"), Some("English"));
+        assert_eq!(lang_stem("fi"), Some("Finnish"));
+        assert_eq!(lang_stem("de"), Some("German"));
+        assert_eq!(lang_stem("no"), Some("Norwegian"));
+        assert_eq!(lang_stem("pl"), Some("Polish"));
+        assert_eq!(lang_stem("si"), Some("Slovenian"));
+        assert_eq!(lang_stem("xx"), None);
+    }
+
+    #[test]
+    fn upsert_preserves_other_keys() {
+        let before = "# comment\nVideo Width=1024\nGame Language=English\nAudio Driver=x\n";
+        let after = upsert_game_language(before, "Finnish");
+        assert_eq!(
+            after,
+            "# comment\nVideo Width=1024\nGame Language=Finnish\nAudio Driver=x\n"
+        );
+        // Missing key appends; other keys untouched.
+        let after = upsert_game_language("Video Width=1024\n", "German");
+        assert_eq!(after, "Video Width=1024\nGame Language=German\n");
+        // Round-trips through the read path.
+        assert_eq!(game_language_from_text(&after), Some("German".to_string()));
+    }
+
+    #[test]
+    fn write_at_creates_minimal_and_updates() {
+        let dir = std::env::temp_dir().join(format!("dsj3-lang-write-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        // Absent file -> minimal file with just Game Language.
+        let f = dir.join("sub").join("settings");
+        write_lang_at(&f, "Polish");
+        assert_eq!(std::fs::read_to_string(&f).unwrap(), "Game Language=Polish\n");
+        // Existing keys preserved, language replaced.
+        std::fs::write(&f, "Video Width=1024\nGame Language=English\n").unwrap();
+        write_lang_at(&f, "Slovenian");
+        assert_eq!(
+            std::fs::read_to_string(&f).unwrap(),
+            "Video Width=1024\nGame Language=Slovenian\n"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
