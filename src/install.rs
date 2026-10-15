@@ -100,6 +100,73 @@ pub(crate) fn is_tty() -> bool {
     }
 }
 
+/// Portable settings file: `$DSJ3_SETTINGS`, else
+/// `$HOME/.config/dsj3/settings` (`Game Language` value format, see
+/// `engine/src/settings.rs`). `None` when no candidate locates.
+fn settings_path() -> Option<PathBuf> {
+    if let Ok(v) = std::env::var("DSJ3_SETTINGS") {
+        if !v.is_empty() {
+            return Some(PathBuf::from(v));
+        }
+    }
+    let home = std::env::var("HOME").ok()?;
+    if home.is_empty() {
+        return None;
+    }
+    Some(PathBuf::from(home).join(".config/dsj3/settings"))
+}
+
+/// `Game Language` value from portable settings text (same line shape
+/// as `engine::settings::parse`: `#`/`;` comments, blank lines
+/// skipped, key trimmed, value verbatim; other keys ignored).
+fn game_language_from_text(text: &str) -> Option<String> {
+    for line in text.lines() {
+        let line = line.strip_suffix('\r').unwrap_or(line);
+        if line.is_empty() || line.starts_with(['#', ';']) {
+            continue;
+        }
+        let (k, v) = line.split_once('=')?;
+        if k.trim() == "Game Language" {
+            return Some(v.to_string());
+        }
+    }
+    None
+}
+
+/// Saved-value (`Game Language` stem, e.g. `Finnish`) to installer
+/// code in this image. `.lan` stems per `engine/src/lang.rs`;
+/// a raw code or display name resolves too. `None` when unresolvable.
+fn resolve_lang<'a>(value: &str, languages: &'a [(String, String)]) -> Option<&'a str> {
+    const STEMS: [(&str, &str); 6] = [
+        ("english", "en"),
+        ("finnish", "fi"),
+        ("german", "de"),
+        ("norwegian", "no"),
+        ("polish", "pl"),
+        ("slovenian", "si"),
+    ];
+    let lower = value.to_ascii_lowercase();
+    let mapped = STEMS.iter().find(|(s, _)| *s == lower).map(|(_, c)| *c);
+    languages.iter().find_map(|(code, name)| {
+        let hit = mapped == Some(code.as_str())
+            || code.to_ascii_lowercase() == lower
+            || name.to_ascii_lowercase() == lower;
+        hit.then_some(code.as_str())
+    })
+}
+
+/// Saved language default for the language page: the settings-file
+/// `Game Language` when it names a language in this image.
+/// `None` for single-language images (page skipped, default untouched)
+/// and when no saved value resolves (fallback: current default).
+pub(crate) fn saved_default_lang(languages: &[(String, String)]) -> Option<String> {
+    if languages.len() < 2 {
+        return None;
+    }
+    let text = std::fs::read_to_string(settings_path()?).ok()?;
+    resolve_lang(&game_language_from_text(&text)?, languages).map(str::to_string)
+}
+
 pub fn usage() -> &'static str {
     "usage: dsj3 [--image EXE] [--dir DIR] [--lang CODE] [--desktop|--no-desktop] [--yes] [--extract DIR] [--gui|--no-gui]\n       dsj3 --entry   (reconstructed original entry, developer harness)"
 }
@@ -125,7 +192,12 @@ pub fn run(args: &[String]) -> i32 {
             return 1;
         }
     };
-    let defaults = default_options(&image);
+    let mut defaults = default_options(&image);
+    // Multi-language images pre-select the saved `Game Language`;
+    // single-language skip and the `en` fallback stay as they were.
+    if let Some(code) = saved_default_lang(&meta.languages) {
+        defaults.lang = code;
+    }
     let mut opts = Options {
         image,
         dir: arg_value(args, "--dir").map(PathBuf::from).unwrap_or(defaults.dir),
@@ -241,5 +313,68 @@ fn install(opts: &Options, meta: &crate::extract::SetupMeta) -> i32 {
             eprintln!("install failed: {e}");
             1
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn six_langs() -> Vec<(String, String)> {
+        ["en:English", "fi:Suomi", "de:Deutsch", "no:Norsk", "pl:Polski", "si:Slovenski"]
+            .iter()
+            .map(|s| {
+                let (c, n) = s.split_once(':').unwrap();
+                (c.to_string(), n.to_string())
+            })
+            .collect()
+    }
+
+    #[test]
+    fn stem_to_code() {
+        let l = six_langs();
+        assert_eq!(resolve_lang("English", &l), Some("en"));
+        assert_eq!(resolve_lang("Finnish", &l), Some("fi"));
+        assert_eq!(resolve_lang("Slovenian", &l), Some("si"));
+        assert_eq!(resolve_lang("german", &l), Some("de")); // case-insensitive
+        assert_eq!(resolve_lang("fi", &l), Some("fi")); // raw code resolves
+        assert_eq!(resolve_lang("Suomi", &l), Some("fi")); // display name resolves
+        assert_eq!(resolve_lang("Klingon", &l), None);
+        let one = vec![("en".to_string(), "English".to_string())];
+        assert_eq!(resolve_lang("German", &one), None);
+    }
+
+    #[test]
+    fn saved_default_from_settings_file() {
+        // Only test touching DSJ3_SETTINGS (env shared across threads).
+        let dir = std::env::temp_dir().join(format!("dsj3-lang-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let prev = std::env::var("DSJ3_SETTINGS").ok();
+        let l = six_langs();
+        let one = vec![("en".to_string(), "English".to_string())];
+        // Full Setup-shaped file preselects; single-language stays None.
+        let f = dir.join("settings");
+        std::fs::write(
+            &f,
+            "Video Adapter=Primary Display Adapter\nVideo Width=1024\nVideo Height=768\n\
+             Video Format=32\nAudio Driver=Primary Sound Driver\nGame Language=Finnish\n",
+        )
+        .unwrap();
+        std::env::set_var("DSJ3_SETTINGS", &f);
+        assert_eq!(saved_default_lang(&l), Some("fi".to_string()));
+        assert_eq!(saved_default_lang(&one), None);
+        // Unknown stem, missing key, and missing file all fall back.
+        std::fs::write(&f, "Game Language=Klingon\n").unwrap();
+        assert_eq!(saved_default_lang(&l), None);
+        std::fs::write(&f, "Video Width=1024\n").unwrap();
+        assert_eq!(saved_default_lang(&l), None);
+        std::env::set_var("DSJ3_SETTINGS", dir.join("absent"));
+        assert_eq!(saved_default_lang(&l), None);
+        match prev {
+            Some(v) => std::env::set_var("DSJ3_SETTINGS", v),
+            None => std::env::remove_var("DSJ3_SETTINGS"),
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

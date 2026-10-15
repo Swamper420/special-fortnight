@@ -190,7 +190,10 @@ the language page is skipped for single-language images; the desktop
 task defaults to off as in the original). The GUI is Tk, not the
 Delphi original: same flow and defaults, native look differs
 (ceiling). Without a display or `wish`, `--gui` falls back to the
-terminal wizard with a one-line note.
+terminal wizard with a one-line note. On multi-language images both
+wizards pre-select the saved `Game Language` settings value
+(`$DSJ3_SETTINGS`, else `$HOME/.config/dsj3/settings`) when it names
+a language in the image, otherwise the default is unchanged.
 
 ## Release artifacts (local)
 

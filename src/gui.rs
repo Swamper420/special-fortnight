@@ -52,8 +52,11 @@ pub fn run(args: &[String]) -> i32 {
         eprintln!("no graphical display or wish(1); using terminal wizard");
         return crate::install::run(args);
     }
-    // Prefill from flags; unknown language aborts like the terminal wizard.
-    let lang = crate::install::arg_value(args, "--lang").unwrap_or_else(|| "en".into());
+    // Prefill from flags, then the saved `Game Language`, then `en`;
+    // unknown language aborts like the terminal wizard.
+    let lang = crate::install::arg_value(args, "--lang")
+        .or_else(|| crate::install::saved_default_lang(&meta.languages))
+        .unwrap_or_else(|| "en".into());
     if !meta.languages.iter().any(|(code, _)| code == &lang) {
         eprintln!("unknown language '{lang}'; available:");
         for (code, name) in &meta.languages {
