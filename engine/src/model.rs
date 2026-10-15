@@ -35,6 +35,7 @@ pub struct Batch {
 fn f(e: &xml::Elem, k: &str, ctx: &str) -> Result<f32, String> {
     e.get(k)
         .ok_or_else(|| format!("{ctx} missing @{k}"))?
+        .trim_ascii()
         .parse::<f32>()
         .map_err(|_| format!("{ctx} bad @{k}"))
 }
@@ -117,6 +118,19 @@ mod tests {
         assert_eq!(b[0].faces, vec![Face { v1: 1, v2: 2, v3: 1 }]);
     }
 
+    /// Generated fixture (never original bytes): ASCII whitespace
+    /// around float attrs (e.g. `x=" 0.00"` in `sj-model.txt`) parses;
+    /// genuinely bad values keep the same error.
+    #[test]
+    fn leading_space_floats_parse() {
+        let xml = "<3dmodel><batch id=\"b\" texture1=\"a.png\" material=\"%m\" fvf=\"274\" order=\"0\">\n<vertex id=\"1\" x=\" 0.00\" y=\"\t-4.0 \" z=\" 1.5\" u1=\" 0.0\" v1=\" 2.0 \"/>\n</batch></3dmodel>";
+        let b = parse(xml).unwrap();
+        assert_eq!(b[0].vertices[0].x, 0.0);
+        assert_eq!(b[0].vertices[0].y, -4.0);
+        let bad = "<3dmodel><batch id=\"b\"><vertex id=\"1\" x=\"abc\" y=\"0\" z=\"0\" u1=\"0\" v1=\"0\"/></batch></3dmodel>";
+        assert_eq!(parse(bad).unwrap_err(), "vertex bad @x");
+    }
+
     /// Generated fixture PNG (never original bytes): resolve by entry
     /// id, accept `/` variant, miss otherwise.
     #[test]
@@ -136,10 +150,9 @@ mod tests {
         assert!(texture_pixels(&entries, "Textures\\missing.png").is_err());
     }
 
-    /// Live check: every `judgetower-summer-model.txt` batch texture
-    /// resolves to non-empty RGBA8. Skips when install dir absent.
-    /// (`sj-model.txt` not used: its `x=" 0.00"` leading-space values
-    /// predate this helper and fail `model::parse`; out of scope.)
+    /// Live check: every `*-model.txt` entry parses (decrypt+manifest)
+    /// and each batch texture resolves to non-empty RGBA8. Skips when
+    /// install dir absent.
     #[test]
     fn live_batch_textures_decode() {
         let res = std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources");
@@ -155,23 +168,28 @@ mod tests {
         let plain1 =
             crate::decrypt::decrypt(&img1, crate::decrypt::K_RES_HEX).unwrap();
         let entries = crate::manifest::split(&m, &plain1).unwrap();
-        let (_, model_blob) = entries
+        let models: Vec<(&str, &[u8])> = entries
             .iter()
-            .find(|(id, _)| *id == "3DModels\\judgetower-summer-model.txt")
-            .expect("judgetower-summer-model.txt in manifest");
-        let text = String::from_utf8_lossy(model_blob).into_owned();
-        let batches = parse(&text).unwrap();
-        assert!(!batches.is_empty());
-        for b in &batches {
-            let img = texture_pixels(&entries, &b.texture)
-                .unwrap_or_else(|e| panic!("{}: {e}", b.texture));
-            assert!(img.width > 0 && img.height > 0, "{}", b.texture);
-            assert_eq!(
-                img.pixels.len(),
-                img.width as usize * img.height as usize * 4,
-                "{}",
-                b.texture
-            );
+            .filter(|(id, _)| id.ends_with("model.txt"))
+            .map(|(id, blob)| (*id, *blob))
+            .collect();
+        assert!(!models.is_empty(), "no *-model.txt in manifest");
+        for (id, model_blob) in &models {
+            let text = String::from_utf8_lossy(model_blob).into_owned();
+            let batches =
+                parse(&text).unwrap_or_else(|e| panic!("{id}: {e}"));
+            assert!(!batches.is_empty(), "{id}: no <batch>");
+            for b in &batches {
+                let img = texture_pixels(&entries, &b.texture)
+                    .unwrap_or_else(|e| panic!("{id} {}: {e}", b.texture));
+                assert!(img.width > 0 && img.height > 0, "{id} {}", b.texture);
+                assert_eq!(
+                    img.pixels.len(),
+                    img.width as usize * img.height as usize * 4,
+                    "{id} {}",
+                    b.texture
+                );
+            }
         }
     }
 }
