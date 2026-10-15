@@ -4,7 +4,7 @@
 //! Exists so Phase 1's viewer milestone is asserted in CI
 //! (`cargo test -p engine`); GPU backends only add presentation.
 
-use crate::model::Batch;
+use crate::model::{Batch, Face, Vertex};
 
 /// Orthographic camera: looks down -z, x right, y up.
 pub struct Cam {
@@ -18,6 +18,22 @@ pub fn project(v: &crate::model::Vertex, cam: &Cam, w: u32, h: u32) -> (i32, i32
     let y = (h as f32 / 2.0 - (v.y - cam.cy) * cam.scale) as i32;
     let _ = h;
     (x, y)
+}
+
+/// Pack an X-monotone strip polyline (e.g. inrun b50 emits) as
+/// degenerate faces (`a,b,b` draws segment `a-b`) so the existing
+/// `wireframe` rasterizes it with no new draw code.
+pub fn strip_batch(points: &[(f32, f32)]) -> Batch {
+    Batch {
+        id: "strip".into(),
+        texture: String::new(),
+        material: String::new(),
+        vertices: points
+            .iter()
+            .map(|&(x, y)| Vertex { x, y, z: 0.0, u: 0.0, v: 0.0 })
+            .collect(),
+        faces: (1..points.len() as u32).map(|i| Face { v1: i, v2: i + 1, v3: i + 1 }).collect(),
+    }
 }
 
 /// Draw all batch faces as segments. Returns lit-pixel count.
@@ -126,5 +142,71 @@ mod tests {
         let mut buf = vec![0u8; (w * h) as usize];
         let n = wireframe(&mut buf, w, h, &batches, &cam);
         assert!(n > 50, "lit={n}");
+    }
+
+    /// End-to-end inrun b50 strip, headless (`evidence/004ddae0_emit_check.md`
+    /// + `evidence/00434020_esp_shift.md`): `Inrun::anchors/moveto` →
+    /// `StripCursor` emits (`dda60` open, `ddae0` ×3, `dd970` seal) →
+    /// `strip_batch` + `wireframe` pixels. Generated Hill01-equivalent
+    /// fixture (live `Hill01-HS138.hil` values); asserts emitted X
+    /// strictly increases and the polyline lights pixels.
+    #[test]
+    fn inrun_strip_renders_headless() {
+        use crate::mesh::{EmitAction, EmitErr, Inrun, StripCursor};
+        // Generated fixture: Hill01 inrun profile values.
+        let ir = Inrun {
+            lz: 3.0,
+            ls: 42.0,
+            lg: 4.7,
+            as_: 44.2,
+            rc: 50.0,
+            lt: 4.6,
+            at: 10.5,
+            ht: 1.7,
+            tz: -0.3,
+            ws: 3.0,
+        };
+        let (m, l1) = (ir.moveto(true), ir.lineto1(true));
+        let p2 = ir.anchors(true)[2];
+        let end = (0.0, ir.ht); // b50 `ddae0(0, ht)`.
+        // b50 order must be X-monotone or the game throws (Decrease).
+        assert!(m.0 < l1.0 && l1.0 < p2.0 && p2.0 < end.0, "m={m:?} l1={l1:?} p2={p2:?}");
+        let mut s = StripCursor::open(m.0, m.1);
+        let mut pts = vec![m];
+        for &(x, y) in &[l1, p2, end] {
+            assert_eq!(s.push(x, y), Ok(EmitAction::Emit));
+            pts.push((s.x, s.y));
+        }
+        // Equal-X drops silently (no cursor/count move).
+        let c = s.count;
+        assert_eq!(s.push(end.0, 99.0), Ok(EmitAction::IgnoreEqual));
+        assert_eq!((s.x, s.count), (end.0, c));
+        // Decrease throws; seal ends the strip like `dd970`.
+        assert_eq!(s.push(end.0 - 1.0, 0.0), Err(EmitErr::Decrease));
+        s.seal();
+        assert_eq!(s.push(1.0, 0.0), Err(EmitErr::Closed));
+        // Render: frame the strip, draw, require lit + screen-X monotone.
+        let (lox, hix) = (pts[0].0, pts[3].0);
+        let (mut loy, mut hiy) = (f32::INFINITY, f32::NEG_INFINITY);
+        for &(_, y) in &pts {
+            loy = loy.min(y);
+            hiy = hiy.max(y);
+        }
+        let cam = Cam { scale: 3.0, cx: (lox + hix) / 2.0, cy: (loy + hiy) / 2.0 };
+        let (w, h) = (220, 140);
+        let batch = strip_batch(&pts);
+        let mut buf = vec![0u8; (w * h) as usize];
+        let n = wireframe(&mut buf, w, h, &[batch], &cam);
+        assert!(n > 100, "lit={n}");
+        let sx: Vec<i32> = pts
+            .iter()
+            .map(|&(x, y)| {
+                project(&Vertex { x, y, z: 0.0, u: 0.0, v: 0.0 }, &cam, w, h).0
+            })
+            .collect();
+        assert!(sx.windows(2).all(|p| p[0] < p[1]), "sx={sx:?}");
+        let mut buf2 = vec![0u8; (w * h) as usize];
+        assert_eq!(wireframe(&mut buf2, w, h, &[strip_batch(&pts)], &cam), n);
+        assert_eq!(buf, buf2);
     }
 }
