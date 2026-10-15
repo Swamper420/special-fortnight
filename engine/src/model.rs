@@ -85,6 +85,22 @@ pub fn parse(text: &str) -> Result<Vec<Batch>, String> {
     Ok(batches)
 }
 
+/// Resolve a batch `texture1` reference (e.g. `Textures\wood1.png`)
+/// to decoded RGBA8 pixels. `entries` is `manifest::split` output over
+/// the decrypted `Resource.001`; match is exact on the entry id, with
+/// a `/`→`\` fallback for slash variants. Decode via `png::decode`.
+pub fn texture_pixels(
+    entries: &[(&str, &[u8])],
+    texture: &str,
+) -> Result<crate::png::Image, String> {
+    let norm = texture.replace('/', "\\");
+    let (_, blob) = entries
+        .iter()
+        .find(|(id, _)| *id == texture || *id == norm)
+        .ok_or_else(|| format!("texture {texture} not in manifest"))?;
+    crate::png::decode(blob).map_err(|e| format!("texture {texture}: {e}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -99,5 +115,63 @@ mod tests {
         assert_eq!(b[0].vertices.len(), 2);
         assert_eq!(b[0].vertices[0].y, -4.0);
         assert_eq!(b[0].faces, vec![Face { v1: 1, v2: 2, v3: 1 }]);
+    }
+
+    /// Generated fixture PNG (never original bytes): resolve by entry
+    /// id, accept `/` variant, miss otherwise.
+    #[test]
+    fn texture_resolves_to_pixels() {
+        let rgba = [255, 0, 0, 255];
+        let mut enc = Vec::new();
+        let mut e = png::Encoder::new(&mut enc, 1, 1);
+        e.set_color(png::ColorType::Rgba);
+        e.set_depth(png::BitDepth::Eight);
+        e.write_header().unwrap().write_image_data(&rgba).unwrap();
+        let entries = vec![("Textures\\a.png", enc.as_slice())];
+        let img = texture_pixels(&entries, "Textures\\a.png").unwrap();
+        assert_eq!((img.width, img.height), (1, 1));
+        assert_eq!(img.pixels, rgba);
+        let img2 = texture_pixels(&entries, "Textures/a.png").unwrap();
+        assert_eq!(img2.pixels, rgba);
+        assert!(texture_pixels(&entries, "Textures\\missing.png").is_err());
+    }
+
+    /// Live check: every `judgetower-summer-model.txt` batch texture
+    /// resolves to non-empty RGBA8. Skips when install dir absent.
+    /// (`sj-model.txt` not used: its `x=" 0.00"` leading-space values
+    /// predate this helper and fail `model::parse`; out of scope.)
+    #[test]
+    fn live_batch_textures_decode() {
+        let res = std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources");
+        if !res.join("Resource.000").exists() || !res.join("Resource.001").exists() {
+            return;
+        }
+        let img0 = std::fs::read(res.join("Resource.000")).unwrap();
+        let plain0 =
+            crate::decrypt::decrypt(&img0, crate::decrypt::K_RES_HEX).unwrap();
+        let m =
+            crate::manifest::parse(&String::from_utf16le_lossy(&plain0)).unwrap();
+        let img1 = std::fs::read(res.join("Resource.001")).unwrap();
+        let plain1 =
+            crate::decrypt::decrypt(&img1, crate::decrypt::K_RES_HEX).unwrap();
+        let entries = crate::manifest::split(&m, &plain1).unwrap();
+        let (_, model_blob) = entries
+            .iter()
+            .find(|(id, _)| *id == "3DModels\\judgetower-summer-model.txt")
+            .expect("judgetower-summer-model.txt in manifest");
+        let text = String::from_utf8_lossy(model_blob).into_owned();
+        let batches = parse(&text).unwrap();
+        assert!(!batches.is_empty());
+        for b in &batches {
+            let img = texture_pixels(&entries, &b.texture)
+                .unwrap_or_else(|e| panic!("{}: {e}", b.texture));
+            assert!(img.width > 0 && img.height > 0, "{}", b.texture);
+            assert_eq!(
+                img.pixels.len(),
+                img.width as usize * img.height as usize * 4,
+                "{}",
+                b.texture
+            );
+        }
     }
 }
