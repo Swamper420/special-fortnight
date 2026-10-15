@@ -190,3 +190,9 @@ count)`, `StripCursor::{advance, seal}` (`count`
 - U5: `[0x61b880]`=pi assumed (file 0.0, set at runtime);
   composition of b50/b58/b60/b68 frames unmapped
   (separate task, untouched).
+
+Status update (inrun `ddf10`): `evidence/00434020_ddf10_args.md`
+maps the `0x43424e-0x434265` slots to
+`ddf10(A0x, A0y, A1x, A1y)` and on to ctor
+`(cx=A1x, cy=A1y, prev=cursor, new=(A0x,A0y))`.
+Landing `ddcb0`/`ddf10` slots stay open (U2 remainder).
