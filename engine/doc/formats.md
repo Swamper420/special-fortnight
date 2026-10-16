@@ -38,6 +38,9 @@ Textures (DONE 2026-10-15): 101/101 embedded PNGs decode to pixels
 (`engine/src/png.rs`, `png` crate for inflate/unfilter/expand,
 fixed RGBA8 expansion after). All 8-bit non-interlaced, color
 types 0/2/3/4/6; per-file magic + IHDR CRC + dims asserted live.
+Sounds (DONE 2026-10-16): 21/21 embedded OGGs decode to i16 PCM
+(`engine/src/audio.rs`, `lewton` crate; stereo, 22050/44100 Hz;
+magic + channels + rate + frame alignment asserted live).
 
 ## Languages (`*.lan`, ~37 KB each after decrypt)
 
