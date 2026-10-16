@@ -409,6 +409,18 @@ pub fn max2(a: f32, b: f32) -> f32 {
     }
 }
 
+/// `thr`/`off` writers (`evidence/thr_off_writers.md`): dhill phase
+/// `FUN_00434390` stores `[hill+0x260]=N11-p15h`, `[hill+0x264]=p15h`
+/// (`0x434878/0x43487e`) on the same hill object the terrain phase
+/// (`FUN_004348a0` → `FUN_00434ff0`) reads as `thr`/`off`; `p15=wb`
+/// (param_keys parse order), `p15h=wb*0.5` (`FMUL [0x5cd3c0]=0.5f`,
+/// `0x434785`), `N11=Landing::anchors().n11`. f32 ops in asm order:
+/// halve `wb`, then subtract.
+pub fn terrain_base_thr_off(n11: f32, wb: f32) -> (f32, f32) {
+    let off = wb * 0.5;
+    (n11 - off, off)
+}
+
 impl TerrainBase {
     /// `FUN_00434ff0(ECX=this, p1, p2) -> f32`, branch-for-branch from asm.
     pub fn eval(&self, xform: impl FnOnce(f32) -> f32, p1: f32, p2: f32) -> f32 {
@@ -1152,8 +1164,14 @@ mod tests {
         // Fixtures for open parts: identity base xform, guard accum
         // = its transcription (`terrain_guard_h` curried over fixture
         // strips/xforms — the `height` closure seam; base value `b`
-        // is not an input to `h`), zero lo strip.
-        let base = TerrainBase { thr: 0.0, off: 0.0, x0: 0.0, lo: -100.0, hi: 100.0, range_present: true };
+        // is not an input to `h`), zero lo strip. thr/off derived
+        // from live Landing anchors via `terrain_base_thr_off`
+        // (`evidence/thr_off_writers.md`: thr=N11-wb*0.5, off=wb*0.5).
+        let land = Landing::from_map(&h.profile_dhill).unwrap();
+        let la = land.anchors(true);
+        let (thr, off) = terrain_base_thr_off(la.n11, land.wb);
+        eprintln!("live thr/off={thr}/{off} n11={} wb={}", la.n11, land.wb);
+        let base = TerrainBase { thr, off, x0: 0.0, lo: -100.0, hi: 100.0, range_present: true };
         let grid = TerrainGrid { cols: 41, step_x: 2.0, base_x: -40.0 };
         let build = || {
             terrain_build(
