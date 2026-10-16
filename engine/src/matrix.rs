@@ -239,6 +239,32 @@ mod tests {
         assert_eq!(&got[2..], &w[2..]);
     }
 
+    /// ONE check for the `00455ba0` frame-block path
+    /// (`evidence/00455ba0_composition_map.md` §3, §10): the block is a
+    /// single `0046f9f0` translation of `(f+g, m, h)` — no scale/rotation.
+    /// `translation` already implements it; this pins the composition
+    /// (f32 `f+g` first, slots 12/13/14, rest identity words).
+    #[test]
+    fn frame_block_translation() {
+        let f = 10.5f32;
+        let g = 2.25f32;
+        let m = -3.0f32;
+        let h = 7.75f32;
+        let t = translation(f + g, m, h);
+        let one = 1.0f32.to_bits();
+        let zero = 0.0f32.to_bits();
+        let bits: Vec<u32> = t.iter().map(|v| v.to_bits()).collect();
+        assert_eq!(
+            bits,
+            vec![
+                one, zero, zero, zero, //
+                zero, one, zero, zero, //
+                zero, zero, one, zero, //
+                (f + g).to_bits(), m.to_bits(), h.to_bits(), one,
+            ]
+        );
+    }
+
     /// ONE check for `FUN_0046fa90` (generated fixture — no original bytes):
     /// identity-quaternion bit-exact + Y-90° transpose-pair asymmetry
     /// (row-major ground truth: slot1 = +wz term, slot4 = −wz term).
