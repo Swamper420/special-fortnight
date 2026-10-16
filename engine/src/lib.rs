@@ -9,6 +9,7 @@ pub mod decrypt;
 pub mod fn_00434390;
 pub mod fn_00435740;
 pub mod fn_004357a0;
+pub mod fn_00436020;
 pub mod fn_00442f30;
 pub mod fn_00442f80;
 pub mod fn_00442fb0;
