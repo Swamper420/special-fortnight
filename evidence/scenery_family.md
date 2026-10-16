@@ -56,7 +56,7 @@ Key names below are the first UTF-16LE token at each key address
 |---|---|---|---|
 | `railing` | `0x436c15–0x436d06` | `00436150`(ECX=hill+0xc4); `004682a0`(ECX=hill+0xc4)→`00435e70`; `00436160`(ECX=hill+0xc4, result discarded) | `d,h` (float `004cae40`); `c1,m1,t1` (string `004caee0`+nested); `c2,m2,t2` (nested) |
 | `frame` | `0x436d0b–0x436e2f` | `004361f0`(ECX=hill+0x114); `0046efb0`→`00435e70`; `00436530`(hill+0x114+0x28)→`00435e70`; `00436540`(hill+0x114+0x4c, result discarded) | `h` (float); `c1,m1,t1`; `c2,m2,t2`; `c3,m3,t3` (strings) |
-| `startgate` | `0x436e34–0x436e97` | `00436590`(ECX=hill+0x9c)→`00435e70` | `c,m,t` (strings) |
+| `startgate` | `0x436e34–0x436e97` | `00436590`(ECX=hill+0x9c, result discarded — no `00435e70`; corrected per `00435e70_strings.md` §4) | `c,m,t` (strings) |
 | `startbanner` | `0x436e9c–0x436eda` | `004361f0`(ECX=hill+0xc0) | `z` (float) |
 | `flag` | `0x436edf–0x437020` | `00436320`(ECX=hill+0x1b8) | `cp` root + `mp,tp,mf,tf` nested (strings); `rt,rb,hp,hf,wf,z,x` (7 floats) |
 | `stairs` | `0x437025–0x4370ac` + tail to `0x437146` | `00435880`(ECX=hill); then `00436580`(EAX=node→+0x10)→`00435e70`; `00502610`(node+0x34, discarded) | `z2,z1,l2,l1` (floats); tail `c1,m1,t1` (strings); tail `c2,m2,t2` (nested, feed discarded LEA) |
