@@ -210,6 +210,73 @@ mod tests {
         assert_eq!(buf, buf2);
     }
 
+    /// End-to-end inrun b58 width strip, headless
+    /// (`evidence/004ddae0_emit_check.md` §3 b58:
+    /// `dda60(P3.x-lz, ws*0.5)`, `ddae0(0, ws*0.5)`, `dd970`):
+    /// `Inrun::anchors/moveto` → `StripCursor` emit →
+    /// `strip_batch` + `wireframe` pixels. Generated
+    /// Hill01-inrun-equivalent fixture (lz=3, ws=3, P3 from
+    /// anchors); asserts emitted X strictly increases and
+    /// the polyline lights pixels.
+    #[test]
+    fn inrun_b58_strip_renders_headless() {
+        use crate::mesh::{EmitAction, EmitErr, Inrun, StripCursor};
+        // Generated fixture: Hill01 inrun profile values (mirror b50 test).
+        let ir = Inrun {
+            lz: 3.0,
+            ls: 42.0,
+            lg: 4.7,
+            as_: 44.2,
+            rc: 50.0,
+            lt: 4.6,
+            at: 10.5,
+            ht: 1.7,
+            tz: -0.3,
+            ws: 3.0,
+        };
+        let p3 = ir.anchors(true)[3];
+        // b58 wiring (§3): dda60(P3.x-lz, ws*0.5); ddae0(0, ws*0.5).
+        let open = (p3.0 - ir.lz, ir.ws * 0.5);
+        let end = (0.0, ir.ws * 0.5);
+        // b58 order must be X-monotone or the game throws (Decrease).
+        assert!(open.0 < end.0, "open={open:?} end={end:?}");
+        let mut s = StripCursor::open(open.0, open.1);
+        let mut pts = vec![open];
+        assert_eq!(s.push(end.0, end.1), Ok(EmitAction::Emit));
+        pts.push((s.x, s.y));
+        // Equal-X drops silently (no cursor/count move).
+        let c = s.count;
+        assert_eq!(s.push(end.0, 99.0), Ok(EmitAction::IgnoreEqual));
+        assert_eq!((s.x, s.count), (end.0, c));
+        // Decrease throws; seal ends the strip like `dd970`.
+        assert_eq!(s.push(end.0 - 1.0, 0.0), Err(EmitErr::Decrease));
+        s.seal();
+        assert_eq!(s.push(1.0, 0.0), Err(EmitErr::Closed));
+        // Render: frame the strip, draw, require lit + screen-X monotone.
+        let (lox, hix) = (pts[0].0, pts[1].0);
+        let (mut loy, mut hiy) = (f32::INFINITY, f32::NEG_INFINITY);
+        for &(_, y) in &pts {
+            loy = loy.min(y);
+            hiy = hiy.max(y);
+        }
+        let cam = Cam { scale: 3.0, cx: (lox + hix) / 2.0, cy: (loy + hiy) / 2.0 };
+        let (w, h) = (220, 140);
+        let batch = strip_batch(&pts);
+        let mut buf = vec![0u8; (w * h) as usize];
+        let n = wireframe(&mut buf, w, h, &[batch], &cam);
+        assert!(n > 100, "lit={n}");
+        let sx: Vec<i32> = pts
+            .iter()
+            .map(|&(x, y)| {
+                project(&Vertex { x, y, z: 0.0, u: 0.0, v: 0.0 }, &cam, w, h).0
+            })
+            .collect();
+        assert!(sx.windows(2).all(|p| p[0] < p[1]), "sx={sx:?}");
+        let mut buf2 = vec![0u8; (w * h) as usize];
+        assert_eq!(wireframe(&mut buf2, w, h, &[strip_batch(&pts)], &cam), n);
+        assert_eq!(buf, buf2);
+    }
+
     /// End-to-end landing b68 width strip, headless
     /// (`evidence/00434390_emit_args.md` §3 b68:
     /// `dda60(0,w0*0.5)`, 3x `ddae0`, `ddf10`, `dd970`):
