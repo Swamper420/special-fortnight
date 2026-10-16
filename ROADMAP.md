@@ -58,6 +58,7 @@ spec, then parser. Fixtures stay generated-only.
    to text, diff-stable.
    Status 2026-10-15: DONE (`engine/src/lang.rs`; English 610
    strings, `Hill01=Norway`). All 6 decrypt with `K_LAN_HEX`.
+   CLI `--dump-langs` added 2026-10-16 (6×610-line dumps, diff-stable).
 3. `Resource.*` packs → entries + textures. Check: extract every
    entry byte-identical across runs; decode textures to PNG only
    post-decrypt (42 raw `BM` pairs pre-decrypt are chance bytes).

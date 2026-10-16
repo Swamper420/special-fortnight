@@ -11,6 +11,8 @@ publish = false
 # installer payload. Pure Rust, no C deps, musl-safe. Reconstructed fn_*
 # modules stay dependency-free.
 lzma-rs = "0.3"
+# --dump-langs backend (src/dump_langs.rs): reuse engine parse/dump/decrypt.
+dsj3-engine = { path = "engine" }
 
 [workspace]
 members = [".", "engine"]

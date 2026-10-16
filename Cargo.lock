@@ -60,6 +60,7 @@ dependencies = [
 name = "dsj3"
 version = "0.0.0"
 dependencies = [
+ "dsj3-engine",
  "lzma-rs",
 ]
 

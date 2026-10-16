@@ -236,7 +236,7 @@ fn persist_lang(code: &str) {
     }}
 
 pub fn usage() -> &'static str {
-    "usage: dsj3 [--image EXE] [--dir DIR] [--lang CODE] [--desktop|--no-desktop] [--yes] [--extract DIR] [--gui|--no-gui]\n       dsj3 --entry   (reconstructed original entry, developer harness)"
+    "usage: dsj3 [--image EXE] [--dir DIR] [--lang CODE] [--desktop|--no-desktop] [--yes] [--extract DIR] [--dump-langs DIR [OUT]] [--gui|--no-gui]\n       dsj3 --entry   (reconstructed original entry, developer harness)"
 }
 
 /// Run the wizard. Returns the process exit code.
