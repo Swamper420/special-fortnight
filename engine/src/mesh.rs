@@ -1132,6 +1132,33 @@ mod tests {
         assert!(g1.iter().all(|v| v.is_finite()));
         assert_eq!(g1, g2);
         eprintln!("live terrain sample={:?}", &g1[..4]);
+        // Seeded RNG tables (live rs; `rng_float::terrain_rng_tables`):
+        // second grid, finite + deterministic re-run + div>0.
+        let seed = crate::rng_float::terrain_seed(&tp);
+        let live = crate::rng_float::terrain_rng_tables(seed, &tp, PI);
+        for k in 0..8 {
+            for &d in &[live.div_a[k], live.div_b[k]] {
+                assert!(d.is_finite() && d > 0.0, "{d}");
+            }
+        }
+        let build_live = || {
+            terrain_build(
+                &grid,
+                &base,
+                |c| c,
+                |fvar4, _| terrain_guard_h(fvar4, -50.0, 50.0, -60.0, 60.0, 0.0, tp.in_, tp.a0, PI, |c| c, |c| c),
+                0.0,
+                &tp,
+                &live,
+                PI,
+            )
+        };
+        let r1 = build_live();
+        let r2 = build_live();
+        assert_eq!(r1.len(), g1.len());
+        assert!(r1.iter().all(|v| v.is_finite()));
+        assert_eq!(r1, r2);
+        eprintln!("live rng tables seed={seed} div_a={:?} sample={:?}", live.div_a, &r1[..4]);
     }
 
     #[test]
