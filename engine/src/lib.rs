@@ -36,6 +36,7 @@ pub mod model;
 pub mod png;
 pub mod render;
 pub mod rng_float;
+pub mod scenery;
 pub mod settings;
 pub mod strip_eval;
 pub mod xml;
