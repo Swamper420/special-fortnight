@@ -109,6 +109,41 @@ pub fn scale(sx: f32, sy: f32, sz: f32) -> Mat4 {
     ])
 }
 
+/// `FUN_0046efc0` (`0x46efc0`, 576 B, `ev_0a37f00d...`): matrix multiply
+/// `dest(param_1) = ECX × param_2` (ECX is LEFT — proven from `C`-rows dotted
+/// with `P`-columns in all 16 slots; see `evidence/0046efc0_multiply.md` §2).
+/// x87 80-bit intermediates, per-slot term order varies: bit-exact on exact
+/// inputs, ~1 ulp/slot otherwise. Rust accumulates canonically (`k = 0..3`).
+pub fn matrix_multiply(a: Mat4, b: Mat4) -> Mat4 {
+    let mut d = [0.0f32; 16];
+    for i in 0..4 {
+        for j in 0..4 {
+            d[i * 4 + j] = a[i * 4] * b[j]
+                + a[i * 4 + 1] * b[4 + j]
+                + a[i * 4 + 2] * b[8 + j]
+                + a[i * 4 + 3] * b[12 + j];
+        }
+    }
+    fn_0046ef20(d)
+}
+
+/// `FUN_0046f910` (`0x46f910`, 97 B, `ev_b0ab3e0a...`): Y-rotation composer,
+/// `ECX` = dest, one stack float (angle, x87 radians). Forwards
+/// `(cos,0,sin,0, 0,1,0,0, -sin,0,cos,0, 0,0,0,1)`.
+/// Signs are OBSERVED (slot2 `+sin`, slot8 `−sin` — opposite handedness vs
+/// the `0046fa90` quaternion path under a common row-vector reading;
+/// see evidence U1). No normalization.
+pub fn y_rotation(angle: f32) -> Mat4 {
+    let c = angle.cos();
+    let s = angle.sin();
+    fn_0046ef20([
+        c, 0.0, s, 0.0, //
+        0.0, 1.0, 0.0, 0.0, //
+        -s, 0.0, c, 0.0, //
+        0.0, 0.0, 0.0, 1.0,
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -215,5 +250,68 @@ mod tests {
         let h = std::f32::consts::FRAC_1_SQRT_2;
         assert!((e[1] - h).abs() < 1e-6 && (e[3] - h).abs() < 1e-6);
         assert!((e[1] * e[1] + e[3] * e[3] - 1.0).abs() < 1e-6); // unit norm
+    }
+
+    /// ONE check for `FUN_0046efc0`/`FUN_0046f910` (generated fixtures):
+    /// identity exact, order asymmetry (`T×S ≠ S×T`, last-row proof),
+    /// transpose-product identity (fails if operand order flipped),
+    /// `(R×S)×T ≈ R×(S×T)` spot, `y_rotation(0)` bit-exact identity,
+    /// `y_rotation(π/2)` observed signs (slot2 `+1`, slot8 `−1`).
+    #[test]
+    fn multiply_yrot_order() {
+        let one = 1.0f32.to_bits();
+        let zero = 0.0f32.to_bits();
+        let ident: Mat4 = [
+            1.0, 0.0, 0.0, 0.0, //
+            0.0, 1.0, 0.0, 0.0, //
+            0.0, 0.0, 1.0, 0.0, //
+            0.0, 0.0, 0.0, 1.0,
+        ];
+        let t = translation(1.0, 2.0, 3.0);
+        let s = scale(2.0, 3.0, 4.0);
+        // Identity is exact both sides (0/1 arithmetic only).
+        assert_eq!(matrix_multiply(ident, t), t);
+        assert_eq!(matrix_multiply(t, ident), t);
+        // Order asymmetry: T×S keeps scaled translation, S×T does not.
+        let ts = matrix_multiply(t, s);
+        let st = matrix_multiply(s, t);
+        assert_eq!(&ts[12..15], &[2.0, 6.0, 12.0]);
+        assert_eq!(&st[12..15], &[1.0, 2.0, 3.0]);
+        assert_ne!(ts, st);
+        // Transpose-product identity: (A×B)^T = B^T×A^T. Proves order:
+        // a flipped transcription would yield A^T×B^T here instead.
+        let tr = |m: Mat4| -> Mat4 {
+            let mut o = [0.0f32; 16];
+            for i in 0..4 {
+                for j in 0..4 {
+                    o[i * 4 + j] = m[j * 4 + i];
+                }
+            }
+            o
+        };
+        assert_eq!(tr(ts), matrix_multiply(tr(s), tr(t)));
+        // Tree-loop shape `(R×S)×T` reassociates (approx: f32 rounding).
+        let r = y_rotation(0.5);
+        let l = matrix_multiply(matrix_multiply(r, s), t);
+        let rr = matrix_multiply(r, matrix_multiply(s, t));
+        for k in 0..16 {
+            assert!((l[k] - rr[k]).abs() < 1e-5, "slot {k}");
+        }
+        // Angle 0: cos/sin exact → identity words (`-0.0` at slot8, observed
+        // `-sin` store — `assert_eq!` on floats treats `-0.0 == 0.0`, bits differ).
+        let bits: Vec<u32> = y_rotation(0.0).iter().map(|f| f.to_bits()).collect();
+        assert_eq!(
+            bits,
+            vec![
+                one, zero, zero, zero, //
+                zero, one, zero, zero, //
+                (-0.0f32).to_bits(), zero, one, zero, //
+                zero, zero, zero, one,
+            ]
+        );
+        // +90°: OBSERVED signs (slot2 +sin, slot8 −sin — NOT D3D RotationY).
+        let q = y_rotation(std::f32::consts::FRAC_PI_2);
+        assert!((q[2] - 1.0).abs() < 1e-6 && (q[8] + 1.0).abs() < 1e-6);
+        assert!(q[0].abs() < 1e-6 && q[10].abs() < 1e-6);
     }
 }
