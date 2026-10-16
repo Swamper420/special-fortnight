@@ -83,6 +83,75 @@ pub fn wireframe(buf: &mut [u8], w: u32, h: u32, batches: &[Batch], cam: &Cam) -
     lit
 }
 
+/// Nearest-neighbor textured fill for all batch faces into an RGB
+/// buffer (`buf.len() == w*h*3`). Reuses `project`; barycentric UV
+/// interpolation, clamped to edge. One texture for all faces — the
+/// caller resolves per-batch pixels with `model::texture_pixels`.
+/// `v = 0` is the texture top row (`png::Image` order); the original
+/// V orientation is unproven (see open unknowns in report). Returns
+/// covered-pixel count.
+pub fn textured_rgb(
+    buf: &mut [u8],
+    w: u32,
+    h: u32,
+    batches: &[Batch],
+    tex: &crate::png::Image,
+    cam: &Cam,
+) -> usize {
+    assert_eq!(buf.len(), (w * h * 3) as usize);
+    if tex.width == 0 || tex.height == 0 || tex.pixels.is_empty() {
+        return 0;
+    }
+    let edge = |ax: i32, ay: i32, bx: i32, by: i32, cx: i32, cy: i32| -> i32 {
+        (cx - ax) * (by - ay) - (cy - ay) * (bx - ax)
+    };
+    let mut seen = vec![false; (w * h) as usize];
+    let mut n = 0usize;
+    for b in batches {
+        for f in &b.faces {
+            let vs = [f.v1, f.v2, f.v3].iter().filter_map(|k| b.vertices.get(k.wrapping_sub(1) as usize)).collect::<Vec<_>>();
+            if vs.len() != 3 {
+                continue;
+            }
+            let ps = [project(vs[0], cam, w, h), project(vs[1], cam, w, h), project(vs[2], cam, w, h)];
+            let area = edge(ps[0].0, ps[0].1, ps[1].0, ps[1].1, ps[2].0, ps[2].1);
+            if area == 0 {
+                continue;
+            }
+            let (mut lox, mut hix) = (ps[0].0.min(ps[1].0).min(ps[2].0), ps[0].0.max(ps[1].0).max(ps[2].0));
+            let (mut loy, mut hiy) = (ps[0].1.min(ps[1].1).min(ps[2].1), ps[0].1.max(ps[1].1).max(ps[2].1));
+            lox = lox.max(0);
+            loy = loy.max(0);
+            hix = hix.min(w as i32 - 1);
+            hiy = hiy.min(h as i32 - 1);
+            let af = area as f32;
+            for y in loy..=hiy {
+                for x in lox..=hix {
+                    let w0 = edge(ps[1].0, ps[1].1, ps[2].0, ps[2].1, x, y);
+                    let w1 = edge(ps[2].0, ps[2].1, ps[0].0, ps[0].1, x, y);
+                    let w2 = edge(ps[0].0, ps[0].1, ps[1].0, ps[1].1, x, y);
+                    let inside = if area > 0 { w0 >= 0 && w1 >= 0 && w2 >= 0 } else { w0 <= 0 && w1 <= 0 && w2 <= 0 };
+                    if !inside {
+                        continue;
+                    }
+                    let u = (w0 as f32 * vs[0].u + w1 as f32 * vs[1].u + w2 as f32 * vs[2].u) / af;
+                    let v = (w0 as f32 * vs[0].v + w1 as f32 * vs[1].v + w2 as f32 * vs[2].v) / af;
+                    let tx = ((u * tex.width as f32).floor() as i32).clamp(0, tex.width as i32 - 1);
+                    let ty = ((v * tex.height as f32).floor() as i32).clamp(0, tex.height as i32 - 1);
+                    let ti = ((ty as u32 * tex.width + tx as u32) as usize) * 4;
+                    let di = ((y as u32 * w + x as u32) as usize) * 3;
+                    buf[di..di + 3].copy_from_slice(&tex.pixels[ti..ti + 3]);
+                    if !seen[(y as u32 * w + x as u32) as usize] {
+                        seen[(y as u32 * w + x as u32) as usize] = true;
+                        n += 1;
+                    }
+                }
+            }
+        }
+    }
+    n
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,6 +185,52 @@ mod tests {
         let mut buf2 = vec![0u8; (w * h) as usize];
         let n2 = wireframe(&mut buf2, w, h, &quad(), &cam);
         assert_eq!((n, buf), (n2, buf2));
+    }
+
+    /// Textured-quad proof: 2x2 generated RGBA fixture fills a batch
+    /// quad; each quadrant samples its texel + re-render deterministic.
+    #[test]
+    fn textured_quad_samples_colors() {
+        // Generated fixture (never original bytes): top row
+        // red/green, bottom row blue/white; v=0 is the top row.
+        let tex = crate::png::Image {
+            width: 2,
+            height: 2,
+            pixels: vec![
+                255, 0, 0, 255, 0, 255, 0, 255,
+                0, 0, 255, 255, 255, 255, 255, 255,
+            ],
+        };
+        let batches = vec![Batch {
+            id: "q".into(),
+            texture: "Textures\\q.png".into(),
+            material: String::new(),
+            vertices: vec![
+                Vertex { x: 0.0, y: 0.0, z: 0.0, u: 0.0, v: 0.0 },
+                Vertex { x: 1.0, y: 0.0, z: 0.0, u: 1.0, v: 0.0 },
+                Vertex { x: 1.0, y: 1.0, z: 0.0, u: 1.0, v: 1.0 },
+                Vertex { x: 0.0, y: 1.0, z: 0.0, u: 0.0, v: 1.0 },
+            ],
+            faces: vec![Face { v1: 1, v2: 2, v3: 3 }, Face { v1: 1, v2: 3, v3: 4 }],
+        }];
+        // Quad exactly covers the 64x64 frame; world y=1 (v=1) is up.
+        let cam = Cam { scale: 64.0, cx: 0.5, cy: 0.5 };
+        let (w, h) = (64, 64);
+        let px = |buf: &[u8], x: u32, y: u32| -> [u8; 3] {
+            let i = ((y * w + x) as usize) * 3;
+            [buf[i], buf[i + 1], buf[i + 2]]
+        };
+        let mut buf = vec![0u8; (w * h * 3) as usize];
+        let n = textured_rgb(&mut buf, w, h, &batches, &tex, &cam);
+        assert!(n > 3000, "n={n}");
+        // Screen top (y=0) is v=1: blue/white; bottom is v=0: red/green.
+        assert_eq!(px(&buf, 16, 16), [0, 0, 255]);
+        assert_eq!(px(&buf, 48, 16), [255, 255, 255]);
+        assert_eq!(px(&buf, 16, 48), [255, 0, 0]);
+        assert_eq!(px(&buf, 48, 48), [0, 255, 0]);
+        let mut buf2 = vec![0u8; (w * h * 3) as usize];
+        assert_eq!(textured_rgb(&mut buf2, w, h, &batches, &tex, &cam), n);
+        assert_eq!(buf, buf2);
     }
 
     /// Live check: real judgetower model renders non-empty.
