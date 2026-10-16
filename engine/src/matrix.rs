@@ -370,6 +370,10 @@ mod tests {
         };
         assert_eq!(tr(ts), matrix_multiply(tr(s), tr(t)));
         // Tree-loop shape `(R×S)×T` reassociates (approx: f32 rounding).
+        // Order ground truth: `evidence/0046efc0_order.md` §5 — asm
+        // `dest = ECX x param_2` (ECX left), so mul#1 `0x456041` is
+        // `matrix_multiply(R, S)` and mul#2 `0x456056` is
+        // `matrix_multiply(tmp, T)`; arg order below matches both sites.
         let r = y_rotation(0.5);
         let l = matrix_multiply(matrix_multiply(r, s), t);
         let rr = matrix_multiply(r, matrix_multiply(s, t));
