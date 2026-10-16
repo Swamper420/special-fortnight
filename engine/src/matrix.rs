@@ -144,6 +144,24 @@ pub fn y_rotation(angle: f32) -> Mat4 {
     ])
 }
 
+/// `FUN_0046f8a0` (`0x46f8a0`, 97 B, `ev_797e0f5d...`): X-rotation composer,
+/// `ECX` = dest, one stack float (angle, x87 radians). Forwards
+/// `(1,0,0,0, 0,cos,sin,0, 0,-sin,cos,0, 0,0,0,1)`.
+/// Slot6 `+sin`, slot9 `−sin` — AGREES with the `0046fa90` quaternion path
+/// at X-90° (see `evidence/0046f8a0_xrot.md` §4 / `yrot_sign.md` §2).
+/// The single `FCHS` (`0x46f8dd`) negates the stored sin copy for slot9 —
+/// matrix construction, not angle negation. No normalization.
+pub fn x_rotation(angle: f32) -> Mat4 {
+    let c = angle.cos();
+    let s = angle.sin();
+    fn_0046ef20([
+        1.0, 0.0, 0.0, 0.0, //
+        0.0, c, s, 0.0, //
+        0.0, -s, c, 0.0, //
+        0.0, 0.0, 0.0, 1.0,
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -313,5 +331,36 @@ mod tests {
         let q = y_rotation(std::f32::consts::FRAC_PI_2);
         assert!((q[2] - 1.0).abs() < 1e-6 && (q[8] + 1.0).abs() < 1e-6);
         assert!(q[0].abs() < 1e-6 && q[10].abs() < 1e-6);
+    }
+
+    /// ONE check for `FUN_0046f8a0` (generated fixtures):
+    /// `x_rotation(0)` bit-exact identity words, `x_rotation(π/2)` observed
+    /// signs (slot6 `+1`, slot9 `−1`), agreement with the quaternion path.
+    #[test]
+    fn xrot_signs_agree_quat() {
+        let one = 1.0f32.to_bits();
+        let zero = 0.0f32.to_bits();
+        // Angle 0: `-sin` store leaves `-0.0` at slot9 (index 9).
+        let bits: Vec<u32> = x_rotation(0.0).iter().map(|f| f.to_bits()).collect();
+        assert_eq!(
+            bits,
+            vec![
+                one, zero, zero, zero, //
+                zero, one, zero, zero, //
+                zero, (-0.0f32).to_bits(), one, zero, //
+                zero, zero, zero, one,
+            ]
+        );
+        // +90°: OBSERVED signs (slot6 +sin, slot9 −sin).
+        let r = x_rotation(std::f32::consts::FRAC_PI_2);
+        assert!((r[6] - 1.0).abs() < 1e-6 && (r[9] + 1.0).abs() < 1e-6);
+        assert!(r[5].abs() < 1e-6 && r[10].abs() < 1e-6);
+        // Quaternion X-90° (s,0,0,c) agrees: slot6 +1, slot9 −1.
+        let s = std::f32::consts::FRAC_1_SQRT_2;
+        let q = rotation_from_quaternion(s, 0.0, 0.0, s);
+        assert!((q[6] - 1.0).abs() < 1e-6 && (q[9] + 1.0).abs() < 1e-6);
+        for k in [5, 6, 9, 10] {
+            assert!((r[k] - q[k]).abs() < 1e-6, "slot {k}");
+        }
     }
 }
