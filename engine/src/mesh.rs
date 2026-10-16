@@ -373,6 +373,90 @@ pub fn takeoff_markers(lg: f32, as_rad: f32, p3x: f32, p3y: f32, tag: u32) -> Ta
     TakeoffMarkers { m1: (m1x, m1y, tag), m2: (m2x, m2y, tag), flag: 0, neg_as: -as_rad, p3x_copy: p3x }
 }
 
+/// Inrun builder `FUN_00434020` driver, asm emit order
+/// (`evidence/004ddae0_emit_check.md` §3 + `evidence/00434020_esp_shift.md`
+/// + `evidence/00434020_ddf10_args.md` §§3-4 +
+/// `evidence/00538660_takeoff_markers.md`).
+///
+/// b50: `dda60(P3.x-lz, P3.y)` → `ddae0(P3.x, P3.y)` → `ddae0(P2.x, P2.y)` →
+/// `ddf10(P0.x, P0.y, P1.x, P1.y)` (entry guard on `P0.x`; ctor
+/// `crate::fn_00443370` with `(cx=P1.x, cy=P1.y, prev=cursor, new=(P0.x,P0.y))`,
+/// interior via `crate::fn_004ddf10::step_loop` with arc closures
+/// `crate::fn_00443450::arc_xform` / `crate::fn_004434d0::fn_004434d0` /
+/// `crate::fn_00443550::fn_00443550`) → `ddae0(0, ht)` → `dd970` seal;
+/// b58: `dda60(P3.x-lz, ws*0.5)` → `ddae0(0, ws*0.5)` → `dd970` seal;
+/// then `takeoff_markers(lg, as_rad, P3.x, P3.y, tag)`.
+///
+/// Reuses `anchors`, `StripCursor::push` (guard triple), `emit_check`
+/// (ddf10 entry guard), `takeoff_markers`. `ddae0` sites are linear `y(x)`
+/// per `00442fb0` — only cursor/count modeled (layout open), same seam as
+/// `StripCursor::push`.
+/// Seams (open, not modeled): `de150` index/tree inserts +
+/// `477450/517ca0` slot-append path (points recorded, tree not built);
+/// x87 80-bit vs `f64` last-ulp; `n==0` ctor throw (original throws, core
+/// returns `0` — driver proceeds on the `cy` line); `tag` is the opaque
+/// `param_9` word, caller-supplied.
+#[derive(Debug, Clone)]
+pub struct InrunBuild {
+    pub b50: Vec<(f32, f32)>,
+    pub b58: Vec<(f32, f32)>,
+    pub markers: TakeoffMarkers,
+}
+
+pub fn inrun_build(ir: &Inrun, tag: u32) -> Result<InrunBuild, EmitErr> {
+    let p = ir.anchors(true);
+    let (p0, p1, p2, p3) = (p[0], p[1], p[2], p[3]);
+    let as_rad = ir.as_ * PI / 180.0;
+    // b50: dda60 opens (moveto guard vacuous on a fresh cursor).
+    let mut cur = StripCursor::open(p3.0 - ir.lz, p3.1);
+    debug_assert!(moveto_check(cur.closed, cur.count).is_ok());
+    let mut b50 = vec![(cur.x, cur.y)];
+    for &(x, y) in &[(p3.0, p3.1), (p2.0, p2.1)] {
+        if cur.push(x, y)? == EmitAction::Emit {
+            b50.push((cur.x, cur.y));
+        }
+    }
+    // ddf10 entry guard (same triple; equal returns before the ctor).
+    match emit_check(cur.closed, cur.x, p0.0)? {
+        EmitAction::Emit => {
+            let (cx, cy, r, n) = crate::fn_00443370::fn_00443370(p1.0, p1.1, cur.x, cur.y, p0.0, p0.1);
+            // ponytail: n==0 seam (original throws; core returns 0) — proceed documented.
+            let mut seg = Vec::new();
+            crate::fn_004ddf10::step_loop(
+                cur.x,
+                p0.0,
+                p0.1,
+                |x| crate::fn_00443450::arc_xform(cx, cy, r, n, x),
+                |x| crate::fn_004434d0::fn_004434d0(cx, r, n, x),
+                |x| crate::fn_00443550::fn_00443550(r, n, x),
+                |x, y| seg.push((x, y)),
+            );
+            for (x, y) in seg {
+                if cur.push(x, y)? == EmitAction::Emit {
+                    b50.push((cur.x, cur.y));
+                }
+            }
+        }
+        EmitAction::IgnoreEqual => {}
+    }
+    // ddae0(0, ht) linear close, then dd970 seal.
+    if cur.push(0.0, ir.ht)? == EmitAction::Emit {
+        b50.push((cur.x, cur.y));
+    }
+    cur.seal();
+    // b58 width strip.
+    let half = ir.ws * 0.5;
+    let mut cur58 = StripCursor::open(p3.0 - ir.lz, half);
+    debug_assert!(moveto_check(cur58.closed, cur58.count).is_ok());
+    let mut b58 = vec![(cur58.x, cur58.y)];
+    if cur58.push(0.0, half)? == EmitAction::Emit {
+        b58.push((cur58.x, cur58.y));
+    }
+    cur58.seal();
+    let markers = takeoff_markers(ir.lg, as_rad, p3.0, p3.1, tag);
+    Ok(InrunBuild { b50, b58, markers })
+}
+
 /// Terrain base `FUN_00434ff0` (evidence `evidence/00434ff0_terrain_base.md`).
 ///
 /// `thr/off/x0` = `[this+0x260/+0x264/+0x98]`; `lo/hi` = `[obj60+0x28/+0x2c]`
@@ -1255,5 +1339,55 @@ mod tests {
             range_present: false,
         };
         t.eval(|c| c, 1.0, 1.0);
+    }
+
+    /// ONE check for the inrun builder driver `FUN_00434020` (emit order
+    /// `evidence/004ddae0_emit_check.md` §3 + ddf10 args
+    /// `evidence/00434020_ddf10_args.md` §§3-4 + markers
+    /// `evidence/00538660_takeoff_markers.md`; live Hill01 inrun via
+    /// manifest locate like `landing_anchors_endpoints`, skipped when
+    /// user-supplied files absent): strips X-monotone, markers finite,
+    /// deterministic re-run.
+    #[test]
+    fn inrun_build_driver() {
+        let (r000, r001) = (
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.000"),
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.001"),
+        );
+        if !r000.exists() || !r001.exists() {
+            return;
+        }
+        let mraw = std::fs::read(r000).unwrap();
+        let mplain = crate::decrypt::decrypt(&mraw, crate::decrypt::K_RES_HEX).unwrap();
+        let man = crate::manifest::parse(&String::from_utf16le_lossy(&mplain)).unwrap();
+        let raw = std::fs::read(r001).unwrap();
+        let blob = crate::decrypt::decrypt(&raw, crate::decrypt::K_RES_HEX).unwrap();
+        let e = man.entries.iter().find(|e| e.id.ends_with(".hil")).unwrap();
+        let t = std::str::from_utf8(&blob[e.offset as usize..e.offset as usize + e.size as usize]).unwrap();
+        let h = hill::parse(t).unwrap();
+        let ir = Inrun::from_map(&h.profile_inrun).unwrap();
+        // tag = opaque param_9 word; p9 slot holds the tz bits (inference seam).
+        let tag = ir.tz.to_bits();
+        let b1 = inrun_build(&ir, tag).unwrap();
+        let b2 = inrun_build(&ir, tag).unwrap();
+        eprintln!("live {} inrun b50={} b58={} m1={:?} m2={:?}", e.id, b1.b50.len(), b1.b58.len(), b1.markers.m1, b1.markers.m2);
+        for pts in [&b1.b50, &b1.b58] {
+            assert!(pts.len() >= 2);
+            for w in pts.windows(2) {
+                assert!(w[0].0 < w[1].0, "X-monotone {w:?}");
+            }
+            for &(x, y) in pts {
+                assert!(x.is_finite() && y.is_finite(), "{x},{y}");
+                assert!(x.abs() < 5000.0 && y.abs() < 5000.0, "{x},{y}");
+            }
+        }
+        for v in [b1.markers.m1.0, b1.markers.m1.1, b1.markers.m2.0, b1.markers.m2.1] {
+            assert!(v.is_finite(), "{v}");
+        }
+        assert_eq!((b1.markers.m1.2, b1.markers.m2.2), (tag, tag));
+        assert_eq!(b1.markers.flag, 0);
+        assert_eq!(b1.b50, b2.b50);
+        assert_eq!(b1.b58, b2.b58);
+        assert_eq!(b1.markers, b2.markers);
     }
 }
