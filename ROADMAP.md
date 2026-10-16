@@ -78,17 +78,18 @@ spec, then parser. Fixtures stay generated-only.
 - Physics from Phase 1 constants: jumper trajectory unit-tested
   against recorded in-game values (tolerance documented, not guessed).
 - Exit: scripted jump plays end-to-end headless with stable hashes.
-- Status 2026-10-15: `engine/src/render.rs` proves the software
-  wireframe path (judgetower renders headless, stable). Hill MESH:
-  anchors/bindings/conversions transcribed (`engine/src/mesh.rs`:
-  inrun P0–P3 + moveTo exact; landing x1–x4 + slope exact; angle
-  keys `at as ar ak a0` converted `×pi×(1/180)` in caller;
-  `[0x61b880]`=pi assumed; arc-length structure verified —
-  `l1/rl`, `l2/rl` sweeps give exactly l1/l2 meters). OPEN: emit
-  topology→polyline, takeoff markers (`+0x268/+0x274`), mesh
-  composition (frames don't meet absolutely — relative placement
-  unmapped), terrain base `FUN_00434ff0`. Demo scope = 4 in-blob
-  hills (trial parity).
+- Status 2026-10-16: builders driven end-to-end headless
+  (`inrun_build`/`landing_build`/`terrain_build` in `mesh.rs`,
+  `strip_eval` composes selector+slot-0s; 4-hill sweep green:
+  all strips X-monotone, no guard threw).DONE since 10-15:
+  emit guards, takeoff markers, strip min/max+predicates+getters,
+  terrain base/loop/sin-tail/guard-h/RNG/grid/thr-off/x0,
+  element ctors (linear/cubic/arc) + all slot xforms, emitters,
+  sample loop, de150 key/tree, P1-anchor fix. OPEN: world-frame
+  composition (dispatcher proven transform-free; relative
+  placement downstream), textured render, vector growth,
+  `de150` nonzero-flag arm (dead on hill path), 3D presentation.
+  Demo scope = 4 in-blob hills (trial parity).
 
 ## Phase 3 — portable presentation
 
