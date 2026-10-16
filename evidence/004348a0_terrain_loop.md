@@ -100,3 +100,41 @@ Sin-weight wiring CLOSED by `evidence/004348a0_sin_tail.md`
 Still open (not this wave): RNG tables, vector growth, exact `004348a0`
 call-site addresses of the 2+1 reader sites (strip-minmax dossier U2),
 downstream use of the min/max results.
+
+## U-status 2026-10-16: entry/setup/grid/tail driver wired (this wave)
+
+REA: `analyze_function FUN_004348a0` re-ran against
+`/tmp/dsj3-wrap/DSJ3.exe` — same dossier, no new Evidence IDs
+(`ev_6aa12cdd56427e2cd5c7cc4e87752d27985c3bf515442de3b43e3c416a697016`:
+body `0x4348a0`–`0x434fe9`, 1866 B contiguous, `RET 0x30`; 20 callees
+incl `0059e643`/`0055b490`/`__ftol`/`operator_new`). Pseudocode confirms
+the per-vertex order wired below (coords → `00434ff0` → `468360/468340`
++ `004de3e0` guard accum with `terrain_adjust_enter` predicates →
+noise → sin tail → `[+0x74/0x78/0x7c]` push) and the fixed slot map
+(`p1=in p2=dh p3=a0 p4=l0 p5=y0 p6=az p7=ax p8=l1 p9=l2 p10=d1
+p11=d2 p12=rs`-seed; caller converts only `ax`/`az`).
+
+Transcription (`engine/src/mesh.rs`, no duplication — reuses
+`terrain_coords`, `TerrainBase::eval`, `terrain_adjust_enter` (predicate
+only), `terrain_noise`, `terrain_sin_tail`, `strip_lo_min`/`strip_hi_max`
+shapes): `Terrain` (12-key profile + `from_map`), `TERRAIN_STEP_Y=10.0`
+/ `TERRAIN_BASE_Y=-300.0`, pure setup taps `terrain_amp_tap`
+(`k×(d2−d1)×0.125+d1`) / `terrain_div_span` (`(l2−l1)×k×0.125+l1`,
+unit RNG factor), `TerrainTables` (shared `amp`, `div`/`ph` open),
+`TerrainGrid` (`cols`/`step_x`/`base_x` open), `terrain_vertex`
+(asm order), `terrain_build` (61×cols row-major `Vec::push`).
+Covered by `terrain_build_driver`: generated tap fixtures exact +
+live Hill01 profile (`in=0.87 dh=0.4 a0=40 l0=70 y0=-46 rs=529572`,
+`ax`/`az` deg→rad) → 61×41 grid all finite, bit-identical re-run,
+sample `[233.0819, 230.89233, 228.76059, 226.73271]` (fixture
+tables/xform/`h`=base/`lo_b60`=0, not original outputs).
+
+CLOSED: entry slot/param map, setup pure taps, grid axes, per-vertex
+wiring order. Still open: RNG tables (`004df960/004df9a0` outputs),
+vector-growth impurity (`operator_new`/`00475330`/`0059c120` path —
+`Vec::push` is std equivalent, not 1:1), `cols`/`step_x`/`base_x`
+(`0059e643` + `__ftol` semantics unmapped, driver inputs), guard `h`
+(`004de3e0` virtual targets + combine order, `height` closure),
+`thr`/`off` writers (`[+0x260/+0x264]`), `lo_b60` strip object,
+reader call-site addresses (U2), downstream min/max use,
+`U-host-sin`/`U-tie-sign` (carried).

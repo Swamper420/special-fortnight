@@ -565,6 +565,157 @@ pub fn strip_hi_max(
     )
 }
 
+/// Terrain builder `FUN_004348a0` entry/setup/grid driver
+/// (`evidence/004348a0_terrain_loop.md`, tail
+/// `evidence/004348a0_sin_tail.md`, slot map
+/// `evidence/004df840_seed.md` + `evidence/00436620_param_keys.md` §4).
+///
+/// Fixed slot map (parse order `rs d2 d1 l2 l1 ax az y0 l0 a0 dh in`,
+/// first-parsed deepest, so last-parsed = `param_1`):
+/// `p1=in p2=dh p3=a0 p4=l0 p5=y0 p6=az p7=ax p8=l1
+/// p9=l2 p10=d1 p11=d2 p12=rs` (seed, int-parsed via `004caee0`,
+/// deepest slot; `RET 0x30` frame). Caller converts only `ax`/`az`
+/// via `×pi×(1/180)` (`0x437649/0x43766f`), hence `deg2rad` touches
+/// just those two.
+///
+/// Wired (asm order per vertex): `terrain_coords` → `TerrainBase::eval`
+/// → guard predicates (`terrain_adjust_enter`) → `terrain_noise` →
+/// `terrain_sin_tail` → `Vec::push` (std equivalent of the
+/// `[this+0x74/0x78/0x7c]` vector push; original growth path
+/// `operator_new`/`00475330`/`0059c120` stays open).
+/// Open (caller-supplied, not guessed): RNG tables (`div`/`ph` need
+/// `004df9a0`/`004df960` outputs), guard `h` accum (`004de3e0`
+/// virtual targets + combine order), `cols`/`step_x`/`base_x`
+/// (`0059e643` + `__ftol` semantics unmapped), `thr`/`off` writers,
+/// `lo_b60` strip object.
+#[derive(Debug, Clone, Copy)]
+pub struct Terrain {
+    pub in_: f32,
+    pub dh: f32,
+    pub a0: f32,
+    pub l0: f32,
+    pub y0: f32,
+    pub az: f32,
+    pub ax: f32,
+    pub l1: f32,
+    pub l2: f32,
+    pub d1: f32,
+    pub d2: f32,
+    /// `rs`: seed slot (`param_12`, int-parsed). Kept `f32` like
+    /// `hill.rs`; the int parse (`004caee0`) has no transcription yet.
+    pub rs: f32,
+}
+
+impl Terrain {
+    pub fn from_map(m: &std::collections::HashMap<String, f32>) -> Result<Self, String> {
+        let g = |k: &str| m.get(k).copied().ok_or_else(|| format!("terrain missing @{k}"));
+        Ok(Terrain {
+            in_: g("in")?,
+            dh: g("dh")?,
+            a0: g("a0")?,
+            l0: g("l0")?,
+            y0: g("y0")?,
+            az: g("az")?,
+            ax: g("ax")?,
+            l1: g("l1")?,
+            l2: g("l2")?,
+            d1: g("d1")?,
+            d2: g("d2")?,
+            rs: g("rs")?,
+        })
+    }
+}
+
+/// Fixed grid axes (`0x434a6a`/`0x434a6e`): `[EBP+0x90]=10.0f`
+/// (`0x41200000`), `[EBP+0x88]=10.0×-30.0` (`[0x5ce064]`).
+pub const TERRAIN_STEP_Y: f32 = 10.0;
+pub const TERRAIN_BASE_Y: f32 = -300.0;
+
+/// Setup tap, pure part (`0x434949`-`0x434a0e`): amplitude tables
+/// `ampA[k]=ampB[k]=k×(p11−p10)×0.125+p10` (`[0x5ce074]`=0.125,
+/// `FILD` counter, exact). `p10=d1`, `p11=d2`.
+pub fn terrain_amp_tap(k: u32, d1: f32, d2: f32) -> f32 {
+    (k as f64 * (d2 as f64 - d1 as f64) * 0.125 + d1 as f64) as f32
+}
+
+/// Setup tap, pure part (same loop): divisor scale
+/// `s=(p9−p8)×k×0.125+p8`; asm multiplies `(|RNG|+1.0)×s`
+/// (`004df9a0` output open, caller supplies). `p8=l1`, `p9=l2`.
+pub fn terrain_div_span(k: u32, l1: f32, l2: f32) -> f32 {
+    ((l2 as f64 - l1 as f64) * k as f64 * 0.125 + l1 as f64) as f32
+}
+
+/// Setup tables: `amp` shared (`ampA==ampB` per asm, passed twice to
+/// `terrain_noise`); `div`/`ph` need the RNG calls (open).
+#[derive(Debug, Clone)]
+pub struct TerrainTables {
+    pub amp: [f32; 8],
+    pub div_a: [f32; 8],
+    pub ph_a: [f32; 8],
+    pub div_b: [f32; 8],
+    pub ph_b: [f32; 8],
+}
+
+/// Grid shape: `rows` fixed (`TERRAIN_ROWS`); `cols`/`step_x`/`base_x`
+/// caller-supplied (`__ftol`/`0059e643` path open).
+#[derive(Debug, Clone, Copy)]
+pub struct TerrainGrid {
+    pub cols: u32,
+    pub step_x: f32,
+    pub base_x: f32,
+}
+
+/// One `FUN_004348a0` vertex in asm order (`0x434b51`-`0x434dcb`):
+/// coords → base → noise → sin tail. `h` = guard-block accum
+/// (open: `004de3e0` targets/order); `xform` = opaque base transform
+/// (`004de3e0`, `TerrainBase` U2); `lo_b60` = `strip_lo(b60)`.
+/// `xform` runs once per vertex here (base only); guard-side `xform`
+/// calls live inside the caller's `h` closure, like the asm repeats
+/// the `CALL`.
+#[allow(clippy::too_many_arguments)]
+pub fn terrain_vertex(
+    col: u32,
+    row: u32,
+    grid: &TerrainGrid,
+    base: &TerrainBase,
+    xform: impl FnOnce(f32) -> f32,
+    h: f32,
+    lo_b60: f32,
+    params: &Terrain,
+    tables: &TerrainTables,
+    pi: f32,
+) -> f32 {
+    let (fvar4, fvar5) = terrain_coords(col, row, grid.step_x, grid.base_x, TERRAIN_STEP_Y, TERRAIN_BASE_Y);
+    let b = base.eval(xform, fvar4, fvar5);
+    let noise = terrain_noise(fvar4, fvar5, pi, &tables.div_a, &tables.ph_a, &tables.amp, &tables.div_b, &tables.ph_b, &tables.amp);
+    terrain_sin_tail(fvar4, lo_b60, fvar5, params.y0, params.az, params.ax, params.dh, b, h, noise)
+}
+
+/// Grid driver: `61 × cols` vertices in row-major asm order, pushed
+/// to a `Vec` (growth path open, see above). Deterministic given
+/// fixed tables/`h` (RNG + guard-xform variance lives in inputs).
+pub fn terrain_build(
+    grid: &TerrainGrid,
+    base: &TerrainBase,
+    xform: impl Fn(f32) -> f32,
+    height: impl Fn(f32, f32) -> f32,
+    lo_b60: f32,
+    params: &Terrain,
+    tables: &TerrainTables,
+    pi: f32,
+) -> Vec<f32> {
+    let mut out = Vec::with_capacity(grid.cols as usize * TERRAIN_ROWS as usize);
+    for row in 0..TERRAIN_ROWS {
+        for col in 0..grid.cols {
+            let (fvar4, fvar5) = terrain_coords(col, row, grid.step_x, grid.base_x, TERRAIN_STEP_Y, TERRAIN_BASE_Y);
+            let b = base.eval(&xform, fvar4, fvar5);
+            let h = height(fvar4, b);
+            out.push(terrain_vertex(col, row, grid, base, &xform, h, lo_b60, params, tables, pi));
+        }
+    }
+    out
+}
+
 /// Hill-mesh dispatch `FUN_00436620` (`evidence/00436620_composition.md`).
 ///
 /// Observed: version gate, then `inrun → dhill → terrain` builders run
@@ -835,6 +986,67 @@ mod tests {
         // NaN base: weights NaN, f18 falls back to 1.0, v NaN.
         let v = terrain_sin_tail(7.0, 2.0, 3.0, 1.0, 0.5, -0.25, 0.25, f32::NAN, 5.0, 6.0);
         assert!(v.is_nan(), "{v}");
+    }
+
+    /// ONE check for the `FUN_004348a0` entry/setup/grid driver
+    /// (slot map `evidence/004df840_seed.md` + param_keys §4; generated
+    /// fixtures for unit parts, live Hill01 terrain profile when
+    /// user-supplied files present, skipped otherwise): pure setup
+    /// taps exact; grid finite + deterministic re-run.
+    #[test]
+    fn terrain_build_driver() {
+        // Generated shape: amp/span taps linear in k (0.125 step).
+        assert_eq!(terrain_amp_tap(0, 6.0, 7.0), 6.0);
+        assert_eq!(terrain_amp_tap(4, 6.0, 7.0), 6.5);
+        assert_eq!(terrain_amp_tap(7, 6.0, 7.0), 6.875);
+        assert_eq!(terrain_div_span(0, 4.0, 5.0), 4.0);
+        assert_eq!(terrain_div_span(7, 4.0, 5.0), 4.875);
+        assert_eq!(TERRAIN_STEP_Y, 10.0);
+        assert_eq!(TERRAIN_BASE_Y, -300.0);
+        // Live Hill01 terrain profile via manifest locate (same shape
+        // as `landing_anchors_endpoints` above).
+        let (r000, r001) = (
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.000"),
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.001"),
+        );
+        if !r000.exists() || !r001.exists() {
+            return;
+        }
+        let mraw = std::fs::read(r000).unwrap();
+        let mplain = crate::decrypt::decrypt(&mraw, crate::decrypt::K_RES_HEX).unwrap();
+        let man = crate::manifest::parse(&String::from_utf16le_lossy(&mplain)).unwrap();
+        let raw = std::fs::read(r001).unwrap();
+        let blob = crate::decrypt::decrypt(&raw, crate::decrypt::K_RES_HEX).unwrap();
+        let e = man.entries.iter().find(|e| e.id.ends_with(".hil")).unwrap();
+        let t = std::str::from_utf8(&blob[e.offset as usize..e.offset as usize + e.size as usize]).unwrap();
+        let h = hill::parse(t).unwrap();
+        let mut tp = Terrain::from_map(&h.profile_terrain).unwrap();
+        // Caller converts ax/az deg→rad (param_keys §4 FMUL sites).
+        tp.ax = tp.ax * PI / 180.0;
+        tp.az = tp.az * PI / 180.0;
+        eprintln!("live terrain params={tp:?} seed_rs={}", tp.rs);
+        // Fixture tables (RNG outputs open): amp from live d1/d2,
+        // div from live l1/l2 spans (unit RNG factor), zero phases.
+        let mut amp = [0.0f32; 8];
+        let mut div_a = [0.0f32; 8];
+        let mut div_b = [0.0f32; 8];
+        for k in 0..8 {
+            amp[k] = terrain_amp_tap(k as u32, tp.d1, tp.d2);
+            div_a[k] = terrain_div_span(k as u32, tp.l1, tp.l2);
+            div_b[k] = div_a[k];
+        }
+        let tables = TerrainTables { amp, div_a, ph_a: [0.0; 8], div_b, ph_b: [0.0; 8] };
+        // Fixtures for open parts: identity base xform, guard accum
+        // substituted with base (`height` closure), zero lo strip.
+        let base = TerrainBase { thr: 0.0, off: 0.0, x0: 0.0, lo: -100.0, hi: 100.0, range_present: true };
+        let grid = TerrainGrid { cols: 41, step_x: 2.0, base_x: -40.0 };
+        let build = || terrain_build(&grid, &base, |c| c, |_, b| b, 0.0, &tp, &tables, PI);
+        let g1 = build();
+        let g2 = build();
+        assert_eq!(g1.len(), TERRAIN_ROWS as usize * grid.cols as usize);
+        assert!(g1.iter().all(|v| v.is_finite()));
+        assert_eq!(g1, g2);
+        eprintln!("live terrain sample={:?}", &g1[..4]);
     }
 
     #[test]
