@@ -457,6 +457,201 @@ pub fn inrun_build(ir: &Inrun, tag: u32) -> Result<InrunBuild, EmitErr> {
     Ok(InrunBuild { b50, b58, markers })
 }
 
+/// Landing builder `FUN_00434390` driver, asm emit order
+/// (`evidence/00434390_emit_args.md` §§3-4 +
+/// `evidence/00434390_sample_loop.md`).
+///
+/// b60: `dda60(0,0)` → `ddcb0(L2x,L2y,slope0,slope1)` (ctor
+/// `crate::fn_00443060` with `(prev=cursor, new=(L2x,L2y))`,
+/// interior via `crate::fn_004ddcb0::step_loop` with cubic closures
+/// `crate::fn_004432a0::cubic_xform` /
+/// `crate::fn_004432c0::{cubic_slope, cubic_radius}`) →
+/// `ddf10(L3x,L3y,L1x,L1y)` → `ddf10(L4x,L4y,L4x,S5)` (ctors
+/// `crate::fn_00443370`, interior via
+/// `crate::fn_004ddf10::step_loop` with arc closures, same as
+/// `inrun_build`) → `ddae0(N9,L4y)` → `ddcb0(N11,M10,0,AT)` →
+/// 10x `sample_loop` (`crate::fn_00434390::sample_loop` on the probe
+/// `443060(N9,L4y,N11,M10,0,AT)` coeffs) → `dd970` seal;
+/// b68: `dda60(0,w0*0.5)` → `ddae0(nk,wk*0.5)` →
+/// `ddae0(L4x,wb*0.5)` → `ddae0(N11-p15h,p15h)` →
+/// `ddf10(N11,0,N11-p15h,0)` → `dd970` seal.
+///
+/// Reuses `anchors`, `StripCursor::push` (guard triple), `emit_check`
+/// (ddcb0/ddf10 entry guards), `sample_loop`. `ddae0` sites are linear
+/// `y(x)` per `00442fb0` — only cursor/count modeled (layout open),
+/// same seam as `StripCursor::push`.
+/// Seams (open, not modeled): `de150` index/tree inserts +
+/// `477450/517ca0` slot-append path (points recorded, tree not built);
+/// sample points use the `de150` sink (no guard — the post-`ddcb0#2`
+/// cursor already sits at `N11`, so guarded pushes would throw);
+/// x87 80-bit vs `f64` last-ulp; `n==0` ctor throw (original throws,
+/// core returns `0` — driver proceeds on the `cy` line, same as
+/// `inrun_build`); `ddcb0` slot+4/+8 wiring
+/// (`cubic_slope`/`cubic_radius` — vtable `0x5ce0fc` identities stay
+/// U1 per `evidence/004ddcb0_stepping.md`); `ddf10#2` `cy=S5`
+/// follows `ev_dfeb` param_4 (emit-args §4 bullet reads `cy=L4y`);
+/// trailing `de7f0/de8c0/ftol` stores stay out.
+#[derive(Debug, Clone)]
+pub struct LandingBuild {
+    pub b60: Vec<(f32, f32)>,
+    pub b68: Vec<(f32, f32)>,
+    /// 10x probe samples (`de150` sink, unguarded — seam above).
+    pub samples: Vec<(f32, f32)>,
+}
+
+pub fn landing_build(la: &Landing) -> Result<LandingBuild, EmitErr> {
+    let a = la.anchors(true);
+    // b60 opens at (0,0).
+    let mut cur = StripCursor::open(0.0, 0.0);
+    debug_assert!(moveto_check(cur.closed, cur.count).is_ok());
+    let mut b60 = vec![(cur.x, cur.y)];
+    // ddcb0#1: entry guard on L2x, then cubic stepping to (L2x, L2y).
+    match emit_check(cur.closed, cur.x, a.l2x)? {
+        EmitAction::Emit => {
+            let (c3, c2, c1, c0) =
+                crate::fn_00443060::fn_00443060(cur.x, cur.y, a.l2x, a.l2y, a.slope0, a.slope1);
+            // ponytail: n/a here (cubic has no n); ddf10 sites below
+            // carry the n==0 seam documented above.
+            let mut seg = Vec::new();
+            crate::fn_004ddcb0::step_loop(
+                cur.x,
+                a.l2x,
+                a.l2y,
+                |x| crate::fn_004432a0::cubic_xform(c3, c2, c1, c0, x),
+                |x| crate::fn_004432c0::cubic_slope(c3, c2, c1, x),
+                |x| crate::fn_004432c0::cubic_radius(c3, c2, c1, x),
+                |x, y| seg.push((x, y)),
+            );
+            for (x, y) in seg {
+                if cur.push(x, y)? == EmitAction::Emit {
+                    b60.push((cur.x, cur.y));
+                }
+            }
+        }
+        EmitAction::IgnoreEqual => {}
+    }
+    // ddf10#1: entry guard on L3x, arc (L1x,L1y) → (L3x,L3y).
+    match emit_check(cur.closed, cur.x, a.l3x)? {
+        EmitAction::Emit => {
+            let (cx, cy, r, n) = crate::fn_00443370::fn_00443370(a.l1x, a.l1y, cur.x, cur.y, a.l3x, a.l3y);
+            let mut seg = Vec::new();
+            crate::fn_004ddf10::step_loop(
+                cur.x,
+                a.l3x,
+                a.l3y,
+                |x| crate::fn_00443450::arc_xform(cx, cy, r, n, x),
+                |x| crate::fn_004434d0::fn_004434d0(cx, r, n, x),
+                |x| crate::fn_00443550::fn_00443550(r, n, x),
+                |x, y| seg.push((x, y)),
+            );
+            for (x, y) in seg {
+                if cur.push(x, y)? == EmitAction::Emit {
+                    b60.push((cur.x, cur.y));
+                }
+            }
+        }
+        EmitAction::IgnoreEqual => {}
+    }
+    // ddf10#2: entry guard on L4x, arc (L4x,S5) → (L4x,L4y).
+    match emit_check(cur.closed, cur.x, a.l4x)? {
+        EmitAction::Emit => {
+            let (cx, cy, r, n) = crate::fn_00443370::fn_00443370(a.l4x, a.s5, cur.x, cur.y, a.l4x, a.l4y);
+            let mut seg = Vec::new();
+            crate::fn_004ddf10::step_loop(
+                cur.x,
+                a.l4x,
+                a.l4y,
+                |x| crate::fn_00443450::arc_xform(cx, cy, r, n, x),
+                |x| crate::fn_004434d0::fn_004434d0(cx, r, n, x),
+                |x| crate::fn_00443550::fn_00443550(r, n, x),
+                |x, y| seg.push((x, y)),
+            );
+            for (x, y) in seg {
+                if cur.push(x, y)? == EmitAction::Emit {
+                    b60.push((cur.x, cur.y));
+                }
+            }
+        }
+        EmitAction::IgnoreEqual => {}
+    }
+    // ddae0(N9, L4y) linear close of the arc endpoint row.
+    if cur.push(a.n9, a.l4y)? == EmitAction::Emit {
+        b60.push((cur.x, cur.y));
+    }
+    // ddcb0#2: entry guard on N11, cubic (N9,L4y) → (N11,M10).
+    match emit_check(cur.closed, cur.x, a.n11)? {
+        EmitAction::Emit => {
+            let (c3, c2, c1, c0) =
+                crate::fn_00443060::fn_00443060(cur.x, cur.y, a.n11, a.m10, 0.0, a.at);
+            let mut seg = Vec::new();
+            crate::fn_004ddcb0::step_loop(
+                cur.x,
+                a.n11,
+                a.m10,
+                |x| crate::fn_004432a0::cubic_xform(c3, c2, c1, c0, x),
+                |x| crate::fn_004432c0::cubic_slope(c3, c2, c1, x),
+                |x| crate::fn_004432c0::cubic_radius(c3, c2, c1, x),
+                |x, y| seg.push((x, y)),
+            );
+            for (x, y) in seg {
+                if cur.push(x, y)? == EmitAction::Emit {
+                    b60.push((cur.x, cur.y));
+                }
+            }
+        }
+        EmitAction::IgnoreEqual => {}
+    }
+    // Probe on a scratch element (same six inputs, no cursor effect)
+    // feeds the 10x sample loop; samples take the de150 sink.
+    let (c3, c2, c1, c0) = crate::fn_00443060::fn_00443060(a.n9, a.l4y, a.n11, a.m10, 0.0, a.at);
+    let mut samples = Vec::new();
+    crate::fn_00434390::sample_loop(
+        a.n11,
+        la.wb,
+        |x| crate::fn_004432a0::cubic_xform(c3, c2, c1, c0, x),
+        |x, y| samples.push((x, y)),
+    );
+    cur.seal();
+    // b68 width strip.
+    let mut cur68 = StripCursor::open(0.0, la.w0 * 0.5);
+    debug_assert!(moveto_check(cur68.closed, cur68.count).is_ok());
+    let mut b68 = vec![(cur68.x, cur68.y)];
+    for &(x, y) in &[(la.nk, la.wk * 0.5), (a.l4x, la.wb * 0.5)] {
+        if cur68.push(x, y)? == EmitAction::Emit {
+            b68.push((cur68.x, cur68.y));
+        }
+    }
+    let p15h = la.wb * 0.5;
+    if cur68.push(a.n11 - p15h, p15h)? == EmitAction::Emit {
+        b68.push((cur68.x, cur68.y));
+    }
+    // ddf10: entry guard on N11, arc (N11-p15h,0) → (N11,0).
+    match emit_check(cur68.closed, cur68.x, a.n11)? {
+        EmitAction::Emit => {
+            let (cx, cy, r, n) =
+                crate::fn_00443370::fn_00443370(a.n11 - p15h, 0.0, cur68.x, cur68.y, a.n11, 0.0);
+            let mut seg = Vec::new();
+            crate::fn_004ddf10::step_loop(
+                cur68.x,
+                a.n11,
+                0.0,
+                |x| crate::fn_00443450::arc_xform(cx, cy, r, n, x),
+                |x| crate::fn_004434d0::fn_004434d0(cx, r, n, x),
+                |x| crate::fn_00443550::fn_00443550(r, n, x),
+                |x, y| seg.push((x, y)),
+            );
+            for (x, y) in seg {
+                if cur68.push(x, y)? == EmitAction::Emit {
+                    b68.push((cur68.x, cur68.y));
+                }
+            }
+        }
+        EmitAction::IgnoreEqual => {}
+    }
+    cur68.seal();
+    Ok(LandingBuild { b60, b68, samples })
+}
+
 /// Terrain base `FUN_00434ff0` (evidence `evidence/00434ff0_terrain_base.md`).
 ///
 /// `thr/off/x0` = `[this+0x260/+0x264/+0x98]`; `lo/hi` = `[obj60+0x28/+0x2c]`
@@ -1389,5 +1584,62 @@ mod tests {
         assert_eq!(b1.b50, b2.b50);
         assert_eq!(b1.b58, b2.b58);
         assert_eq!(b1.markers, b2.markers);
+    }
+
+    /// ONE check for the landing builder driver `FUN_00434390` (emit
+    /// order `evidence/00434390_emit_args.md` §§3-4 + probe/sample
+    /// `evidence/00434390_sample_loop.md`; live Hill01 dhill via
+    /// manifest locate like `inrun_build_driver`, skipped when
+    /// user-supplied files absent): strips X-monotone, finite,
+    /// deterministic re-run; samples exactly 10, finite, monotone.
+    #[test]
+    fn landing_build_driver() {
+        let (r000, r001) = (
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.000"),
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.001"),
+        );
+        if !r000.exists() || !r001.exists() {
+            return;
+        }
+        let mraw = std::fs::read(r000).unwrap();
+        let mplain = crate::decrypt::decrypt(&mraw, crate::decrypt::K_RES_HEX).unwrap();
+        let man = crate::manifest::parse(&String::from_utf16le_lossy(&mplain)).unwrap();
+        let raw = std::fs::read(r001).unwrap();
+        let blob = crate::decrypt::decrypt(&raw, crate::decrypt::K_RES_HEX).unwrap();
+        let e = man.entries.iter().find(|e| e.id.ends_with(".hil")).unwrap();
+        let t = std::str::from_utf8(&blob[e.offset as usize..e.offset as usize + e.size as usize]).unwrap();
+        let h = hill::parse(t).unwrap();
+        let la = Landing::from_map(&h.profile_dhill).unwrap();
+        let b1 = landing_build(&la).unwrap();
+        let b2 = landing_build(&la).unwrap();
+        eprintln!(
+            "live {} landing b60={} b68={} samples={} n11={} m10={}",
+            e.id,
+            b1.b60.len(),
+            b1.b68.len(),
+            b1.samples.len(),
+            la.anchors(true).n11,
+            la.anchors(true).m10
+        );
+        for pts in [&b1.b60, &b1.b68] {
+            assert!(pts.len() >= 2);
+            for w in pts.windows(2) {
+                assert!(w[0].0 < w[1].0, "X-monotone {w:?}");
+            }
+            for &(x, y) in pts {
+                assert!(x.is_finite() && y.is_finite(), "{x},{y}");
+                assert!(x.abs() < 5000.0 && y.abs() < 5000.0, "{x},{y}");
+            }
+        }
+        assert_eq!(b1.samples.len(), 10);
+        for w in b1.samples.windows(2) {
+            assert!(w[0].0 <= w[1].0, "samples rise {w:?}");
+        }
+        for &(x, y) in &b1.samples {
+            assert!(x.is_finite() && y.is_finite(), "{x},{y}");
+        }
+        assert_eq!(b1.b60, b2.b60);
+        assert_eq!(b1.b68, b2.b68);
+        assert_eq!(b1.samples, b2.samples);
     }
 }
