@@ -617,4 +617,139 @@ mod tests {
         eprintln!("live {} landing b60={} b68={} samples={}", e.id, lb.b60.len(), lb.b68.len(), lb.samples.len());
         render_assert(&lb.b60);
     }
+
+    /// Full-scene transform proof (`evidence/00455ba0_render_assets.md`
+    /// §4 + `evidence/00409060_submit.md` §4 U3): tree-loop caller
+    /// composes `(R×S)×T` via `0046f9f0`/`0046fa40`/`0046f910` +
+    /// `0046efc0` × 2, submits the single buffer via `00409060`.
+    /// Applies that product (matrix fns only) to batch vertices, then
+    /// `textured_rgb` fill. Generated quad fixture + live
+    /// judgetower batch (skip when absent). Row-vector `v*M`,
+    /// translation row `[12..15]` (see `matrix.rs`).
+    #[test]
+    fn judgetower_fullscene_transform_compose() {
+        use crate::matrix::{matrix_multiply, scale, translation, y_rotation, Mat4};
+        // ponytail: test-local point xform; no scene-graph API (out of scope).
+        fn apply(m: &Mat4, v: &Vertex) -> Vertex {
+            Vertex {
+                x: v.x * m[0] + v.y * m[4] + v.z * m[8] + m[12],
+                y: v.x * m[1] + v.y * m[5] + v.z * m[9] + m[13],
+                z: v.x * m[2] + v.y * m[6] + v.z * m[10] + m[14],
+                u: v.u,
+                v: v.v,
+            }
+        }
+        fn xbatch(b: &Batch, m: &Mat4) -> Batch {
+            Batch {
+                id: b.id.clone(),
+                texture: b.texture.clone(),
+                material: b.material.clone(),
+                vertices: b.vertices.iter().map(|v| apply(m, v)).collect(),
+                faces: b.faces.clone(),
+            }
+        }
+        fn frame(vertices: &[Vertex], w: u32, h: u32) -> Cam {
+            let (mut lox, mut hix) = (f32::INFINITY, f32::NEG_INFINITY);
+            let (mut loy, mut hiy) = (f32::INFINITY, f32::NEG_INFINITY);
+            for v in vertices {
+                lox = lox.min(v.x);
+                hix = hix.max(v.x);
+                loy = loy.min(v.y);
+                hiy = hiy.max(v.y);
+            }
+            let s = ((w as f32 / (hix - lox + 1e-6).abs().max(1e-6))
+                .min(h as f32 / (hiy - loy + 1e-6).abs().max(1e-6))
+                * 0.9)
+                .max(0.5);
+            Cam { scale: s, cx: (lox + hix) / 2.0, cy: (loy + hiy) / 2.0 }
+        }
+        // Caller order: (R×S)×T — ECX is LEFT in `0046efc0` (matrix.rs).
+        let r = y_rotation(0.5);
+        let s = scale(2.0, 3.0, 4.0);
+        let t = translation(10.0, 20.0, 30.0);
+        let m = matrix_multiply(matrix_multiply(r, s), t);
+        // Last row is exactly T (R,S last rows are [0,0,0,1]).
+        assert_eq!(&m[12..16], &[10.0, 20.0, 30.0, 1.0]);
+        // Origin lands on T; (1,0,0) proves R-then-S-then-T:
+        // row0 = [2cos, 0, 4sin] + T.
+        let o = apply(&m, &Vertex { x: 0.0, y: 0.0, z: 0.0, u: 0.0, v: 0.0 });
+        assert_eq!([o.x, o.y, o.z], [10.0, 20.0, 30.0]);
+        let c = 0.5f32.cos();
+        let sn = 0.5f32.sin();
+        let p = apply(&m, &Vertex { x: 1.0, y: 0.0, z: 0.0, u: 0.0, v: 0.0 });
+        assert!((p.x - (2.0 * c + 10.0)).abs() < 1e-5, "px={}", p.x);
+        assert!((p.y - 20.0).abs() < 1e-5, "py={}", p.y);
+        assert!((p.z - (4.0 * sn + 30.0)).abs() < 1e-5, "pz={}", p.z);
+        // Generated quad fixture through the composed frame + textured fill.
+        let tex = crate::png::Image {
+            width: 2,
+            height: 2,
+            pixels: vec![
+                255, 0, 0, 255, 0, 255, 0, 255,
+                0, 0, 255, 255, 255, 255, 255, 255,
+            ],
+        };
+        let qb = Batch {
+            id: "q".into(),
+            texture: String::new(),
+            material: String::new(),
+            vertices: vec![
+                Vertex { x: 0.0, y: 0.0, z: 0.0, u: 0.0, v: 0.0 },
+                Vertex { x: 1.0, y: 0.0, z: 0.0, u: 1.0, v: 0.0 },
+                Vertex { x: 1.0, y: 1.0, z: 0.0, u: 1.0, v: 1.0 },
+                Vertex { x: 0.0, y: 1.0, z: 0.0, u: 0.0, v: 1.0 },
+            ],
+            faces: vec![Face { v1: 1, v2: 2, v3: 3 }, Face { v1: 1, v2: 3, v3: 4 }],
+        };
+        let xb = xbatch(&qb, &m);
+        // UVs survive the frame (fill already proven in textured_quad).
+        assert_eq!(
+            xb.vertices.iter().map(|v| (v.u, v.v)).collect::<Vec<_>>(),
+            qb.vertices.iter().map(|v| (v.u, v.v)).collect::<Vec<_>>()
+        );
+        let (w, h) = (64, 64);
+        let cam = frame(&xb.vertices, w, h);
+        let mut buf = vec![0u8; (w * h * 3) as usize];
+        let n = textured_rgb(&mut buf, w, h, &[xb.clone()], &tex, &cam);
+        assert!(n > 500, "n={n}");
+        let mut buf2 = vec![0u8; (w * h * 3) as usize];
+        assert_eq!(textured_rgb(&mut buf2, w, h, &[xb], &tex, &cam), n);
+        assert_eq!(buf, buf2);
+        // Live judgetower batch through the same compose shape; skip absent.
+        let res = std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources");
+        if !res.join("Resource.000").exists() || !res.join("Resource.001").exists() {
+            return;
+        }
+        use crate::{decrypt, manifest, model};
+        let plain0 =
+            decrypt::decrypt(&std::fs::read(res.join("Resource.000")).unwrap(), decrypt::K_RES_HEX)
+                .unwrap();
+        let man = manifest::parse(&String::from_utf16le_lossy(&plain0)).unwrap();
+        let plain1 =
+            decrypt::decrypt(&std::fs::read(res.join("Resource.001")).unwrap(), decrypt::K_RES_HEX)
+                .unwrap();
+        let entries = manifest::split(&man, &plain1).unwrap();
+        let (_, model_blob) = entries
+            .iter()
+            .find(|(id, _)| id.contains("judgetower-summer-model"))
+            .unwrap();
+        let batches = model::parse(&String::from_utf8_lossy(model_blob)).unwrap();
+        let (src, teximg) = batches
+            .iter()
+            .find_map(|b| model::texture_pixels(&entries, &b.texture).ok().map(|t| (b, t)))
+            .unwrap();
+        let live = xbatch(src, &m);
+        let (lw, lh) = (160, 120);
+        let lcam = frame(&live.vertices, lw, lh);
+        let mut lb = vec![0u8; (lw * lh * 3) as usize];
+        let ln = textured_rgb(&mut lb, lw, lh, std::slice::from_ref(&live), &teximg, &lcam);
+        assert!(ln > 0, "live covered={ln}");
+        eprintln!("live judgetower xform: batches={} src={} covered={ln}", batches.len(), src.id);
+        let mut lb2 = vec![0u8; (lw * lh * 3) as usize];
+        assert_eq!(
+            textured_rgb(&mut lb2, lw, lh, std::slice::from_ref(&live), &teximg, &lcam),
+            ln
+        );
+        assert_eq!(lb, lb2);
+    }
 }
