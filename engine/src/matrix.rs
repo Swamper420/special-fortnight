@@ -36,7 +36,8 @@ pub fn translation(tx: f32, ty: f32, tz: f32) -> Mat4 {
 /// `FUN_0046fa90` (`0x46fa90`, 263 B, `ev_32ec9bd7...`): `ECX` = dest,
 /// stack `float[4] (x,y,z,w)` → forwards quaternion rotation matrix
 /// (§ rotation; row-major ground truth — see `evidence/rotation_writer.md`).
-/// `FUN_0046fbf0` is NOT a rotation writer (outer-product form); untraced.
+/// `FUN_0046fbf0` (`0x46fbf0`, 355 B, `ev_a2d5b611...`): outer-product form
+/// `d·I − v⊗u` (NOT a rotation writer — see `evidence/0046fbf0_outer.md`).
 
 /// `FUN_0046fa90`: quaternion→rotation matrix, slots per original
 /// association order (`((x²+w²)−y²)−z²`, `(zw+yx)+(zw+yx)`, …).
@@ -97,6 +98,40 @@ pub fn euler_to_quaternion(a: f32, b: f32, c: f32) -> Quat {
     let qx = [(b * 0.5).sin(), 0.0, 0.0, (b * 0.5).cos()];
     let qz = [0.0, 0.0, (c * 0.5).sin(), (c * 0.5).cos()];
     quat_multiply(quat_multiply(qy, qx), qz)
+}
+
+/// `FUN_0046fbf0`: outer-product form `M[i][j] = d·δij − u_j·v_i`.
+/// Both inputs normalized in place by xyz-norm first
+/// (`sqrt((x²+y²)+z²)`, `w` scaled too — `FUN_00538b60` divides all 4);
+/// `d` = 4D dot (`FUN_004df630`, assoc `((w·w'+z·z')+y·y')+x·x'`);
+/// diagonals `d − u·v` (`FSUBR`), off-diagonals `−(u·v)` (`FCHS`).
+/// No zero-norm guard in asm (none here). x87 vs `f32`: ~1 ulp/slot.
+pub fn outer_product_form(u: [f32; 4], v: [f32; 4]) -> Mat4 {
+    let un = (u[0] * u[0] + u[1] * u[1]) + u[2] * u[2];
+    let vn = (v[0] * v[0] + v[1] * v[1]) + v[2] * v[2];
+    let un = un.sqrt();
+    let vn = vn.sqrt();
+    let u = [u[0] / un, u[1] / un, u[2] / un, u[3] / un];
+    let v = [v[0] / vn, v[1] / vn, v[2] / vn, v[3] / vn];
+    let d = ((u[3] * v[3] + u[2] * v[2]) + u[1] * v[1]) + u[0] * v[0];
+    fn_0046ef20([
+        d - u[0] * v[0],
+        -(u[1] * v[0]),
+        -(u[2] * v[0]),
+        -(u[3] * v[0]), //
+        -(u[0] * v[1]),
+        d - u[1] * v[1],
+        -(u[2] * v[1]),
+        -(u[3] * v[1]), //
+        -(u[0] * v[2]),
+        -(u[1] * v[2]),
+        d - u[2] * v[2],
+        -(u[3] * v[2]), //
+        -(u[0] * v[3]),
+        -(u[1] * v[3]),
+        -(u[2] * v[3]),
+        d - u[3] * v[3],
+    ])
 }
 
 /// `FUN_0046fa40`: scale matrix, factors on the diagonal.
@@ -331,6 +366,49 @@ mod tests {
         let q = y_rotation(std::f32::consts::FRAC_PI_2);
         assert!((q[2] - 1.0).abs() < 1e-6 && (q[8] + 1.0).abs() < 1e-6);
         assert!(q[0].abs() < 1e-6 && q[10].abs() < 1e-6);
+    }
+
+    /// ONE check for `FUN_0046fbf0` (generated fixtures):
+    /// `u=v=(1,0,0,0)` → `diag(0,1,1,1)` bit-exact;
+    /// `u=(0,1,0,0),v=(0,0,1,0)` → only slot9 `= −1` bit-exact;
+    /// `u=v=(1,1,0,0)` → `0.5/−0.5` blocks under tolerance (sqrt path).
+    #[test]
+    fn outer_product_exact() {
+        let one = 1.0f32.to_bits();
+        let zero = 0.0f32.to_bits();
+        let neg_zero = (-0.0f32).to_bits();
+        let neg_one = (-1.0f32).to_bits();
+        // d = 1, M = I − e0⊗e0: exact (norm 1, 0/1 arithmetic).
+        // Off-diagonals are −(0·0) = −0.0 (FCHS, matches original).
+        let m = outer_product_form([1.0, 0.0, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]);
+        let bits: Vec<u32> = m.iter().map(|f| f.to_bits()).collect();
+        assert_eq!(
+            bits,
+            vec![
+                zero, neg_zero, neg_zero, neg_zero, //
+                neg_zero, one, neg_zero, neg_zero, //
+                neg_zero, neg_zero, one, neg_zero, //
+                neg_zero, neg_zero, neg_zero, one,
+            ]
+        );
+        // d = 0, M = −v⊗u: single −1 at slot9 (i=2,j=1), rest ±0.
+        let n = outer_product_form([0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0]);
+        assert_eq!(n[9].to_bits(), neg_one);
+        for (k, f) in n.iter().enumerate() {
+            if k != 9 {
+                assert_eq!(*f, 0.0, "slot {k}");
+            }
+        }
+        // Non-trivial norm: û = v̂ = (1/√2,1/√2,0,0), d = 1.
+        let r = outer_product_form([1.0, 1.0, 0.0, 0.0], [1.0, 1.0, 0.0, 0.0]);
+        assert!((r[0] - 0.5).abs() < 1e-6);
+        assert!((r[1] + 0.5).abs() < 1e-6);
+        assert!((r[4] + 0.5).abs() < 1e-6);
+        assert!((r[5] - 0.5).abs() < 1e-6);
+        assert!((r[10] - 1.0).abs() < 1e-6 && (r[15] - 1.0).abs() < 1e-6);
+        for k in [2, 3, 6, 7, 8, 9, 11, 12, 13, 14] {
+            assert_eq!(r[k], 0.0, "slot {k}");
+        }
     }
 
     /// ONE check for `FUN_0046f8a0` (generated fixtures):
