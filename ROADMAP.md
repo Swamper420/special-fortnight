@@ -86,10 +86,15 @@ spec, then parser. Fixtures stay generated-only.
   emit guards, takeoff markers, strip min/max+predicates+getters,
   terrain base/loop/sin-tail/guard-h/RNG/grid/thr-off/x0,
   element ctors (linear/cubic/arc) + all slot xforms, emitters,
-  sample loop, de150 key/tree, P1-anchor fix. OPEN: world-frame
-  composition (dispatcher proven transform-free; relative
-  placement downstream), textured render, vector growth,
-  `de150` nonzero-flag arm (dead on hill path), 3D presentation.
+  sample loop, de150 key/tree, P1-anchor fix, inrun/landing/terrain
+  drivers + 4-hill sweep, strip_eval, matrix family (T/S/Rx/Ry/quat/
+  Hamilton/matmul/outer, row-major proven), tick chain (3 ticks +
+  DSound rate/level/play/stop path), scenery leaves + inline stores,
+  textured quad + live judgetower proofs, OGG→PCM + WAV dumps.
+  OPEN: world-frame composition (scenery frames placed via 00455ba0
+  matrices; terrain-mesh vertex placement still unmapped), V-orientation,
+  vector growth, `de150` nonzero-flag arm (dead on hill path),
+  GPU backend, audio playback, physics/gameplay.
   Demo scope = 4 in-blob hills (trial parity).
 
 ## Phase 3 — portable presentation

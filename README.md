@@ -248,6 +248,23 @@ Covers files only: uninstaller stub (generated at install), icon
 shortcuts, `.url` files (ini table), registry/run entries have no
 Linux equivalent and are skipped (listed, not written).
 
+## Asset dump commands
+
+Six read-only inspectors over an installed/extracted tree
+(`SRC`, default `dsj3-installed`; `DST` defaults to `SRC`):
+
+- `--dump-langs SRC [DST]` — 6 `.lan` → `<Stem>.txt` (610 lines each).
+- `--dump-models SRC [DST]` — 8 `*-model.txt` → batch counts/textures.
+- `--dump-hills SRC [DST]` — 4 in-blob `.hil` → profile key=value
+  (standalone `Hills/*.hil` need license keys, out of scope).
+- `--dump-wavs SRC [DST]` — 21 OGGs → listenable `.wav` (RIFF PCM).
+- `--dump-pngs SRC [DST]` — 101 PNGs, entry-dir tree kept
+  (`Sprites\mediamond.png` vs `Textures\mediamond.png` collide flat).
+- `--dump-materials SRC [DST]` — 5 `Materials\*.txt` verbatim
+  (13 `%name` batch refs resolve at render time, not in files).
+
+All exit 0 with a count line, 1 on corrupt input or I/O.
+
 ## Payload inventory (researched 2026-10-15, do not re-scope)
 
 `--extract` writes 58 files. The game binary is inside the payload,
