@@ -50,12 +50,22 @@ pub fn parse_hex(s: &str) -> BigUint {
     v
 }
 
+/// Dual-step LCG full-u32 output (`FUN_004df900`; evidence
+/// `evidence/004df9a0_rng.md` §1: `s1=(s*A+1)%M`, `s2=(s1*A+1)%M`,
+/// `out=(s2&0xFFFF0000)|(s1>>16)`; `+` == `|`). Single core: the
+/// decrypt keystream byte is the low byte of this word, and the
+/// terrain RNG-float path (`crate::rng_float`) consumes the whole
+/// word — no duplication.
+pub fn prng_next_u32(state: u32) -> (u32, u32) {
+    let s1 = (((state as u64) * LCG_A + 1) % LCG_M) as u32;
+    let s2 = (((s1 as u64) * LCG_A + 1) % LCG_M) as u32;
+    ((s2), (s2 & 0xFFFF0000) | (s1 >> 16))
+}
+
 /// Dual-step LCG (`FUN_004df900`). Returns `(new_state, keystream_byte)`.
 pub fn prng_step(state: u64) -> (u64, u8) {
-    let s1 = (state * LCG_A + 1) % LCG_M;
-    let s2 = (s1 * LCG_A + 1) % LCG_M;
-    let out = ((s2 & 0xFFFF0000) | (s1 >> 16)) & 0xFFFFFFFF;
-    (s2, (out & 0xFF) as u8)
+    let (ns, out) = prng_next_u32(state as u32);
+    (ns as u64, (out & 0xFF) as u8)
 }
 
 /// One round: XOR whole buffer with keystream from `seed`.
