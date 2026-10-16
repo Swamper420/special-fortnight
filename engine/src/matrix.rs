@@ -31,6 +31,41 @@ pub fn translation(tx: f32, ty: f32, tz: f32) -> Mat4 {
     ])
 }
 
+/// `FUN_0046fba0` (`0x46fba0`, 26 B, `ev_30783466...`): `ECX` = dest →
+/// forwards 16-word identity. Same frame/return convention as siblings.
+/// `FUN_0046fa90` (`0x46fa90`, 263 B, `ev_32ec9bd7...`): `ECX` = dest,
+/// stack `float[4] (x,y,z,w)` → forwards quaternion rotation matrix
+/// (§ rotation; row-major ground truth — see `evidence/rotation_writer.md`).
+/// `FUN_0046fbf0` is NOT a rotation writer (outer-product form); untraced.
+
+/// `FUN_0046fa90`: quaternion→rotation matrix, slots per original
+/// association order (`((x²+w²)−y²)−z²`, `(zw+yx)+(zw+yx)`, …).
+/// No normalization in asm (caller responsibility). x87 80-bit
+/// intermediates vs `f32` per-op rounding: bit-exact on exact inputs,
+/// ≤1 ulp/slot otherwise.
+/// Row-major: slot1 = `2(xy+wz)`, slot4 = `2(xy−wz)` (transpose pair).
+pub fn rotation_from_quaternion(x: f32, y: f32, z: f32, w: f32) -> Mat4 {
+    let xx = x * x;
+    let yy = y * y;
+    let zz = z * z;
+    let ww = w * w;
+    fn_0046ef20([
+        (xx + ww) - yy - zz,
+        (z * w + y * x) + (z * w + y * x),
+        (z * x - y * w) + (z * x - y * w),
+        0.0, //
+        (y * x - z * w) + (y * x - z * w),
+        (yy + (ww - xx)) - zz,
+        (x * w + z * y) + (x * w + z * y),
+        0.0, //
+        (z * x + y * w) + (z * x + y * w),
+        (z * y - x * w) + (z * y - x * w),
+        ((ww - xx) - yy) + zz,
+        0.0, //
+        0.0, 0.0, 0.0, 1.0,
+    ])
+}
+
 /// `FUN_0046fa40`: scale matrix, factors on the diagonal.
 pub fn scale(sx: f32, sy: f32, sz: f32) -> Mat4 {
     fn_0046ef20([
@@ -81,5 +116,34 @@ mod tests {
         assert!(got[0].is_nan());
         assert_eq!(got[1].to_bits(), (-0.0f32).to_bits());
         assert_eq!(&got[2..], &w[2..]);
+    }
+
+    /// ONE check for `FUN_0046fa90` (generated fixture — no original bytes):
+    /// identity-quaternion bit-exact + Y-90° transpose-pair asymmetry
+    /// (row-major ground truth: slot1 = +wz term, slot4 = −wz term).
+    #[test]
+    fn quaternion_rotation_layout() {
+        let one = 1.0f32.to_bits();
+        let zero = 0.0f32.to_bits();
+        // Identity quaternion (0,0,0,1) is exactly representable: bit-exact.
+        let id = rotation_from_quaternion(0.0, 0.0, 0.0, 1.0);
+        let bits: Vec<u32> = id.iter().map(|f| f.to_bits()).collect();
+        assert_eq!(
+            bits,
+            vec![
+                one, zero, zero, zero, //
+                zero, one, zero, zero, //
+                zero, zero, one, zero, //
+                zero, zero, zero, one,
+            ]
+        );
+        // 90° about Y: q = (0, s, 0, c), s = c = √2/2.
+        let s = std::f32::consts::FRAC_1_SQRT_2;
+        let r = rotation_from_quaternion(0.0, s, 0.0, s);
+        assert!((r[5] - 1.0).abs() < 1e-6); // s²+s² ≈ 1 (f32: not bit-exact)
+        assert_eq!(r[2], -r[8]); // ∓2sc transpose pair, nonzero
+        assert_ne!(r[2].to_bits(), zero);
+        assert!(r[0].abs() < 1e-6 && r[10].abs() < 1e-6); // cos90° ≈ 0
+        assert!((r[2] + 1.0).abs() < 1e-6 && (r[8] - 1.0).abs() < 1e-6);
     }
 }
