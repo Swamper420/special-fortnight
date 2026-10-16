@@ -5,6 +5,7 @@
 //! inputs, never bundled, never modified. See `engine/doc/formats.md`.
 
 pub mod assets;
+pub mod audio;
 pub mod decrypt;
 pub mod fn_00434390;
 pub mod fn_00435740;

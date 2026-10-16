@@ -10,3 +10,6 @@ num-bigint = "0.4"
 # PNG-to-pixel decode of Resource.001 textures (pure Rust; manual
 # inflate+unfilter would be far more code for zero gain).
 png = "0.17"
+# OGG-to-PCM decode of Resource.001 sounds (pure Rust Vorbis; a
+# hand-rolled decoder would be far more code for zero gain).
+lewton = "0.10"
