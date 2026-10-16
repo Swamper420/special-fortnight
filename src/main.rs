@@ -522,6 +522,7 @@ mod host_image;
 mod dump_langs;
 mod dump_hills;
 mod dump_wavs;
+mod dump_pngs;
 mod dump_models;
 mod extract;
 mod install;
@@ -588,6 +589,18 @@ fn main() {
         }
         return;
     }
+    if args.len() >= 2 && args[1] == "--dump-pngs" {
+        let src = args.get(2).map(String::as_str).unwrap_or("dsj3-installed");
+        let dst = args.get(3).map(String::as_str).unwrap_or(src);
+        match dump_pngs::dump_pngs(std::path::Path::new(src), std::path::Path::new(dst)) {
+            Ok(n) => println!("dumped {n} pngs to {dst}"),
+            Err(e) => {
+                eprintln!("dump-pngs failed: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     if args.len() >= 2 && args[1] == "--entry" {
         // Reconstructed original entry (developer harness, see host_image.rs).
         #[cfg(target_os = "linux")]
@@ -619,7 +632,7 @@ fn want_gui(args: &[String], display: bool) -> bool {
     if args.iter().any(|a| a == "--no-gui") {
         return false;
     }
-    if ["--yes", "-y", "--extract", "-x", "--dump-langs", "--dump-models", "--dump-hills", "--dump-wavs", "--entry"]
+    if ["--yes", "-y", "--extract", "-x", "--dump-langs", "--dump-models", "--dump-hills", "--dump-wavs", "--dump-pngs", "--entry"]
         .iter()
         .any(|f| args.iter().any(|a| a == f))
     {
@@ -647,6 +660,7 @@ mod tests {
         assert!(!super::want_gui(&a(&["dsj3", "--dump-models", "d"]), true));
         assert!(!super::want_gui(&a(&["dsj3", "--dump-hills", "d"]), true));
         assert!(!super::want_gui(&a(&["dsj3", "--dump-wavs", "d"]), true));
+        assert!(!super::want_gui(&a(&["dsj3", "--dump-pngs", "d"]), true));
         // --dir alone still goes GUI (prefill), matching the original.
         assert!(super::want_gui(&a(&["dsj3", "--dir", "d"]), true));
     }
