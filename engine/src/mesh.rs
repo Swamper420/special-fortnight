@@ -465,6 +465,52 @@ pub fn terrain_adjust_enter(fvar: f32, bound: f32) -> bool {
     !(fvar >= bound)
 }
 
+/// Guard sin factor (`[0x5ce05c]`, exact file bits `0xBBB60B61` =
+/// `-0.0055555556900799274`; see `evidence/004348a0_guard_h.md` §4).
+pub const TERRAIN_GUARD_SIN_NEG: f32 = f32::from_bits(0xBBB6_0B61);
+
+/// Guard-block height accum `h` (`0x434b9e`-`0x434c71` per vertex;
+/// `evidence/004348a0_guard_h.md`). Seed + two guarded adjustments in
+/// asm order; `f64` intermediates (≈ x87 extended), one `f32` round per
+/// asm `FSTP` (`t_max`, `t2`, `h0`, `ta`, each new `h`). The second
+/// body-1 `xform` (`tb`) and the body-2 chain stay unrounded like the
+/// `ST0`-direct asm path (virtual targets assumed `f32`-rounded on
+/// return, `de3e0` U3 carried). Guards/combines reuse
+/// `terrain_adjust_enter` / `max2` / `min2` — NaN sides identical.
+/// `xform_b60`/`xform_b50` = opaque `FUN_004de3e0` on the b60/b50 strips.
+#[allow(clippy::too_many_arguments)]
+pub fn terrain_guard_h(
+    fvar4: f32,
+    lo_b60: f32,
+    hi_b60: f32,
+    lo_b50: f32,
+    hi_b50: f32,
+    x0: f32,
+    p1_in: f32,
+    p3_a0: f32,
+    pi: f32,
+    xform_b60: impl Fn(f32) -> f32,
+    xform_b50: impl Fn(f32) -> f32,
+) -> f32 {
+    // Seed: h0 = xform_b60(min2(hi_b60, max2(lo_b60, fvar4))).
+    let t_max = max2(lo_b60, fvar4);
+    let t2 = crate::fn_00435740::min2(hi_b60, t_max);
+    let mut h = xform_b60(t2);
+    // Body 1 (`0x434bd6`): h += (xform_b50(max2(lo_b50,fvar4)) - xform_b50(hi_b50)) * p1.
+    if terrain_adjust_enter(fvar4, lo_b60) {
+        let ta = xform_b50(max2(lo_b50, fvar4));
+        let tb = xform_b50(hi_b50);
+        h = ((ta as f64 - tb as f64) * p1_in as f64 + h as f64) as f32;
+    }
+    // Body 2 (`0x434c24`): h += sin((pi*p3) * NEG) * (max2(fvar4,x0) - lo_b50) * p1.
+    if terrain_adjust_enter(fvar4, lo_b50) {
+        let m = max2(fvar4, x0);
+        let s = ((pi as f64 * p3_a0 as f64) * TERRAIN_GUARD_SIN_NEG as f64).sin();
+        h = (s * (m as f64 - lo_b50 as f64) * p1_in as f64 + h as f64) as f32;
+    }
+    h
+}
+
 /// Cosine noise (`0x434c75`-`0x434cd4`, tap order): `acc=0`;
 /// per tap `t=fvar/div*pi; acc += cos(t+t+ph)*amp` (first fVar4 taps,
 /// then fVar5 taps). x87 extended ≈ f64; one f32 round at return.
@@ -584,8 +630,8 @@ pub fn strip_hi_max(
 /// `[this+0x74/0x78/0x7c]` vector push; original growth path
 /// `operator_new`/`00475330`/`0059c120` stays open).
 /// Open (caller-supplied, not guessed): RNG tables (`div`/`ph` need
-/// `004df9a0`/`004df960` outputs), guard `h` accum (`004de3e0`
-/// virtual targets + combine order), `cols`/`step_x`/`base_x`
+/// `004df9a0`/`004df960` outputs), guard `xform` virtual targets
+/// (combine itself = `terrain_guard_h`, wired as the `height` closure), `cols`/`step_x`/`base_x`
 /// (`0059e643` + `__ftol` semantics unmapped), `thr`/`off` writers,
 /// `lo_b60` strip object.
 #[derive(Debug, Clone, Copy)]
@@ -966,6 +1012,32 @@ mod tests {
         assert_eq!(strip_hi_max(&b50, &n), 44.0);
     }
 
+    /// ONE check for the guard-block height accum `h`
+    /// (`evidence/004348a0_guard_h.md`, generated fixtures — no
+    /// original bytes): seed `xform_b60(min2(hi_b60, max2(lo_b60,
+    /// fvar4)))`; body-1/body-2 guarded adds in asm order (incl. the
+    /// body-2 `max2(fvar4, x0)` arg flip); NaN enters both guards with
+    /// the asm a/b sides.
+    #[test]
+    fn terrain_guard_h_combine() {
+        let id = |c: f32| c;
+        // Seed only: fvar4=50 above both bounds; no guard enters.
+        assert_eq!(terrain_guard_h(50.0, 10.0, 20.0, 2.0, 8.0, 100.0, 0.5, 0.0, PI, id, id), 20.0);
+        // Both... first body only: fvar4=5 < lo_b60=10 enters body 1
+        // (ta=5, tb=8: h=10+(5-8)*0.5=8.5); 5 >= lo_b50=2 skips body 2.
+        assert_eq!(terrain_guard_h(5.0, 10.0, 20.0, 2.0, 8.0, 100.0, 0.5, 0.0, PI, id, id), 8.5);
+        // Body 2 nonzero sin: lo_b60=1 skips body 1; fvar4=5 < lo_b50=10
+        // enters body 2 with p3=90 → sin(-pi/2) ≈ -1, m=max2(5,100)=100:
+        // h = 5 + (-1)*(100-10)*0.5 = -40 (tolerance: host sin ≈ FSIN).
+        let h = terrain_guard_h(5.0, 1.0, 20.0, 10.0, 8.0, 100.0, 0.5, 90.0, PI, id, id);
+        assert!((h - -40.0).abs() < 1e-4, "{h}");
+        // NaN fvar4 enters both: seed max2(10,NaN)=10 → min2(20,10)=10;
+        // body 1 max2(2,NaN)=2 → h=10+(2-8)*0.5=7; body 2
+        // max2(NaN,100)=NaN, sin(0)=0 → 0*NaN=NaN poisons h.
+        let h = terrain_guard_h(f32::NAN, 10.0, 20.0, 2.0, 8.0, 100.0, 0.5, 0.0, PI, id, id);
+        assert!(h.is_nan(), "{h}");
+    }
+
     /// ONE check for the `FUN_004348a0` sin-weight tail
     /// (`evidence/004348a0_sin_tail.md`, generated fixture — no
     /// original bytes): `wsum` sin wiring, `t1`/`t2` weights,
@@ -1037,10 +1109,23 @@ mod tests {
         }
         let tables = TerrainTables { amp, div_a, ph_a: [0.0; 8], div_b, ph_b: [0.0; 8] };
         // Fixtures for open parts: identity base xform, guard accum
-        // substituted with base (`height` closure), zero lo strip.
+        // = its transcription (`terrain_guard_h` curried over fixture
+        // strips/xforms — the `height` closure seam; base value `b`
+        // is not an input to `h`), zero lo strip.
         let base = TerrainBase { thr: 0.0, off: 0.0, x0: 0.0, lo: -100.0, hi: 100.0, range_present: true };
         let grid = TerrainGrid { cols: 41, step_x: 2.0, base_x: -40.0 };
-        let build = || terrain_build(&grid, &base, |c| c, |_, b| b, 0.0, &tp, &tables, PI);
+        let build = || {
+            terrain_build(
+                &grid,
+                &base,
+                |c| c,
+                |fvar4, _| terrain_guard_h(fvar4, -50.0, 50.0, -60.0, 60.0, 0.0, tp.in_, tp.a0, PI, |c| c, |c| c),
+                0.0,
+                &tp,
+                &tables,
+                PI,
+            )
+        };
         let g1 = build();
         let g2 = build();
         assert_eq!(g1.len(), TERRAIN_ROWS as usize * grid.cols as usize);
