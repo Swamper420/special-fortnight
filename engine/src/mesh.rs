@@ -421,6 +421,21 @@ pub fn terrain_base_thr_off(n11: f32, wb: f32) -> (f32, f32) {
     (n11 - off, off)
 }
 
+/// `[0x5ce060]` twin of `TERRAIN_GUARD_SIN_NEG`: exact file bits
+/// `0x3BB60B61` = `+0.0055555556900799274` (see
+/// `evidence/004348a0_x0.md`).
+pub const TERRAIN_DEG_POS: f32 = f32::from_bits(0x3BB6_0B61);
+
+/// `x0` writer (`0x434b09`-`0x434b29`):
+/// `[this+0x98] = lo_b50 − cos((pi × a0) × (1/180)) × l0`
+/// (`evidence/004348a0_x0.md`). `a0` raw degrees (caller converts
+/// only `ax`/`az`; same inline `pi×(1/180)` idiom as the guard
+/// body-2 sin factor). f64 intermediates (≈ x87 extended); single
+/// f32 round at the `FSTP` (no mid-chain rounding in asm).
+pub fn terrain_base_x0(lo_b50: f32, a0_deg: f32, l0: f32, pi: f32) -> f32 {
+    (lo_b50 as f64 - ((pi as f64 * a0_deg as f64) * TERRAIN_DEG_POS as f64).cos() * l0 as f64) as f32
+}
+
 impl TerrainBase {
     /// `FUN_00434ff0(ECX=this, p1, p2) -> f32`, branch-for-branch from asm.
     pub fn eval(&self, xform: impl FnOnce(f32) -> f32, p1: f32, p2: f32) -> f32 {
@@ -1171,14 +1186,22 @@ mod tests {
         let la = land.anchors(true);
         let (thr, off) = terrain_base_thr_off(la.n11, land.wb);
         eprintln!("live thr/off={thr}/{off} n11={} wb={}", la.n11, land.wb);
-        let base = TerrainBase { thr, off, x0: 0.0, lo: -100.0, hi: 100.0, range_present: true };
+        // x0 seam (`evidence/004348a0_x0.md`): generated legs exact
+        // (a0=0 → cos 0 = 1) / tolerance (a0=90 → cos ≈ 0); live x0
+        // from fixture lo_b50 (-60.0, same as the guard closure below)
+        // + live a0/l0.
+        assert_eq!(terrain_base_x0(-60.0, 0.0, 70.0, PI), -130.0);
+        assert!((terrain_base_x0(-60.0, 90.0, 70.0, PI) - -60.0).abs() < 1e-3);
+        let x0 = terrain_base_x0(-60.0, tp.a0, tp.l0, PI);
+        eprintln!("live x0={x0} a0={} l0={}", tp.a0, tp.l0);
+        let base = TerrainBase { thr, off, x0, lo: -100.0, hi: 100.0, range_present: true };
         let grid = TerrainGrid { cols: 41, step_x: 2.0, base_x: -40.0 };
         let build = || {
             terrain_build(
                 &grid,
                 &base,
                 |c| c,
-                |fvar4, _| terrain_guard_h(fvar4, -50.0, 50.0, -60.0, 60.0, 0.0, tp.in_, tp.a0, PI, |c| c, |c| c),
+                |fvar4, _| terrain_guard_h(fvar4, -50.0, 50.0, -60.0, 60.0, x0, tp.in_, tp.a0, PI, |c| c, |c| c),
                 0.0,
                 &tp,
                 &tables,
@@ -1205,7 +1228,7 @@ mod tests {
                 &grid,
                 &base,
                 |c| c,
-                |fvar4, _| terrain_guard_h(fvar4, -50.0, 50.0, -60.0, 60.0, 0.0, tp.in_, tp.a0, PI, |c| c, |c| c),
+                |fvar4, _| terrain_guard_h(fvar4, -50.0, 50.0, -60.0, 60.0, x0, tp.in_, tp.a0, PI, |c| c, |c| c),
                 0.0,
                 &tp,
                 &live,
