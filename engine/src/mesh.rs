@@ -711,6 +711,35 @@ pub struct TerrainGrid {
     pub base_x: f32,
 }
 
+/// `FUN_0059e643` finite mapping (`0x434a5c/0x434acb`): x87 `FRNDINT`
+/// = round-half-to-even under default RC (finite inputs only; NaN/Inf
+/// + exception plumbing open, see `evidence/004348a0_grid_setup.md`).
+pub fn terrain_grid_rint(x: f64) -> f64 {
+    x.round_ties_even()
+}
+
+/// `step_x` (`0x434a44`-`0x434a74`): `range / rint(range * 0.1f)`,
+/// `range = hi_b60 - lo_b60` (`[this+0x60]` strip slots).
+pub fn terrain_grid_step(range: f32) -> f32 {
+    (range as f64 / terrain_grid_rint(range as f64 * 0.1f32 as f64)) as f32
+}
+
+/// `cols` (`0x434a7a`-`0x434aa6`): `trunc(span / step_x) + 40`
+/// (`__ftol` truncates toward zero, `ADD EAX,0x28` wraps).
+/// Finite in-`i32`-range inputs only (FISTP-invalid + non-default
+/// RC open).
+pub fn terrain_grid_cols(span: f32, step_x: f32) -> u32 {
+    ((span as f64 / step_x as f64).trunc() as i64).wrapping_add(40) as u32
+}
+
+/// `base_x` (`0x434ab6`-`0x434af1`):
+/// `lo_b60 - (rint((lo_b60 - min_lo) / step_x) + 20.0) * step_x`.
+pub fn terrain_grid_base(lo_b60: f32, min_lo: f32, step_x: f32) -> f32 {
+    (lo_b60 as f64
+        - (terrain_grid_rint((lo_b60 as f64 - min_lo as f64) / step_x as f64) + 20.0)
+            * step_x as f64) as f32
+}
+
 /// One `FUN_004348a0` vertex in asm order (`0x434b51`-`0x434dcb`):
 /// coords → base → noise → sin tail. `h` = guard-block accum
 /// (open: `004de3e0` targets/order); `xform` = opaque base transform
@@ -1058,6 +1087,18 @@ mod tests {
         // NaN base: weights NaN, f18 falls back to 1.0, v NaN.
         let v = terrain_sin_tail(7.0, 2.0, 3.0, 1.0, 0.5, -0.25, 0.25, f32::NAN, 5.0, 6.0);
         assert!(v.is_nan(), "{v}");
+    }
+
+    /// Grid setup (`evidence/004348a0_grid_setup.md`): generated
+    /// fixtures for `step`/`cols`/`base` incl FRNDINT ties-even.
+    #[test]
+    fn terrain_grid_setup() {
+        assert_eq!(terrain_grid_rint(2.5), 2.0);
+        assert_eq!(terrain_grid_rint(3.5), 4.0);
+        assert_eq!(terrain_grid_rint(8.0), 8.0);
+        assert_eq!(terrain_grid_step(80.0), 10.0);
+        assert_eq!(terrain_grid_cols(42.0, 2.0), 61);
+        assert_eq!(terrain_grid_base(70.0, 60.0, 2.0), 20.0);
     }
 
     /// ONE check for the `FUN_004348a0` entry/setup/grid driver
