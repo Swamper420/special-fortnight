@@ -1642,4 +1642,103 @@ mod tests {
         assert_eq!(b1.b68, b2.b68);
         assert_eq!(b1.samples, b2.samples);
     }
+
+    /// 4-hill sweep over every manifest `.hil` (inrun+landing+terrain
+    /// drivers proven on Hill01 only before; `hill.rs`
+    /// `live_all_demo_hills` locates all 4). Skips when files absent.
+    /// Guard throws are NOT fixed here — failures name the hill.
+    #[test]
+    fn all_hills_build() {
+        let (r000, r001) = (
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.000"),
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.001"),
+        );
+        if !r000.exists() || !r001.exists() {
+            return;
+        }
+        let mraw = std::fs::read(r000).unwrap();
+        let mplain = crate::decrypt::decrypt(&mraw, crate::decrypt::K_RES_HEX).unwrap();
+        let man = crate::manifest::parse(&String::from_utf16le_lossy(&mplain)).unwrap();
+        let raw = std::fs::read(r001).unwrap();
+        let blob = crate::decrypt::decrypt(&raw, crate::decrypt::K_RES_HEX).unwrap();
+        let hills: Vec<_> = man.entries.iter().filter(|e| e.id.ends_with(".hil")).collect();
+        assert_eq!(hills.len(), 4);
+        let mono = |pts: &[(f32, f32)]| pts.windows(2).all(|w| w[0].0 < w[1].0);
+        let sane = |pts: &[(f32, f32)]| {
+            pts.iter().all(|&(x, y)| x.is_finite() && y.is_finite() && x.abs() < 5000.0 && y.abs() < 5000.0)
+        };
+        let mut failures: Vec<String> = Vec::new();
+        for e in hills {
+            let t = std::str::from_utf8(&blob[e.offset as usize..e.offset as usize + e.size as usize]).unwrap();
+            let h = hill::parse(t).unwrap_or_else(|_| panic!("{} parse", e.id));
+            // Inrun.
+            match Inrun::from_map(&h.profile_inrun) {
+                Ok(ir) => match inrun_build(&ir, ir.tz.to_bits()) {
+                    Ok(b) => {
+                        eprintln!("{} inrun b50={} b58={} m1={:?} m2={:?}", e.id, b.b50.len(), b.b58.len(), b.markers.m1, b.markers.m2);
+                        let mk = [b.markers.m1.0, b.markers.m1.1, b.markers.m2.0, b.markers.m2.1];
+                        if b.b50.len() < 2 || b.b58.len() < 2 || !mono(&b.b50) || !mono(&b.b58) || !sane(&b.b50) || !sane(&b.b58) || !mk.iter().all(|v| v.is_finite()) {
+                            failures.push(format!("{} inrun shape", e.id));
+                        }
+                    }
+                    Err(err) => {
+                        eprintln!("{} inrun ERR {err:?}", e.id);
+                        failures.push(format!("{} inrun {err:?}", e.id));
+                    }
+                },
+                Err(s) => failures.push(format!("{} inrun map {s}", e.id)),
+            }
+            // Landing.
+            match Landing::from_map(&h.profile_dhill) {
+                Ok(la) => match landing_build(&la) {
+                    Ok(b) => {
+                        eprintln!("{} landing b60={} b68={} samples={}", e.id, b.b60.len(), b.b68.len(), b.samples.len());
+                        let smono = b.samples.windows(2).all(|w| w[0].0 <= w[1].0);
+                        let ssane = b.samples.iter().all(|&(x, y)| x.is_finite() && y.is_finite());
+                        if b.b60.len() < 2 || b.b68.len() < 2 || !mono(&b.b60) || !mono(&b.b68) || !sane(&b.b60) || !sane(&b.b68) || b.samples.len() != 10 || !smono || !ssane {
+                            failures.push(format!("{} landing shape", e.id));
+                        }
+                    }
+                    Err(err) => {
+                        eprintln!("{} landing ERR {err:?}", e.id);
+                        failures.push(format!("{} landing {err:?}", e.id));
+                    }
+                },
+                Err(s) => failures.push(format!("{} landing map {s}", e.id)),
+            }
+            // Terrain (seeded tables; same fixtures as terrain_build_driver).
+            match Terrain::from_map(&h.profile_terrain) {
+                Ok(mut tp) => match Landing::from_map(&h.profile_dhill) {
+                    Ok(la) => {
+                        tp.ax = tp.ax * PI / 180.0;
+                        tp.az = tp.az * PI / 180.0;
+                        let seed = crate::rng_float::terrain_seed(&tp);
+                        let tables = crate::rng_float::terrain_rng_tables(seed, &tp, PI);
+                        let anchors = la.anchors(true);
+                        let (thr, off) = terrain_base_thr_off(anchors.n11, la.wb);
+                        let x0 = terrain_base_x0(-60.0, tp.a0, tp.l0, PI);
+                        let base = TerrainBase { thr, off, x0, lo: -100.0, hi: 100.0, range_present: true };
+                        let grid = TerrainGrid { cols: 41, step_x: 2.0, base_x: -40.0 };
+                        let g = terrain_build(
+                            &grid,
+                            &base,
+                            |c| c,
+                            |fvar4, _| terrain_guard_h(fvar4, -50.0, 50.0, -60.0, 60.0, x0, tp.in_, tp.a0, PI, |c| c, |c| c),
+                            0.0,
+                            &tp,
+                            &tables,
+                            PI,
+                        );
+                        eprintln!("{} terrain n={} seed={seed} thr={thr} off={off} x0={x0} sample={:?}", e.id, g.len(), &g[..4.min(g.len())]);
+                        if g.len() != TERRAIN_ROWS as usize * grid.cols as usize || !g.iter().all(|v| v.is_finite()) {
+                            failures.push(format!("{} terrain shape", e.id));
+                        }
+                    }
+                    Err(s) => failures.push(format!("{} terrain landing {s}", e.id)),
+                },
+                Err(s) => failures.push(format!("{} terrain map {s}", e.id)),
+            }
+        }
+        assert!(failures.is_empty(), "{failures:?}");
+    }
 }
