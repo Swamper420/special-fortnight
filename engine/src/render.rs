@@ -351,4 +351,96 @@ mod tests {
         assert_eq!(wireframe(&mut buf2, w, h, &[strip_batch(&pts)], &cam), n);
         assert_eq!(buf, buf2);
     }
+
+    /// End-to-end landing b60 profile strip, headless
+    /// (`evidence/00434390_emit_args.md` §4 b60:
+    /// `dda60(0,0)`, `ddcb0`, `ddf10`, `ddf10`, `ddae0`,
+    /// `ddcb0`, 10x samples, `dd970`):
+    /// `landing_build` → `strip_batch(b60)` + `wireframe` pixels.
+    /// Fixture dhill values mirror `mesh.rs`
+    /// `landing_anchors_endpoints`; live Hill01 dhill via manifest
+    /// locate when user-supplied files present. Asserts world-X
+    /// monotone, lit pixels, screen-X monotone, deterministic
+    /// re-render.
+    #[test]
+    fn landing_b60_strip_renders_headless() {
+        use crate::mesh::{Landing, landing_build};
+        fn fixture() -> Landing {
+            // Hill01-equivalent fixture (live Hill01-HS138.hil dhill
+            // values): the synthetic `landing_anchors_endpoints`
+            // values (nk=1, rl=120, ar=35, ...) throw Decrease inside
+            // `landing_build`, so they cannot drive a render proof.
+            let mut m = std::collections::HashMap::new();
+            for (k, v) in [
+                ("a0", 10.0), ("ak", 44.0), ("hk", 65.0), ("nk", 93.0),
+                ("rl", 350.0), ("l1", 14.0), ("l2", 23.0), ("rs", 140.0),
+                ("lb", 35.0), ("hr", 5.0), ("nr", 35.0), ("ar", 5.0),
+                ("w0", 3.5), ("wk", 26.0), ("wb", 32.4),
+            ] {
+                m.insert(k.to_string(), v);
+            }
+            Landing::from_map(&m).unwrap()
+        }
+        fn render_assert(pts: &[(f32, f32)]) {
+            assert!(pts.len() >= 2, "len={}", pts.len());
+            assert!(
+                pts.windows(2).all(|w| w[0].0 < w[1].0),
+                "world-X monotone"
+            );
+            let (lox, hix) = (pts[0].0, pts[pts.len() - 1].0);
+            let (mut loy, mut hiy) = (f32::INFINITY, f32::NEG_INFINITY);
+            for &(_, y) in pts {
+                loy = loy.min(y);
+                hiy = hiy.max(y);
+            }
+            let cam = Cam { scale: 3.0, cx: (lox + hix) / 2.0, cy: (loy + hiy) / 2.0 };
+            // b60 spans ~270x113m (Hill01); b68's 220x140 would clip
+            // it to lit=34. 900x400 frames it whole at the same scale
+            // (all 75 fixture points in range, screen-X still strict).
+            let (w, h) = (900, 400);
+            let batch = strip_batch(pts);
+            let mut buf = vec![0u8; (w * h) as usize];
+            let n = wireframe(&mut buf, w, h, &[batch], &cam);
+            assert!(n > 100, "lit={n}");
+            let sx: Vec<i32> = pts
+                .iter()
+                .map(|&(x, y)| {
+                    project(&Vertex { x, y, z: 0.0, u: 0.0, v: 0.0 }, &cam, w, h).0
+                })
+                .collect();
+            assert!(sx.windows(2).all(|p| p[0] < p[1]), "sx={sx:?}");
+            let mut buf2 = vec![0u8; (w * h) as usize];
+            assert_eq!(wireframe(&mut buf2, w, h, &[strip_batch(pts)], &cam), n);
+            assert_eq!(buf, buf2);
+        }
+        // Fixture fallback (Hill01-equivalent values above).
+        let b = landing_build(&fixture()).unwrap();
+        eprintln!("fixture landing b60={} b68={} samples={}", b.b60.len(), b.b68.len(), b.samples.len());
+        render_assert(&b.b60);
+        // Live Hill01 dhill via manifest locate, skipped when absent.
+        let (r000, r001) = (
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.000"),
+            std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources/Resource.001"),
+        );
+        if !r000.exists() || !r001.exists() {
+            return;
+        }
+        let mraw = std::fs::read(r000).unwrap();
+        let mplain = crate::decrypt::decrypt(&mraw, crate::decrypt::K_RES_HEX).unwrap();
+        let man = crate::manifest::parse(&String::from_utf16le_lossy(&mplain)).unwrap();
+        let e = man
+            .entries
+            .iter()
+            .find(|e| e.id.contains("Hill01"))
+            .or_else(|| man.entries.iter().find(|e| e.id.ends_with(".hil")))
+            .unwrap();
+        let raw = std::fs::read(r001).unwrap();
+        let blob = crate::decrypt::decrypt(&raw, crate::decrypt::K_RES_HEX).unwrap();
+        let t = std::str::from_utf8(&blob[e.offset as usize..e.offset as usize + e.size as usize]).unwrap();
+        let h = crate::hill::parse(t).unwrap();
+        let live = Landing::from_map(&h.profile_dhill).unwrap();
+        let lb = landing_build(&live).unwrap();
+        eprintln!("live {} landing b60={} b68={} samples={}", e.id, lb.b60.len(), lb.b68.len(), lb.samples.len());
+        render_assert(&lb.b60);
+    }
 }
