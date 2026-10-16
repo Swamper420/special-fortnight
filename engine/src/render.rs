@@ -259,6 +259,65 @@ mod tests {
         assert!(n > 50, "lit={n}");
     }
 
+    /// Live check: real judgetower model textured-fill renders
+    /// non-empty. Per-batch textures via `model::texture_pixels`
+    /// (batches whose texture misses skip); no color asserts (V
+    /// orientation unproven). Skips when install dir absent.
+    #[test]
+    fn live_judgetower_textured_renders() {
+        use crate::{decrypt, manifest, model};
+        let res = std::path::Path::new("/tmp/dsj3-wrap/Data Files/Resources");
+        if !res.join("Resource.000").exists() || !res.join("Resource.001").exists() {
+            return;
+        }
+        let plain0 = decrypt::decrypt(
+            &std::fs::read(res.join("Resource.000")).unwrap(),
+            decrypt::K_RES_HEX,
+        )
+        .unwrap();
+        let m = manifest::parse(&String::from_utf16le_lossy(&plain0)).unwrap();
+        let plain1 = decrypt::decrypt(
+            &std::fs::read(res.join("Resource.001")).unwrap(),
+            decrypt::K_RES_HEX,
+        )
+        .unwrap();
+        let entries = manifest::split(&m, &plain1).unwrap();
+        let (_, model_blob) = entries
+            .iter()
+            .find(|(id, _)| id.contains("judgetower-summer-model"))
+            .unwrap();
+        let batches = model::parse(&String::from_utf8_lossy(model_blob)).unwrap();
+        let cam = Cam { scale: 6.0, cx: 0.75, cy: -1.5 };
+        let (w, h) = (160, 120);
+        let mut buf = vec![0u8; (w * h * 3) as usize];
+        let mut covered = 0usize;
+        let mut drew = 0usize;
+        for b in &batches {
+            let tex = match model::texture_pixels(&entries, &b.texture) {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            covered += textured_rgb(&mut buf, w, h, std::slice::from_ref(b), &tex, &cam);
+            drew += 1;
+        }
+        if drew == 0 {
+            return;
+        }
+        assert!(covered > 0, "covered={covered} drew={drew}");
+        eprintln!("live judgetower textured: batches={} drew={drew} covered={covered}", batches.len());
+        let mut buf2 = vec![0u8; (w * h * 3) as usize];
+        let mut covered2 = 0usize;
+        for b in &batches {
+            let tex = match model::texture_pixels(&entries, &b.texture) {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+            covered2 += textured_rgb(&mut buf2, w, h, std::slice::from_ref(b), &tex, &cam);
+        }
+        assert_eq!(covered, covered2);
+        assert_eq!(buf, buf2);
+    }
+
     /// End-to-end inrun b50 strip, headless (`evidence/004ddae0_emit_check.md`
     /// + `evidence/00434020_esp_shift.md`): `Inrun::anchors/moveto` →
     /// `StripCursor` emits (`dda60` open, `ddae0` ×3, `dd970` seal) →
