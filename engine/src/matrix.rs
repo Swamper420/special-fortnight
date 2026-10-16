@@ -66,6 +66,39 @@ pub fn rotation_from_quaternion(x: f32, y: f32, z: f32, w: f32) -> Mat4 {
     ])
 }
 
+/// `FUN_004df510` (`0x4df510`, 150 B, `ev_6dd1846c...`): Hamilton product
+/// `dest([entry+4]) = ECX ⊗ [entry+8]`, x87 FPU, `RET 0x8`.
+/// No normalization. Component formulas verified term-by-term from asm;
+/// association order below matches FPU stack order (`w,z,y,x` computed,
+/// stored `(x,y,z,w)` — see `evidence/004df660_quaternion.md` §3).
+/// `FUN_004df660` (`0x4df660`, 158 B, `ev_248242f9...`): cdecl
+/// `(dest, a, b, c)` Euler→quaternion: `qY(a)=(0,sin(a/2),0,cos(a/2))`,
+/// `qX(b)=(sin(b/2),0,0,cos(b/2))`, `qZ(c)=(0,0,sin(c/2),cos(c/2))`,
+/// `*dest = (qY ⊗ qX) ⊗ qZ` (order from entry-canonical refs, §2).
+/// Trig is inline x87 `FCOS`/`FSIN` on `float×double(0.5)` (`0x5cdaf8`
+/// observed `000000000000e03f`); Rust `f32` rounds per-op, so bit-exact
+/// only on exact inputs (`(0,0,0)`), ~1 ulp/slot otherwise.
+
+/// Quaternion `(x, y, z, w)`; word order = original store order.
+pub type Quat = [f32; 4];
+
+/// `FUN_004df510`: `a ⊗ b` with `a` = original `ECX`, `b` = stack src.
+pub fn quat_multiply(a: Quat, b: Quat) -> Quat {
+    let w = ((b[3] * a[3] - b[0] * a[0]) - b[1] * a[1]) - b[2] * a[2];
+    let z = ((b[1] * a[0] + a[3] * b[2]) - b[0] * a[1]) + b[3] * a[2];
+    let y = ((a[3] * b[1] - b[2] * a[0]) + b[0] * a[2]) + b[3] * a[1];
+    let x = ((b[2] * a[1] + a[3] * b[0]) + a[0] * b[3]) - b[1] * a[2];
+    [x, y, z, w]
+}
+
+/// `FUN_004df660`: Euler angles (Y, X, Z) → quaternion.
+pub fn euler_to_quaternion(a: f32, b: f32, c: f32) -> Quat {
+    let qy = [0.0, (a * 0.5).sin(), 0.0, (a * 0.5).cos()];
+    let qx = [(b * 0.5).sin(), 0.0, 0.0, (b * 0.5).cos()];
+    let qz = [0.0, 0.0, (c * 0.5).sin(), (c * 0.5).cos()];
+    quat_multiply(quat_multiply(qy, qx), qz)
+}
+
 /// `FUN_0046fa40`: scale matrix, factors on the diagonal.
 pub fn scale(sx: f32, sy: f32, sz: f32) -> Mat4 {
     fn_0046ef20([
@@ -145,5 +178,42 @@ mod tests {
         assert_ne!(r[2].to_bits(), zero);
         assert!(r[0].abs() < 1e-6 && r[10].abs() < 1e-6); // cos90° ≈ 0
         assert!((r[2] + 1.0).abs() < 1e-6 && (r[8] - 1.0).abs() < 1e-6);
+    }
+
+    /// ONE check for `FUN_004df510`/`FUN_004df660` (generated fixtures):
+    /// Hamilton identities + `i⊗j=k` bit-exact, `euler(0,0,0)` identity
+    /// bit-exact (observed `00502220` call), single-axis Y-90° structure.
+    #[test]
+    fn quaternion_compose() {
+        let q = [0.5, -0.25, 0.125, 1.0];
+        let ident = [0.0, 0.0, 0.0, 1.0];
+        assert_eq!(quat_multiply(ident, q), q); // I⊗q exact (×1/×0)
+        assert_eq!(quat_multiply(q, ident), q); // q⊗I exact
+        // i⊗j=k: (1,0,0,0)⊗(0,1,0,0) = (0,0,1,0), exact 0/1 arithmetic.
+        assert_eq!(
+            quat_multiply([1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]),
+            [0.0, 0.0, 1.0, 0.0]
+        );
+        // Zero Euler = identity quat, bit-exact (sin0/cos0 exact both sides).
+        let zero_bits: Vec<u32> = euler_to_quaternion(0.0, 0.0, 0.0)
+            .iter()
+            .map(|f| f.to_bits())
+            .collect();
+        assert_eq!(
+            zero_bits,
+            vec![
+                0.0f32.to_bits(),
+                0.0f32.to_bits(),
+                0.0f32.to_bits(),
+                1.0f32.to_bits()
+            ]
+        );
+        // Single-axis Y-90°: order-independent, (0,s,0,c) via identity chain.
+        let e = euler_to_quaternion(std::f32::consts::FRAC_PI_2, 0.0, 0.0);
+        assert_eq!(e[0].to_bits(), 0.0f32.to_bits());
+        assert_eq!(e[2].to_bits(), 0.0f32.to_bits());
+        let h = std::f32::consts::FRAC_1_SQRT_2;
+        assert!((e[1] - h).abs() < 1e-6 && (e[3] - h).abs() < 1e-6);
+        assert!((e[1] * e[1] + e[3] * e[3] - 1.0).abs() < 1e-6); // unit norm
     }
 }
