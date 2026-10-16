@@ -108,6 +108,30 @@ pub fn store_quad_words(dst: &mut [u32; 4], p1: u32, p2: u32, p3: u32, p4: u32) 
     dst[3] = p4;
 }
 
+/// Trees node size (`FUN_00435aa0` `operator_new(0x20)`).
+pub const TREES_NODE_WORDS: usize = 8;
+
+/// `FUN_004365d0`: bit-exact 8-word store
+/// (`[ECX+0x0..+0x1c]=[ESP+4..+0x20]; RET 0x20`).
+/// Trees setter — NOT the shared `00436020` (sweep §3a).
+/// Fresh: analyze `ev_1a9265fb2adf4198483696eba96728f1605e7a0d363a6d9bfb41a4ff01f20882`,
+/// insn `ev_238133e57d1d4d3230d747caf386f3ffebe35fb42689395172ff7ab801096bf5`;
+/// sweep `ev_d2cab5cb1479b855f61986d09953da6f1cf1c1a09b621c762eba8b0d57168987`.
+pub fn store_oct_words(dst: &mut [u32; 8], p: [u32; 8]) {
+    *dst = p;
+}
+
+/// `FUN_004365a0`: trees ctor const-init, 8 words
+/// (`0,0,0,0,0x40c00000,0x41000000,0,0` = `0,0,0,0,6.0,8.0,0,0`;
+/// sweep §3a mislabels first as 3.5 — raw words rule).
+/// Fresh: analyze `ev_bfeebb2f74cdf0960a8134a8fcb73a98b181a967dc37c8896e8e8525eeedf02a`,
+/// insn `ev_cc75042497712d66458eca41573b26e0c138caf2629153f12023f3e5267ee229`;
+/// sweep `ev_eed9f381dc722924fbeefe9385760665d1cd133759ee90bd9ccf0f49bcbc6ecd`.
+/// Dead on trees path (fully overwritten by `004365d0`) — sweep U2.
+pub fn trees_node_const_init() -> [u32; 8] {
+    [0, 0, 0, 0, 0x40c0_0000, 0x4100_0000, 0, 0]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -137,6 +161,19 @@ mod tests {
         store_quad_words(&mut q, f(3.25), 0x1234_5678, f(f32::NAN), f(-0.0));
         assert_eq!(q[0], f(3.25));
         assert_eq!(q[1], 0x1234_5678);
+        // 004365d0 8-word setter (trees, NOT 00436020 — sweep §3a).
+        let mut oct = [0u32; 8];
+        let p8 = [f(1.0), f(2.0), f(-0.0), f(f32::NAN), 0xdead_beef, f(3.5), f(8.0), 0];
+        store_oct_words(&mut oct, p8);
+        assert_eq!(oct, p8);
+        assert!(f32::from_bits(oct[3]).is_nan());
+        // 004365a0 ctor const-init (dead on trees path, sweep U2).
+        // NOTE: sweep §3a labels 0x40c00000 as 3.5 — wrong;
+        // 0x40c00000 = 6.0 (3.5 would be 0x40600000). Raw words rule.
+        assert_eq!(trees_node_const_init(), [0, 0, 0, 0, 0x40c0_0000, 0x4100_0000, 0, 0]);
+        assert_eq!(f32::from_bits(0x40c0_0000), 6.0);
+        assert_eq!(f32::from_bits(0x4100_0000), 8.0);
+        assert_eq!(TREES_NODE_WORDS, 8);
         // Slot bases from the §2 dispatch table.
         assert_eq!(
             [HILL_OFF_RAILING, HILL_OFF_FRAME, HILL_OFF_STARTGATE, HILL_OFF_STARTBANNER, HILL_OFF_FLAG, HILL_OFF_FENCE, HILL_OFF_JUDGETOWER],

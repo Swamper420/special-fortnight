@@ -92,7 +92,7 @@ tail `ev_bf93297db581fd09bae00615f43dd9500b2f5588ef66e7e84d52b40acc458c69`):
 `FUN_004365a0`
 (`ev_eed9f381dc722924fbeefe9385760665d1cd133759ee90bd9ccf0f49bcbc6ecd`,
 36 bytes, no callees — writes `0,0,0,0,0x40c00000,0x41000000,0,0`,
-i.e. floats `0,0,0,0,3.5,8.0,0,0`); setter `FUN_004365d0`
+i.e. floats `0,0,0,0,6.0,8.0,0,0` (0x40c00000=6.0, corrected 2026-10-16); setter `FUN_004365d0`
 (`ev_d2cab5cb1479b855f61986d09953da6f1cf1c1a09b621c762eba8b0d57168987`,
 58 bytes, no callees, `RET 0x20` — 8-word store, NOT `00436020`);
 vector `FUN_004382f0(*(hill+0x240),1,&local)` with
@@ -204,7 +204,7 @@ or node layout is mapped and a second consumer needs the width.
 - U2 (open): node layouts beyond the stored prefix (`0x58` stairs,
   `0x34` pillar, `0x20` trees); ctor helpers `00435cc0`/`00436050`/
   `00436570`/`00458de0` internals unexamined. Note `004365a0`'s
-  `3.5/8.0` defaults at `+0x10/+0x14` are dead on the trees path
+  `6.0/8.0` defaults at `+0x10/+0x14` are dead on the trees path (3.5 label corrected)
   (fully overwritten by `004365d0`) — their purpose is unknown.
 - U3 (open): vector element types at hill `+0x218/+0x228/+0x238`
   (8-byte stride assumed from wrapper shape — inference, same as
