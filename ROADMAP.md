@@ -22,6 +22,14 @@ Principles:
   `engine/doc/` plus a round-trip test, so modders never guess.
 - No empty scaffolding: crates appear when a phase needs them.
 
+## Prereq — ledger first
+
+Full 502-proc obligation ledger before mapped-code claims
+(`rea build-reconstruction-obligation-ledger` /
+`rea evaluate-reconstruction-coverage`). Coverage comes only
+from the ledger, never file counts. Per-function evidence
+precedes its Rust (see AGENTS.md). Pilot-5 ledger only so far.
+
 ## Phase 0 — layout and harness
 
 - `engine/` crate (name TBD), `engine/doc/`, `engine/tests/`.
